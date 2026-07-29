@@ -1,1 +1,1 @@
-@livewireScripts
+@vite('resources/js/admin.js')

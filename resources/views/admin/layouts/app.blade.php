@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
+@livewireStyles
 @include('admin.layouts.partials.head')
 
 <body class="admin-body">
@@ -14,7 +14,7 @@
             @include('admin.layouts.partials.navbar')
 
             <main class="admin-content">
-                @yield('content')
+                {{ $slot }}
             </main>
 
             @include('admin.layouts.partials.footer')
@@ -26,7 +26,9 @@
     @include('admin.layouts.partials.scripts')
 
     @stack('scripts')
+    @livewireScripts
 
+    
 </body>
 
 </html>
