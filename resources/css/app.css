@@ -1,0 +1,11 @@
+@import './variables.css';
+@import './admin.css';
+
+@import './base.css';
+@import './layout.css';
+@import './components/button.css';
+@import './components/card.css';
+@import './pages/dashboard.css';
+
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';

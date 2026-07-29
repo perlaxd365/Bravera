@@ -1,0 +1,40 @@
+:root {
+
+    /* Brand */
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+
+    /* Status */
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #0ea5e9;
+
+    /* Background */
+    --bg-body: #f5f7fb;
+    --bg-card: #ffffff;
+
+    /* Sidebar */
+    --sidebar-bg: #111827;
+    --sidebar-hover: #1f2937;
+
+    /* Text */
+    --text: #111827;
+    --text-muted: #6b7280;
+
+    /* Border */
+    --border: #e5e7eb;
+
+    /* Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    /* Shadow */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, .05);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .08);
+
+    /* Transition */
+    --transition: .25s ease;
+
+}
