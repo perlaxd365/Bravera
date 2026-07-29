@@ -1,18 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Livewire\Admin\Catalog\Categories\Index;
+use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
+use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
 
-Route::get('/', function () {
-    return view('admin.dashboard.index');
-})->name('dashboard');
+Route::get('/', DashboardIndex::class)
+    ->name('dashboard');
 
+Route::prefix('catalog')
+    ->name('categories.')
+    ->group(function () {
 
-Route::middleware(['auth'])->group(function () {
-
-    Route::prefix('catalog')->group(function () {
-
-        Route::get('/categories', Index::class)
-            ->name('admin.categories.index');
+        Route::get('/categories', CategoryIndex::class)
+            ->name('index');
     });
-});
