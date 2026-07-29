@@ -4,9 +4,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
-Route::prefix('admin')
+Route::view('dashboard', 'dashboard')
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+Route::view('profile', 'profile')
     ->middleware(['auth'])
-    ->as('admin.')
-    ->group(base_path('routes/admin.php'));
+    ->name('profile');
 
 require __DIR__.'/auth.php';
