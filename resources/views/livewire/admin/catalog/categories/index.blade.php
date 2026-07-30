@@ -13,10 +13,14 @@
                     </small>
                 </div>
 
-                <button class="btn btn-primary">
+                <livewire:admin.catalog.categories.form />
+
+                <button class="btn btn-primary" wire:click="$dispatch('category-create')">
+
                     <i class="bi bi-plus-circle me-2"></i>
                     Nueva categoría
                 </button>
+
 
             </div>
 
@@ -103,11 +107,15 @@
 
                                 <td class="text-center">
 
-                                    <button class="btn btn-sm btn-outline-primary">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        wire:click="$dispatch('category-edit',{id:{{ $category->id }}})">
+
                                         <i class="bi bi-pencil"></i>
                                     </button>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        wire:click="delete({{ $category->id }})"
+                                        wire:confirm="¿Está seguro de eliminar esta categoría?">
 
-                                    <button class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>
 

@@ -28,7 +28,29 @@
     @stack('scripts')
     @livewireScripts
 
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener('livewire:init', () => {
+
+            Livewire.on('notify', (event) => {
+
+                const data = Array.isArray(event) ? event[0] : event;
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: data.type,
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 2500,
+                    timerProgressBar: true
+                });
+
+            });
+
+        });
+    </script>
 </body>
 
 </html>
