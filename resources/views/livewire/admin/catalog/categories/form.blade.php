@@ -63,7 +63,7 @@
 
                                 @foreach ($parents as $parent)
                                     <option value="{{ $parent->id }}">
-                                        {{ $parent->name }}
+                                        {{ collect(explode('/', $parent->path))->map(fn($item) => ucfirst(str_replace('-', ' ', $item)))->implode(' > ') }}
                                     </option>
                                 @endforeach
 

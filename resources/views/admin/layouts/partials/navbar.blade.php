@@ -7,7 +7,8 @@
         <span class="user-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}</span>
         <div class="d-none d-sm-block">
             <span class="user-name">{{ auth()->user()->name ?? 'Usuario' }}</span>
-            <span class="user-role">Administrador</span>
+            <span class="user-role">{{ auth()->check() ? 'Bienvenido: ' . auth()->user()->email : 'No autenticado' }}</span>
+            
         </div>
     </div>
 </header>

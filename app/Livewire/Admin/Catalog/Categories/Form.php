@@ -114,8 +114,6 @@ class Form extends Component
 
         // Recién aquí validar
         $this->validate();
-        $this->validate();
-
 
         if ($this->category) {
 
@@ -146,8 +144,8 @@ class Form extends Component
 
         // Generar el path correcto
         $path = $category->parent_id
-            ? $category->parent->path . '/' . $category->id
-            : (string) $category->id;
+            ? $category->parent->path . '/' . $category->slug
+            : $category->slug;
 
         if ($category->path !== $path) {
             $category->update([
@@ -199,7 +197,7 @@ class Form extends Component
             ->when($this->category, function ($query) {
                 $query->where('id', '!=', $this->category->id);
             })
-            ->orderBy('name')
+            ->orderBy('path')
             ->get();
 
         return view('livewire.admin.catalog.categories.form', compact('parents'));
