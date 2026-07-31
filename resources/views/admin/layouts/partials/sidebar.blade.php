@@ -36,8 +36,8 @@
 
         <nav class="admin-nav">
 
-            <a href="{{ route('admin.categories.index') }}"
-                class="admin-nav-link {{ request()->routeIs('admin.categories.*') ? 'is-active' : '' }}">
+            <a href="{{ route('admin.catalog.categories.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.categories.*') ? 'is-active' : '' }}">
 
                 <i class="bi bi-tags"></i>
 
@@ -45,16 +45,31 @@
 
             </a>
 
-            <a href="#" class="admin-nav-link">
+            <a href="{{ route('admin.catalog.brands.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.brands.*') ? 'is-active' : '' }}">
 
-                <i class="bi bi-bookmark"></i>
+                <i class="bi bi-award"></i>
 
                 <span>Marcas</span>
 
-                <span class="nav-soon">Próximamente</span>
-
             </a>
 
+            <a href="{{ route('admin.catalog.attributes.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.attributes.*') ? 'is-active' : '' }}">
+
+                <i class="bi bi-sliders"></i>
+
+                <span>Atributos</span>
+
+            </a>
+            <a href="{{ route('admin.catalog.attribute-values.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.attribute-values.*') ? 'is-active' : '' }}">
+
+                <i class="bi bi-palette"></i>
+
+                <span>Valores de Atributos</span>
+
+            </a>
             <a href="#" class="admin-nav-link">
 
                 <i class="bi bi-box-seam"></i>

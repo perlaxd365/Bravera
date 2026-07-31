@@ -3,17 +3,34 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
 use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
+use App\Livewire\Admin\Catalog\Brands\Index as BrandIndex;
+use App\Livewire\Admin\Catalog\Attributes\Index as AttributeIndex;
+use App\Livewire\Admin\Catalog\AttributeValues\Index as AttributeValueIndex;
+
 
 Route::middleware('auth')->group(function () {
 
     Route::get('/', DashboardIndex::class)
         ->name('dashboard');
 
-    Route::prefix('catalog')
-        ->name('categories.')
-        ->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | Catálogo
+    |--------------------------------------------------------------------------
+    */
 
-            Route::get('/categories', CategoryIndex::class)
-                ->name('index');
-        });
+    Route::prefix('catalog')->name('catalog.')->group(function () {
+
+        Route::get('/categories', CategoryIndex::class)
+            ->name('categories.index');
+
+        Route::get('/brands', BrandIndex::class)
+            ->name('brands.index');
+
+        Route::get('/attributes', AttributeIndex::class)
+            ->name('attributes.index');
+
+        Route::get('/attribute-values', AttributeValueIndex::class)
+            ->name('attribute-values.index');
+    });
 });
