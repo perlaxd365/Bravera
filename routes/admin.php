@@ -6,7 +6,7 @@ use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
 use App\Livewire\Admin\Catalog\Brands\Index as BrandIndex;
 use App\Livewire\Admin\Catalog\Attributes\Index as AttributeIndex;
 use App\Livewire\Admin\Catalog\AttributeValues\Index as AttributeValueIndex;
-
+use App\Livewire\Admin\Catalog\Suppliers\Index as SupplierIndex;
 
 Route::middleware('auth')->group(function () {
 
@@ -32,5 +32,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/attribute-values', AttributeValueIndex::class)
             ->name('attribute-values.index');
+
+        Route::get('/suppliers', SupplierIndex::class)
+            ->name('suppliers.index');
     });
 });

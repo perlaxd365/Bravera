@@ -80,16 +80,14 @@
 
             </a>
 
-            <a href="#" class="admin-nav-link">
+            <a href="{{ route('admin.catalog.suppliers.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.suppliers.*') ? 'is-active' : '' }}">
 
                 <i class="bi bi-truck"></i>
 
                 <span>Proveedores</span>
 
-                <span class="nav-soon">Próximamente</span>
-
             </a>
-
         </nav>
 
     </div>
