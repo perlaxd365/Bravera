@@ -56,5 +56,8 @@ class Attribute extends Model
     {
         return $query->where('is_filter', true);
     }
-    
+    public function variantValues()
+    {
+        return $this->hasMany(ProductVariantAttributeValue::class);
+    }
 }

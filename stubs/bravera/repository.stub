@@ -1,0 +1,50 @@
+<?php
+
+namespace {{namespace}}\Repositories;
+
+use App\Models\{{model}};
+use {{namespace}}\DTO\{{model}}Data;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class {{model}}Repository implements {{model}}RepositoryInterface
+{
+    public function paginate(
+        ?string $search = null,
+        int $perPage = 10
+    ): LengthAwarePaginator
+    {
+        return {{model}}::query()
+
+            ->when($search, function ($query) use ($search) {
+
+                $query->where('name','like',"%{$search}%");
+
+            })
+
+            ->latest()
+
+            ->paginate($perPage);
+    }
+
+    public function find(int $id): ?{{model}}
+    {
+        return {{model}}::find($id);
+    }
+
+    public function create({{model}}Data $dto): {{model}}
+    {
+        return {{model}}::create((array)$dto);
+    }
+
+    public function update({{model}} $model, {{model}}Data $dto): {{model}}
+    {
+        $model->update((array)$dto);
+
+        return $model->refresh();
+    }
+
+    public function delete({{model}} $model): bool
+    {
+        return $model->delete();
+    }
+}

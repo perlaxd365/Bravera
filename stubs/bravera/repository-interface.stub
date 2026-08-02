@@ -1,0 +1,28 @@
+<?php
+
+namespace {{namespace}}\Repositories;
+
+use App\Models\{{model}};
+use {{namespace}}\DTO\{{model}}Data;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+interface {{model}}RepositoryInterface
+{
+    public function paginate(
+        ?string $search = null,
+        int $perPage = 10
+    ): LengthAwarePaginator;
+
+    public function find(int $id): ?{{model}};
+
+    public function create({{model}}Data $dto): {{model}};
+
+    public function update(
+        {{model}} $model,
+        {{model}}Data $dto
+    ): {{model}};
+
+    public function delete(
+        {{model}} $model
+    ): bool;
+}

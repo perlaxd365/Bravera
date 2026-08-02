@@ -27,7 +27,7 @@
                 <div class="col-md-4 text-end">
                     <button class="btn btn-primary" wire:click="$dispatch('attribute-value-create')">
 
-                        <i class="fas fa-plus"></i>
+                        <i class="bi bi-plus"></i>
                         Nuevo Valor
                     </button>
                 </div>

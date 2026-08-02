@@ -59,4 +59,11 @@ class Brand extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+    /**
+     * Scope: solo marcas activas.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

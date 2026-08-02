@@ -50,4 +50,8 @@ class AttributeValue extends Model
         return $query->orderBy('sort_order')
             ->orderBy('value');
     }
+    public function variantValues()
+    {
+        return $this->hasMany(ProductVariantAttributeValue::class);
+    }
 }

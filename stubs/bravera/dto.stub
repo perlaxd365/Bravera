@@ -1,0 +1,10 @@
+<?php
+
+namespace {{namespace}}\DTO;
+
+readonly class {{class}}
+{
+    public function __construct()
+    {
+    }
+}

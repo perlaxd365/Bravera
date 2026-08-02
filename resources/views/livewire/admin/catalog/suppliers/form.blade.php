@@ -1,4 +1,4 @@
-<x-modal wire:model="show" :title="$form->id ? 'Editar proveedor' : 'Nuevo proveedor'" size="modal-xl">
+<x-modal wire:model="show" :title="$form->id ? 'Editar Producto' : 'Nuevo Producto'" size="modal-xl">
 
     <form wire:submit="save">
 
@@ -10,70 +10,98 @@
         <div class="row">
 
             <div class="col-md-8">
-                <x-input label="Razón Social" wire:model.live="form.business_name"
-                    placeholder="Razón social del proveedor" />
+
+                <x-input label="Nombre del Producto" wire:model.live="form.name" wire:blur="form.generateSlug"
+                    placeholder="Ingrese el nombre del producto" />
+
             </div>
 
             <div class="col-md-4">
-                <x-input label="RUC" wire:model.live="form.tax_id" placeholder="2060XXXXXXXX" />
+
+                <x-input label="Slug" wire:model.live="form.slug" placeholder="slug-del-producto" />
+
             </div>
 
             <div class="col-md-6">
-                <x-input label="Nombre Comercial" wire:model.live="form.trade_name" />
+
+                <x-select label="Categoría" wire:model.live="form.category_id">
+
+                    <option value="">
+                        Seleccione una categoría
+                    </option>
+
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}">
+
+                            {{ $category->name }}
+
+                        </option>
+                    @endforeach
+
+                </x-select>
+
             </div>
 
             <div class="col-md-6">
-                <x-input label="Contacto" wire:model.live="form.contact_name" />
+
+                <x-select label="Marca" wire:model.live="form.brand_id">
+
+                    <option value="">
+                        Sin marca
+                    </option>
+
+                    @foreach ($brands as $brand)
+                        <option value="{{ $brand->id }}">
+
+                            {{ $brand->name }}
+
+                        </option>
+                    @endforeach
+
+                </x-select>
+
             </div>
 
         </div>
 
-        {{-- Contacto --}}
+        {{-- Descripción --}}
         <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
-            Información de Contacto
+            Descripción
         </h6>
 
         <div class="row">
 
-            <div class="col-md-4">
-                <x-input label="Teléfono" wire:model.live="form.phone" />
-            </div>
+            <div class="col-md-12">
 
-            <div class="col-md-4">
-                <x-input label="WhatsApp" wire:model.live="form.whatsapp" />
-            </div>
+                <x-textarea label="Descripción corta" rows="2" wire:model.live="form.short_description" />
 
-            <div class="col-md-4">
-                <x-input type="email" label="Correo" wire:model.live="form.email" />
             </div>
 
             <div class="col-md-12">
-                <x-input label="Sitio Web" wire:model.live="form.website" />
+
+                <x-textarea label="Descripción" rows="5" wire:model.live="form.description" />
+
             </div>
 
         </div>
 
-        {{-- Dirección --}}
+        {{-- SEO --}}
         <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
-            Dirección
+            SEO
         </h6>
 
         <div class="row">
 
-            <div class="col-md-4">
-                <x-input label="Departamento" wire:model.live="form.department" />
-            </div>
+            <div class="col-md-12">
 
-            <div class="col-md-4">
-                <x-input label="Provincia" wire:model.live="form.province" />
-            </div>
+                <x-input label="Título SEO" wire:model.live="form.seo_title" />
 
-            <div class="col-md-4">
-                <x-input label="Distrito" wire:model.live="form.district" />
             </div>
 
             <div class="col-md-12">
-                <x-input label="Dirección" wire:model.live="form.address" />
+
+                <x-textarea label="Descripción SEO" rows="3" wire:model.live="form.seo_description" />
+
             </div>
 
         </div>
@@ -85,22 +113,52 @@
 
         <div class="row">
 
-            <div class="col-md-6">
-                <x-input type="number" label="Días estimados de despacho"
-                    wire:model.live="form.estimated_dispatch_days" />
+            <div class="col-md-4">
+
+                <div class="form-check mt-4">
+
+                    <input class="form-check-input" type="checkbox" wire:model.live="form.status">
+
+                    <label class="form-check-label">
+
+                        Producto activo
+
+                    </label>
+
+                </div>
+
             </div>
 
-            <div class="col-md-6">
-                <x-select label="Estado" wire:model.live="form.status">
+            <div class="col-md-4">
 
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
+                <div class="form-check mt-4">
 
-                </x-select>
+                    <input class="form-check-input" type="checkbox" wire:model.live="form.is_visible">
+
+                    <label class="form-check-label">
+
+                        Visible en tienda
+
+                    </label>
+
+                </div>
+
             </div>
 
-            <div class="col-md-12">
-                <x-textarea label="Observaciones" rows="4" wire:model.live="form.internal_notes" />
+            <div class="col-md-4">
+
+                <div class="form-check mt-4">
+
+                    <input class="form-check-input" type="checkbox" wire:model.live="form.is_featured">
+
+                    <label class="form-check-label">
+
+                        Producto destacado
+
+                    </label>
+
+                </div>
+
             </div>
 
         </div>

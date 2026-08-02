@@ -70,13 +70,12 @@
                 <span>Valores de Atributos</span>
 
             </a>
-            <a href="#" class="admin-nav-link">
+            <a href="{{ route('admin.catalog.products.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.catalog.products.*') ? 'is-active' : '' }}">
 
                 <i class="bi bi-box-seam"></i>
 
                 <span>Productos</span>
-
-                <span class="nav-soon">Próximamente</span>
 
             </a>
 

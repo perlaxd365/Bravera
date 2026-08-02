@@ -84,4 +84,8 @@ class Supplier extends Model
     {
         return $query->where('status', 'active');
     }
+    public function products()
+    {
+        return $this->hasMany(SupplierProduct::class);
+    }
 }

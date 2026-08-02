@@ -48,7 +48,7 @@ class SupplierForm extends Form
     public ?string $address = null;
 
     #[Validate('required|integer|min:1|max:90')]
-    public int $estimated_dispatch_days = 1;
+    public ?int $estimated_dispatch_days = 1;
 
     #[Validate('string')]
     public string $status = 'active';
