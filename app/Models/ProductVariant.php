@@ -14,9 +14,6 @@ class ProductVariant extends Model
     use HasFactory;
     use SoftDeletes;
 
-    /**
-     * Atributos asignables.
-     */
     protected $fillable = [
         'product_id',
         'sku',
@@ -28,13 +25,11 @@ class ProductVariant extends Model
         'length',
         'width',
         'height',
+        'sync_enabled',
         'is_default',
         'is_active',
     ];
 
-    /**
-     * Conversión automática.
-     */
     protected $casts = [
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
@@ -43,24 +38,22 @@ class ProductVariant extends Model
         'length' => 'decimal:2',
         'width' => 'decimal:2',
         'height' => 'decimal:2',
+        'sync_enabled' => 'boolean',
         'is_default' => 'boolean',
         'is_active' => 'boolean',
     ];
-
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function attributes(): HasMany
+    public function attributeValues(): HasMany
     {
-        return $this->hasMany(ProductVariantAttributeValue::class);
+        return $this->hasMany(
+            ProductVariantAttributeValue::class,
+            'product_variant_id'
+        );
     }
 
     public function images(): HasMany
@@ -69,21 +62,10 @@ class ProductVariant extends Model
             ->orderBy('sort_order');
     }
 
-    public function suppliers(): HasMany
+    public function supplierVariants(): HasMany
     {
-        return $this->hasMany(SupplierProduct::class);
+        return $this->hasMany(SupplierVariant::class);
     }
-
-    public function stock()
-    {
-        return $this->hasOne(ProductVariantStock::class);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Scopes
-    |--------------------------------------------------------------------------
-    */
 
     public function scopeActive(Builder $query): Builder
     {

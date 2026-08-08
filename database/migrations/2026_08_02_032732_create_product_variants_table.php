@@ -81,6 +81,9 @@ return new class extends Migration
             | Estado
             |--------------------------------------------------------------------------
             */
+            $table->boolean('sync_enabled')
+                ->default(true)
+                ->comment('Indica si la variante sincroniza información con proveedores.');
 
             $table->boolean('is_default')
                 ->default(false)

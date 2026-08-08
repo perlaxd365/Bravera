@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
@@ -84,8 +85,8 @@ class Supplier extends Model
     {
         return $query->where('status', 'active');
     }
-    public function products()
+    public function supplierVariants(): HasMany
     {
-        return $this->hasMany(SupplierProduct::class);
+        return $this->hasMany(SupplierVariant::class);
     }
 }

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('supplier_products', function (Blueprint $table) {
+        Schema::create('supplier_variants', function (Blueprint $table) {
 
             /*
             |--------------------------------------------------------------------------
@@ -68,19 +68,50 @@ return new class extends Migration
                 ->default(0)
                 ->comment('Costo de envío del proveedor.');
 
+            $table->decimal('supplier_sale_price', 10, 2)
+                ->nullable()
+                ->comment('Precio de venta sugerido por el proveedor.');
             /*
             |--------------------------------------------------------------------------
-            | Disponibilidad
+            | Inventario
             |--------------------------------------------------------------------------
             */
 
-            $table->unsignedInteger('available_stock')
+            $table->unsignedInteger('stock')
                 ->default(0)
-                ->comment('Stock informado por el proveedor.');
+                ->comment('Stock disponible informado por el proveedor.');
+
+            $table->unsignedInteger('reserved_stock')
+                ->default(0)
+                ->comment('Stock reservado por pedidos pendientes.');
+
+            $table->unsignedInteger('minimum_stock')
+                ->default(0)
+                ->comment('Stock mínimo permitido para la variante.');
+                
+            $table->json('extra_data')
+                ->nullable()
+                ->comment('Información adicional enviada por el proveedor.');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Logística
+            |--------------------------------------------------------------------------
+            */
 
             $table->unsignedTinyInteger('estimated_dispatch_days')
                 ->default(1)
                 ->comment('Tiempo estimado de despacho en días.');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Sincronización
+            |--------------------------------------------------------------------------
+            */
+
+            $table->timestamp('last_sync_at')
+                ->nullable()
+                ->comment('Última sincronización del proveedor.');
 
             /*
             |--------------------------------------------------------------------------
@@ -94,7 +125,7 @@ return new class extends Migration
 
             $table->boolean('is_active')
                 ->default(true)
-                ->comment('Indica si el proveedor está habilitado.');
+                ->comment('Proveedor habilitado.');
 
             /*
             |--------------------------------------------------------------------------
@@ -138,8 +169,10 @@ return new class extends Migration
 
             $table->index('supplier_id');
             $table->index('product_variant_id');
+            $table->index('stock');
             $table->index('is_default');
             $table->index('is_active');
+            $table->index('last_sync_at');
         });
     }
 
@@ -148,6 +181,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('supplier_products');
+        Schema::dropIfExists('supplier_variants');
     }
 };

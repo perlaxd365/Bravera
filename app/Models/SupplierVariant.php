@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class SupplierProduct extends Model
+class SupplierVariant extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -20,8 +20,13 @@ class SupplierProduct extends Model
         'supplier_product_url',
         'cost_price',
         'shipping_cost',
-        'available_stock',
+        'supplier_sale_price',
+        'stock',
+        'reserved_stock',
+        'minimum_stock',
+        'extra_data',
         'estimated_dispatch_days',
+        'last_sync_at',
         'is_default',
         'is_active',
         'internal_notes',
@@ -30,8 +35,13 @@ class SupplierProduct extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
-        'available_stock' => 'integer',
+        'supplier_sale_price' => 'decimal:2',
+        'stock' => 'integer',
+        'reserved_stock' => 'integer',
+        'minimum_stock' => 'integer',
+        'extra_data' => 'array',
         'estimated_dispatch_days' => 'integer',
+        'last_sync_at' => 'datetime',
         'is_default' => 'boolean',
         'is_active' => 'boolean',
     ];
@@ -47,9 +57,9 @@ class SupplierProduct extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    public function variant(): BelongsTo
+    public function productVariant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->belongsTo(ProductVariant::class);
     }
 
     /*

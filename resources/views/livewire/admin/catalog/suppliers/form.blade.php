@@ -1,186 +1,220 @@
-<x-modal wire:model="show" :title="$form->id ? 'Editar Producto' : 'Nuevo Producto'" size="modal-xl">
+<div class="modal fade @if ($show) show d-block @endif" tabindex="-1"
+    @if ($show) style="background: rgba(0,0,0,.5);" @endif>
+    <div class="modal-dialog modal-xl">
 
-    <form wire:submit="save">
+        <div class="modal-content">
 
-        {{-- Información General --}}
-        <h6 class="fw-bold border-bottom pb-2 mb-3">
-            Información General
-        </h6>
+            <div class="modal-header">
 
-        <div class="row">
+                <h5 class="modal-title">
+                    {{ $form->id ? 'Editar Proveedor' : 'Nuevo Proveedor' }}
+                </h5>
 
-            <div class="col-md-8">
-
-                <x-input label="Nombre del Producto" wire:model.live="form.name" wire:blur="form.generateSlug"
-                    placeholder="Ingrese el nombre del producto" />
+                <button type="button" class="btn-close" wire:click="$set('show', false)"></button>
 
             </div>
 
-            <div class="col-md-4">
+            <form wire:submit="save">
 
-                <x-input label="Slug" wire:model.live="form.slug" placeholder="slug-del-producto" />
+                <div class="modal-body">
 
-            </div>
+                    {{-- Información General --}}
+                    <h6 class="fw-bold border-bottom pb-2 mb-3">
+                        Información General
+                    </h6>
 
-            <div class="col-md-6">
+                    <div class="row">
 
-                <x-select label="Categoría" wire:model.live="form.category_id">
+                        <div class="col-md-3 mb-3">
 
-                    <option value="">
-                        Seleccione una categoría
-                    </option>
+                            <x-input label="Código" wire:model.live="form.code" placeholder="SUP000001" />
 
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}">
+                        </div>
 
-                            {{ $category->name }}
+                        <div class="col-md-5 mb-3">
 
-                        </option>
-                    @endforeach
+                            <x-input label="Razón Social" wire:model.live="form.business_name"
+                                placeholder="Ingrese la razón social" />
 
-                </x-select>
+                        </div>
 
-            </div>
+                        <div class="col-md-4 mb-3">
 
-            <div class="col-md-6">
+                            <x-input label="Nombre Comercial" wire:model.live="form.trade_name"
+                                placeholder="Ingrese el nombre comercial" />
 
-                <x-select label="Marca" wire:model.live="form.brand_id">
+                        </div>
 
-                    <option value="">
-                        Sin marca
-                    </option>
+                    </div>
 
-                    @foreach ($brands as $brand)
-                        <option value="{{ $brand->id }}">
 
-                            {{ $brand->name }}
+                    {{-- Información Fiscal y Contacto --}}
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
+                        Información Fiscal y Contacto
+                    </h6>
 
-                        </option>
-                    @endforeach
+                    <div class="row">
 
-                </x-select>
+                        <div class="col-md-4 mb-3">
 
-            </div>
+                            <x-input label="RUC" wire:model.live="form.tax_id" placeholder="20601234567" />
 
-        </div>
+                        </div>
 
-        {{-- Descripción --}}
-        <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
-            Descripción
-        </h6>
+                        <div class="col-md-4 mb-3">
 
-        <div class="row">
+                            <x-input label="Persona de Contacto" wire:model.live="form.contact_name"
+                                placeholder="Nombre del contacto" />
 
-            <div class="col-md-12">
+                        </div>
 
-                <x-textarea label="Descripción corta" rows="2" wire:model.live="form.short_description" />
+                        <div class="col-md-4 mb-3">
 
-            </div>
+                            <x-input label="Correo Electrónico" type="email" wire:model.live="form.email"
+                                placeholder="correo@proveedor.com" />
 
-            <div class="col-md-12">
+                        </div>
 
-                <x-textarea label="Descripción" rows="5" wire:model.live="form.description" />
+                    </div>
 
-            </div>
 
-        </div>
+                    <div class="row">
 
-        {{-- SEO --}}
-        <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
-            SEO
-        </h6>
+                        <div class="col-md-4 mb-3">
 
-        <div class="row">
+                            <x-input label="Teléfono" wire:model.live="form.phone" placeholder="999999999" />
 
-            <div class="col-md-12">
+                        </div>
 
-                <x-input label="Título SEO" wire:model.live="form.seo_title" />
+                        <div class="col-md-4 mb-3">
 
-            </div>
+                            <x-input label="WhatsApp" wire:model.live="form.whatsapp" placeholder="999999999" />
 
-            <div class="col-md-12">
+                        </div>
 
-                <x-textarea label="Descripción SEO" rows="3" wire:model.live="form.seo_description" />
+                        <div class="col-md-4 mb-3">
 
-            </div>
+                            <x-input label="Sitio Web" type="url" wire:model.live="form.website"
+                                placeholder="https://proveedor.com" />
 
-        </div>
+                        </div>
 
-        {{-- Configuración --}}
-        <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
-            Configuración
-        </h6>
+                    </div>
 
-        <div class="row">
 
-            <div class="col-md-4">
+                    {{-- Ubicación --}}
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
+                        Ubicación
+                    </h6>
 
-                <div class="form-check mt-4">
+                    <div class="row">
 
-                    <input class="form-check-input" type="checkbox" wire:model.live="form.status">
+                        <div class="col-md-4 mb-3">
 
-                    <label class="form-check-label">
+                            <x-input label="Departamento" wire:model.live="form.department" placeholder="Ancash" />
 
-                        Producto activo
+                        </div>
 
-                    </label>
+                        <div class="col-md-4 mb-3">
+
+                            <x-input label="Provincia" wire:model.live="form.province" placeholder="Santa" />
+
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+
+                            <x-input label="Distrito" wire:model.live="form.district" placeholder="Chimbote" />
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="row">
+
+                        <div class="col-md-12 mb-3">
+
+                            <x-input label="Dirección" wire:model.live="form.address"
+                                placeholder="Ingrese la dirección" />
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- Operación --}}
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
+                        Operación
+                    </h6>
+
+                    <div class="row">
+
+                        <div class="col-md-4 mb-3">
+
+                            <x-input label="Días Estimados de Despacho" type="number" min="0" max="255"
+                                wire:model.live="form.estimated_dispatch_days" />
+
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+
+                            <x-select label="Estado" wire:model.live="form.status">
+
+                                <option value="active">
+                                    Activo
+                                </option>
+
+                                <option value="inactive">
+                                    Inactivo
+                                </option>
+
+                            </x-select>
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- Observaciones --}}
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">
+                        Observaciones
+                    </h6>
+
+                    <div class="row">
+
+                        <div class="col-md-12 mb-3">
+
+                            <x-textarea label="Observaciones Internas" rows="4"
+                                wire:model.live="form.internal_notes"
+                                placeholder="Ingrese observaciones internas del proveedor..." />
+
+                        </div>
+
+                    </div>
 
                 </div>
 
-            </div>
 
-            <div class="col-md-4">
+                {{-- Footer --}}
+                <div class="modal-footer">
 
-                <div class="form-check mt-4">
+                    <button type="button" class="btn btn-secondary" wire:click="$set('show', false)">
+                        Cancelar
+                    </button>
 
-                    <input class="form-check-input" type="checkbox" wire:model.live="form.is_visible">
+                    <button type="submit" class="btn btn-primary">
 
-                    <label class="form-check-label">
+                        <i class="bi bi-check-lg me-1"></i>
 
-                        Visible en tienda
+                        {{ $form->id ? 'Actualizar' : 'Guardar' }}
 
-                    </label>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-4">
-
-                <div class="form-check mt-4">
-
-                    <input class="form-check-input" type="checkbox" wire:model.live="form.is_featured">
-
-                    <label class="form-check-label">
-
-                        Producto destacado
-
-                    </label>
+                    </button>
 
                 </div>
 
-            </div>
+            </form>
 
         </div>
 
-        <div class="d-flex justify-content-end mt-4">
-
-            <button type="button" class="btn btn-secondary me-2" wire:click="$set('show', false)">
-
-                Cancelar
-
-            </button>
-
-            <button type="submit" class="btn btn-primary">
-
-                <i class="bi bi-check-lg me-1"></i>
-
-                {{ $form->id ? 'Actualizar' : 'Guardar' }}
-
-            </button>
-
-        </div>
-
-    </form>
-
-</x-modal>
+    </div>
+</div>

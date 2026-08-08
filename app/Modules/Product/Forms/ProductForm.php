@@ -39,11 +39,21 @@ class ProductForm extends Form
     public function rules(): array
     {
         return [
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'exists:categories,id',
+            ],
 
-            'brand_id' => ['nullable', 'exists:brands,id'],
+            'brand_id' => [
+                'nullable',
+                'exists:brands,id',
+            ],
 
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
             'slug' => [
                 'required',
@@ -63,11 +73,17 @@ class ProductForm extends Form
                 'string',
             ],
 
-            'status' => ['boolean'],
+            'status' => [
+                'boolean',
+            ],
 
-            'is_featured' => ['boolean'],
+            'is_featured' => [
+                'boolean',
+            ],
 
-            'is_visible' => ['boolean'],
+            'is_visible' => [
+                'boolean',
+            ],
 
             'seo_title' => [
                 'nullable',
@@ -88,17 +104,32 @@ class ProductForm extends Form
     public function messages(): array
     {
         return [
-            'category_id.required' => 'Debe seleccionar una categoría.',
+            'category_id.required' =>
+            'Debe seleccionar una categoría.',
 
-            'category_id.exists' => 'La categoría seleccionada no es válida.',
+            'category_id.exists' =>
+            'La categoría seleccionada no es válida.',
 
-            'brand_id.exists' => 'La marca seleccionada no es válida.',
+            'brand_id.exists' =>
+            'La marca seleccionada no es válida.',
 
-            'name.required' => 'El nombre del producto es obligatorio.',
+            'name.required' =>
+            'El nombre del producto es obligatorio.',
 
-            'slug.required' => 'El slug es obligatorio.',
+            'name.max' =>
+            'El nombre del producto no puede superar los 255 caracteres.',
 
-            'slug.unique' => 'El slug ya existe.',
+            'slug.required' =>
+            'El slug es obligatorio.',
+
+            'slug.unique' =>
+            'El slug ya existe.',
+
+            'slug.max' =>
+            'El slug no puede superar los 255 caracteres.',
+
+            'short_description.max' =>
+            'La descripción corta no puede superar los 500 caracteres.',
         ];
     }
 
@@ -114,6 +145,9 @@ class ProductForm extends Form
             'slug' => 'slug',
             'short_description' => 'descripción corta',
             'description' => 'descripción',
+            'status' => 'estado',
+            'is_featured' => 'producto destacado',
+            'is_visible' => 'visible en tienda',
             'seo_title' => 'título SEO',
             'seo_description' => 'descripción SEO',
         ];
@@ -125,16 +159,27 @@ class ProductForm extends Form
     public function fromModel(Product $product): void
     {
         $this->id = $product->id;
+
         $this->category_id = $product->category_id;
+
         $this->brand_id = $product->brand_id;
+
         $this->name = $product->name;
+
         $this->slug = $product->slug;
+
         $this->short_description = $product->short_description;
+
         $this->description = $product->description;
-        $this->status = $product->status;
-        $this->is_featured = $product->is_featured;
-        $this->is_visible = $product->is_visible;
+
+        $this->status = (bool) $product->status;
+
+        $this->is_featured = (bool) $product->is_featured;
+
+        $this->is_visible = (bool) $product->is_visible;
+
         $this->seo_title = $product->seo_title;
+
         $this->seo_description = $product->seo_description;
     }
 
@@ -174,8 +219,28 @@ class ProductForm extends Form
     {
         $this->reset();
 
+        $this->id = null;
+
+        $this->category_id = null;
+
+        $this->brand_id = null;
+
+        $this->name = '';
+
+        $this->slug = '';
+
+        $this->short_description = null;
+
+        $this->description = null;
+
+        $this->seo_title = null;
+
+        $this->seo_description = null;
+
         $this->status = true;
+
         $this->is_featured = false;
+
         $this->is_visible = true;
     }
 }

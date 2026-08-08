@@ -88,6 +88,9 @@ return new class extends Migration
                 ->default(true)
                 ->comment('Estado de la imagen.');
 
+            $table->string('alt')
+                ->nullable()
+                ->comment('Texto alternativo para SEO.');
             /*
             |--------------------------------------------------------------------------
             | Auditoría
