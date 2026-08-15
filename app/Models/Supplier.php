@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Location;
 
 class Supplier extends Model
 {
@@ -27,13 +28,11 @@ class Supplier extends Model
         'phone',
         'whatsapp',
         'website',
-        'department',
-        'province',
-        'district',
         'address',
         'estimated_dispatch_days',
         'status',
         'internal_notes',
+        'location_id',
         'created_by',
         'updated_by',
     ];
@@ -88,5 +87,16 @@ class Supplier extends Model
     public function supplierVariants(): HasMany
     {
         return $this->hasMany(SupplierVariant::class);
+    }
+
+    /**
+     * Ubicación del proveedor.
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(
+            Location::class,
+            'location_id'
+        );
     }
 }

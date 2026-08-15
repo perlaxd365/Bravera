@@ -8,6 +8,8 @@ use App\Livewire\Admin\Catalog\Attributes\Index as AttributeIndex;
 use App\Livewire\Admin\Catalog\AttributeValues\Index as AttributeValueIndex;
 use App\Livewire\Admin\Catalog\Suppliers\Index as SupplierIndex;
 use App\Livewire\Admin\Catalog\Products\Index as ProductIndex;
+use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
+use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
 
 Route::middleware('auth')->group(function () {
 
@@ -39,5 +41,20 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/products', ProductIndex::class)
             ->name('products.index');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Envíos
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('shipping')->name('shipping.')->group(function () {
+
+        Route::get('/zones', ShippingZoneIndex::class)
+            ->name('zones.index');
+
+        Route::get('/rates', ShippingRateIndex::class)
+            ->name('rates.index');
     });
 });

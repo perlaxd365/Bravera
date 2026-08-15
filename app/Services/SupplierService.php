@@ -43,9 +43,7 @@ class SupplierService
                 phone: $dto->phone,
                 whatsapp: $dto->whatsapp,
                 website: $dto->website,
-                department: $dto->department,
-                province: $dto->province,
-                district: $dto->district,
+                location_id: $dto->location_id,
                 address: $dto->address,
                 estimated_dispatch_days: $dto->estimated_dispatch_days,
                 status: $dto->status,
@@ -63,7 +61,6 @@ class SupplierService
         Supplier $supplier,
         SupplierDTO $dto
     ): Supplier {
-
         if (
             $dto->tax_id &&
             Supplier::where('tax_id', $dto->tax_id)
@@ -87,9 +84,7 @@ class SupplierService
                 phone: $dto->phone,
                 whatsapp: $dto->whatsapp,
                 website: $dto->website,
-                department: $dto->department,
-                province: $dto->province,
-                district: $dto->district,
+                location_id: $dto->location_id,
                 address: $dto->address,
                 estimated_dispatch_days: $dto->estimated_dispatch_days,
                 status: $dto->status,

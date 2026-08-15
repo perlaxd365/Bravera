@@ -90,6 +90,34 @@
         </nav>
 
     </div>
+    {{-- Envíos --}}
+    <div class="nav-section">
+
+        <p class="nav-section-label">Envíos</p>
+
+        <nav class="admin-nav">
+
+            <a href="{{ route('admin.shipping.zones.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.shipping.zones.*') ? 'is-active' : '' }}">
+
+                <i class="bi bi-geo-alt"></i>
+
+                <span>Zonas de envío</span>
+
+            </a>
+
+            <a href="{{ route('admin.shipping.rates.index') }}"
+                class="admin-nav-link {{ request()->routeIs('admin.shipping.rates.*') ? 'is-active' : '' }}">
+
+                <i class="bi bi-cash-coin"></i>
+
+                <span>Tarifas de envío</span>
+
+            </a>
+
+        </nav>
+
+    </div>
 
     {{-- Ventas --}}
     <div class="nav-section">

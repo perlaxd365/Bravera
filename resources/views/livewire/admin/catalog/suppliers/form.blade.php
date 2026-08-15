@@ -109,21 +109,52 @@
 
                     <div class="row">
 
+                        {{-- Departamento --}}
                         <div class="col-md-4 mb-3">
 
-                            <x-input label="Departamento" wire:model.live="form.department" placeholder="Ancash" />
+                            <x-select label="Departamento" wire:model.live="departmentId">
+                                <option value="">Seleccione un departamento</option>
+
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}">
+                                        {{ $department->name }}
+                                    </option>
+                                @endforeach
+                            </x-select>
 
                         </div>
 
+                        {{-- Provincia --}}
                         <div class="col-md-4 mb-3">
 
-                            <x-input label="Provincia" wire:model.live="form.province" placeholder="Santa" />
+                            <x-select label="Provincia" wire:model.live="provinceId" :disabled="!$departmentId">
+                                <option value="">
+                                    {{ $departmentId ? 'Seleccione una provincia' : 'Seleccione primero un departamento' }}
+                                </option>
+
+                                @foreach ($provinces as $province)
+                                    <option value="{{ $province->id }}">
+                                        {{ $province->name }}
+                                    </option>
+                                @endforeach
+                            </x-select>
 
                         </div>
 
+                        {{-- Distrito --}}
                         <div class="col-md-4 mb-3">
 
-                            <x-input label="Distrito" wire:model.live="form.district" placeholder="Chimbote" />
+                            <x-select label="Distrito" wire:model.live="districtId" :disabled="!$provinceId">
+                                <option value="">
+                                    {{ $provinceId ? 'Seleccione un distrito' : 'Seleccione primero una provincia' }}
+                                </option>
+
+                                @foreach ($districts as $district)
+                                    <option value="{{ $district->id }}">
+                                        {{ $district->name }}
+                                    </option>
+                                @endforeach
+                            </x-select>
 
                         </div>
 

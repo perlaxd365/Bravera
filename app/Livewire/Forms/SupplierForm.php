@@ -11,6 +11,9 @@ class SupplierForm extends Form
 {
     public ?int $id = null;
 
+    #[Validate('required|integer|exists:locations,id')]
+    public ?int $location_id = null;
+
     #[Validate('required|string|max:200')]
     public string $business_name = '';
 
@@ -34,15 +37,6 @@ class SupplierForm extends Form
 
     #[Validate('nullable|url|max:255')]
     public ?string $website = null;
-
-    #[Validate('nullable|string|max:100')]
-    public ?string $department = null;
-
-    #[Validate('nullable|string|max:100')]
-    public ?string $province = null;
-
-    #[Validate('nullable|string|max:100')]
-    public ?string $district = null;
 
     #[Validate('nullable|string|max:255')]
     public ?string $address = null;
@@ -80,11 +74,9 @@ class SupplierForm extends Form
         $this->contact_name = $supplier->contact_name;
         $this->email = $supplier->email;
         $this->phone = $supplier->phone;
+        $this->location_id = $supplier->location_id;
         $this->whatsapp = $supplier->whatsapp;
         $this->website = $supplier->website;
-        $this->department = $supplier->department;
-        $this->province = $supplier->province;
-        $this->district = $supplier->district;
         $this->address = $supplier->address;
         $this->estimated_dispatch_days = $supplier->estimated_dispatch_days;
         $this->status = $supplier->status;
@@ -105,10 +97,8 @@ class SupplierForm extends Form
             email: $this->email,
             phone: $this->phone,
             whatsapp: $this->whatsapp,
+            location_id: $this->location_id,
             website: $this->website,
-            department: $this->department,
-            province: $this->province,
-            district: $this->district,
             address: $this->address,
             estimated_dispatch_days: $this->estimated_dispatch_days,
             status: $this->status,
