@@ -1,157 +1,91 @@
-<div class="container-fluid py-4">
-
-    <div class="card shadow-sm border-0">
-
-        <div class="card-header bg-white">
-
-            <div class="d-flex justify-content-between align-items-center">
-
-                <div>
-                    <h3 class="mb-1">Categorías</h3>
-                    <small class="text-muted">
-                        Administra las categorías de los productos.
-                    </small>
-                </div>
-
-                <livewire:admin.catalog.categories.form />
-
-                <button class="btn btn-primary" wire:click="$dispatch('category-create')">
-
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Nueva categoría
-                </button>
-
-
+<div class="mx-auto max-w-7xl">
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <header class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-5">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-gray-900">Categorías</h1>
+                <p class="mt-0.5 text-sm text-gray-500">Administra las categorías de los productos.</p>
             </div>
 
+            <livewire:admin.catalog.categories.form />
+
+            <button wire:click="$dispatch('category-create')"
+                class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
+                <flux:icon name="plus" class="size-4" /> Nueva categoría
+            </button>
+        </header>
+
+        <div class="border-b border-gray-100 p-6">
+            <div class="relative max-w-sm">
+                <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                <input type="text" placeholder="Buscar categoría..." wire:model.live.debounce.300ms="search"
+                    class="w-full rounded-full border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+            </div>
         </div>
 
-        <div class="card-body">
-
-            <div class="row mb-4">
-
-                <div class="col-md-4">
-
-                    <div class="input-group">
-
-                        <span class="input-group-text">
-                            <i class="bi bi-search"></i>
-                        </span>
-
-                        <input type="text" class="form-control" placeholder="Buscar categoría..."
-                            wire:model.live.debounce.300ms="search">
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle">
-
-                    <thead class="table-light">
-
-                        <tr>
-
-                            <th width="70">#</th>
-
-                            <th>Nombre</th>
-
-                            <th>Slug</th>
-
-                            <th>Categoría Padre</th>
-
-                            <th width="100">Estado</th>
-
-                            <th width="150" class="text-center">
-                                Acciones
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        @forelse($categories as $category)
-                            <tr>
-
-                                <td>{{ $category->id }}</td>
-
-                                <td>
-                                    <strong>{{ $category->name }}</strong>
-                                </td>
-
-                                <td>
-                                    <code>{{ $category->slug }}</code>
-                                </td>
-
-                                <td>
-                                    {{ optional($category->parent)->name ?? '-' }}
-                                </td>
-
-                                <td>
-
-                                    @if ($category->is_visible)
-                                        <span class="badge bg-success">
-                                            Activo
-                                        </span>
-                                    @else
-                                        <span class="badge bg-secondary">
-                                            Inactivo
-                                        </span>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <th class="px-6 py-3">#</th>
+                        <th class="px-6 py-3">Nombre</th>
+                        <th class="px-6 py-3">Slug</th>
+                        <th class="px-6 py-3">Categoría Padre</th>
+                        <th class="px-6 py-3">Estado</th>
+                        <th class="px-6 py-3 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($categories as $category)
+                        <tr class="transition hover:bg-gray-50">
+                            <td class="px-6 py-4 text-gray-500">{{ $category->id }}</td>
+                            <td class="px-6 py-4 font-semibold text-gray-900">
+                                <div class="flex items-center gap-3">
+                                    @if ($category->image)
+                                        <img src="{{ $category->image }}" alt="{{ $category->name }}" class="size-10 rounded-lg object-cover">
                                     @endif
-
-                                </td>
-
-                                <td class="text-center">
-
-                                    <button class="btn btn-sm btn-outline-primary"
-                                        wire:click="$dispatch('category-edit',{id:{{ $category->id }}})">
-
-                                        <i class="bi bi-pencil"></i>
+                                    {{ $category->name }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4"><code class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">{{ $category->slug }}</code></td>
+                            <td class="px-6 py-4 text-gray-600">{{ optional($category->parent)->name ?? '-' }}</td>
+                            <td class="px-6 py-4">
+                                @if ($category->is_visible)
+                                    <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                @else
+                                    <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="inline-flex gap-2">
+                                    <button wire:click="$dispatch('category-edit',{id:{{ $category->id }}})"
+                                        class="rounded-full border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-50"
+                                        aria-label="Editar">
+                                        <flux:icon name="pencil" class="size-4" />
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                        wire:click="delete({{ $category->id }})"
-                                        wire:confirm="¿Está seguro de eliminar esta categoría?">
-
-                                        <i class="bi bi-trash"></i>
+                                    <button wire:click="delete({{ $category->id }})"
+                                        wire:confirm="¿Está seguro de eliminar esta categoría?"
+                                        class="rounded-full border border-red-300 p-2 text-red-600 transition hover:bg-red-50"
+                                        aria-label="Eliminar">
+                                        <flux:icon name="trash" class="size-4" />
                                     </button>
-
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td colspan="6" class="text-center py-5 text-muted">
-
-                                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-
-                                    No existen categorías registradas.
-
-                                </td>
-
-                            </tr>
-                        @endforelse
-
-                    </tbody>
-
-
-                </table>
-                @if ($categories->hasPages())
-                    <div class="mt-3">
-                        {{ $categories->links() }}
-                    </div>
-                @endif
-
-            </div>
-
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-14 text-center">
+                                <x-bravera.empty-state icon="cube" title="No existen categorías registradas" description="Crea la primera categoría para comenzar." />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
 
+        @if ($categories->hasPages())
+            <div class="border-t border-gray-100 p-4">
+                {{ $categories->links() }}
+            </div>
+        @endif
     </div>
-
 </div>

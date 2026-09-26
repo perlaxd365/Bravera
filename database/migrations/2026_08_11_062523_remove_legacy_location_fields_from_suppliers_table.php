@@ -12,6 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('suppliers', function (Blueprint $table) {
+            $table->dropIndex('suppliers_department_province_district_index');
+
             $table->dropColumn([
                 'department',
                 'province',
@@ -29,6 +31,7 @@ return new class extends Migration
             $table->string('department', 100)->nullable();
             $table->string('province', 100)->nullable();
             $table->string('district', 100)->nullable();
+            $table->index(['department', 'province', 'district']);
         });
     }
 };

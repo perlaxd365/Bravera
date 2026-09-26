@@ -3,17 +3,17 @@
 namespace App\Livewire\Admin\Catalog\Attributes;
 
 use App\Models\Attribute;
-use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('admin.layouts.app')]
 class Index extends Component
 {
     use WithPagination;
 
-    protected string $paginationTheme = 'bootstrap';
+    protected string $paginationTheme = 'tailwind';
 
     public string $search = '';
 

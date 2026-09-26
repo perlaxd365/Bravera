@@ -77,4 +77,19 @@ class SupplierVariant extends Model
     {
         return $query->where('is_default', true);
     }
+
+    /**
+     * Stock realmente disponible para vender.
+     */
+    public function availableStock(): int
+    {
+        return max(0, (int) $this->stock - (int) $this->reserved_stock);
+    }
+
+    public function scopeAvailable(Builder $query): Builder
+    {
+        return $query
+            ->active()
+            ->whereColumn('stock', '>', 'reserved_stock');
+    }
 }

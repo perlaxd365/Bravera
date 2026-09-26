@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,18 @@ Route::middleware('guest')->group(function () {
 
     Volt::route('reset-password/{token}', 'pages.auth.reset-password')
         ->name('password.reset');
+
+    /*
+    |--------------------------------------------------------------------------
+    | OAuth con Google
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('auth/google', [GoogleController::class, 'redirect'])
+        ->name('auth.google');
+
+    Route::get('auth/google/callback', [GoogleController::class, 'callback'])
+        ->name('auth.google.callback');
 });
 
 /*
@@ -33,6 +46,10 @@ Route::middleware('guest')->group(function () {
 */
 
 Route::middleware('auth')->group(function () {
+
+    // Paso previo: el usuario que entró con Google aún no tiene contraseña.
+    Volt::route('auth/completar-contrasena', 'pages.auth.set-password')
+        ->name('set-password');
 
     Volt::route('verify-email', 'pages.auth.verify-email')
         ->name('verification.notice');

@@ -1,7 +1,8 @@
 <?php
 
+use App\Events\CustomerRegistered;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use App\Services\EmailVerificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -14,75 +15,117 @@ new #[Layout('layouts.guest')] class extends Component
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
+    public bool $terms = false;
 
     /**
      * Handle an incoming registration request.
      */
-    public function register(): void
+    public function register(EmailVerificationService $verification): void
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'string', 'min:8', 'confirmed', Rules\Password::defaults()],
+            'terms' => ['accepted'],
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
 
-        event(new Registered($user = User::create($validated)));
+        $user->assignCustomerRole();
+
+        // Evento propio: evita la verificación por enlace síncrona del framework,
+        // que rompía el registro cuando el SMTP fallaba. Aquí el correo de
+        // bienvenida y el de verificación viajan por la cola de forma segura.
+        event(new CustomerRegistered($user));
+
+        $verification->sendCode($user);
 
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirectRoute('verification.notice', navigate: true);
     }
 }; ?>
 
 <div>
-    <form wire:submit="register">
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input wire:model="name" id="name" class="block mt-1 w-full" type="text" name="name" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+    <x-bravera.auth-card
+        title="Crea tu cuenta"
+        subtitle="Únete a Bravera y compra con los mejores precios del mercado."
+    >
+        <x-bravera.google-button label="Regístrate con Google" />
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+        <x-bravera.auth-divider />
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <form wire:submit="register" class="space-y-5" novalidate>
+            <x-bravera.floating-input
+                wire:model="name"
+                id="name"
+                label="Nombre completo"
+                type="text"
+                icon="user"
+                autocomplete="name"
+                required
+            />
 
-            <x-text-input wire:model="password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+            <x-bravera.floating-input
+                wire:model="email"
+                id="email"
+                label="Correo electrónico"
+                type="email"
+                icon="mail"
+                autocomplete="username"
+                required
+            />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+            <x-bravera.password-input
+                wire:model="password"
+                id="password"
+                label="Contraseña"
+                strength
+                autocomplete="new-password"
+                required
+            />
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+            <x-bravera.password-input
+                wire:model="password_confirmation"
+                id="password_confirmation"
+                label="Confirmar contraseña"
+                autocomplete="new-password"
+                required
+            />
 
-            <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
+            <label for="terms" class="flex cursor-pointer items-start gap-2.5 text-sm text-gray-600">
+                <input
+                    wire:model="terms"
+                    id="terms"
+                    type="checkbox"
+                    class="mt-0.5 size-4 rounded border-gray-300 text-gray-900 shadow-sm focus:ring-gray-900/20"
+                    required
+                >
+                <span>
+                    Acepto los
+                    <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Términos y condiciones</a>
+                    y la
+                    <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Política de privacidad</a>
+                    de Bravera.
+                </span>
+            </label>
 
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
+            <x-bravera.button class="w-full">
+                Crear cuenta
+            </x-bravera.button>
+        </form>
 
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}" wire:navigate>
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
-    </form>
+        <x-slot:footer>
+            <p class="text-center text-sm text-gray-500">
+                ¿Ya tienes cuenta?
+                <a href="{{ route('login') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
+                    Inicia sesión
+                </a>
+            </p>
+        </x-slot:footer>
+    </x-bravera.auth-card>
 </div>

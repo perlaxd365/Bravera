@@ -34,29 +34,31 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('This is a secure area of the application. Please confirm your password before continuing.') }}
-    </div>
+    <x-bravera.auth-card
+        title="Confirma tu contraseña"
+        subtitle="Esta es un área segura. Ingresa tu contraseña para continuar."
+        icon="shield-check"
+    >
+        <form wire:submit="confirmPassword" class="space-y-5" novalidate>
+            <x-bravera.password-input
+                wire:model="password"
+                id="password"
+                label="Contraseña"
+                autocomplete="current-password"
+                required
+            />
 
-    <form wire:submit="confirmPassword">
-        <!-- Password -->
-        <div>
-            <x-input-label for="password" :value="__('Password')" />
+            <x-bravera.button class="w-full">
+                Confirmar contraseña
+            </x-bravera.button>
+        </form>
 
-            <x-text-input wire:model="password"
-                          id="password"
-                          class="block mt-1 w-full"
-                          type="password"
-                          name="password"
-                          required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <div class="flex justify-end mt-4">
-            <x-primary-button>
-                {{ __('Confirm') }}
-            </x-primary-button>
-        </div>
-    </form>
+        <x-slot:footer>
+            <p class="text-center text-sm text-gray-500">
+                <a href="{{ route('home') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
+                    Ir a la tienda
+                </a>
+            </p>
+        </x-slot:footer>
+    </x-bravera.auth-card>
 </div>

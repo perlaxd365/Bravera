@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Brand;
-use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +12,7 @@ class Product extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
     protected $fillable = [
         'category_id',
         'brand_id',
@@ -54,6 +53,7 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariant::class);
     }
+
     public function scopeActive($query)
     {
         return $query->where('status', true);
@@ -67,5 +67,72 @@ class Product extends Model
     public function scopeFeatured($query)
     {
         return $query->where('is_featured', true);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Helpers para tienda
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Variantes activas que tienen al menos un proveedor con stock.
+     */
+    public function availableVariants()
+    {
+        return $this->variants()
+            ->where('is_active', true)
+            ->whereHas('supplierVariants', function ($query) {
+                $query->active()->whereColumn('stock', '>', 'reserved_stock');
+            });
+    }
+
+    public function minPrice(): ?float
+    {
+        return $this->availableVariants()->get()->min('sale_price');
+    }
+
+    public function maxPrice(): ?float
+    {
+        return $this->availableVariants()->get()->max('sale_price');
+    }
+
+    public function priceRange(): string
+    {
+        $min = $this->minPrice();
+        $max = $this->maxPrice();
+
+        if ($min === null) {
+            return 'Consultar';
+        }
+
+        if ($min === $max) {
+            return 'S/ '.number_format((float) $min, 2);
+        }
+
+        return 'S/ '.number_format((float) $min, 2).' - '.number_format((float) $max, 2);
+    }
+
+    public function hasStock(): bool
+    {
+        return $this->availableVariants()->exists();
+    }
+
+    public function coverImage(): ?string
+    {
+        $variant = $this->variants
+            ->sortByDesc('is_default')
+            ->first(function ($variant) {
+                return ! $variant->images->isEmpty();
+            });
+
+        if (! $variant) {
+            return null;
+        }
+
+        $image = $variant->images->firstWhere('is_primary', true)
+            ?? $variant->images->first();
+
+        return $image->secure_url ?? $image->url;
     }
 }

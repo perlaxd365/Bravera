@@ -4,16 +4,17 @@ namespace App\Livewire\Admin\Catalog\Categories;
 
 use App\Models\Category;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\On;
 
 #[Layout('admin.layouts.app')]
 class Index extends Component
 {
     use WithPagination;
 
-    protected $paginationTheme = 'bootstrap';
+    protected $paginationTheme = 'tailwind';
+
     public string $search = '';
 
     public function updatingSearch()
@@ -46,7 +47,7 @@ class Index extends Component
 
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'No puedes eliminar una categoría con subcategorías.'
+                'message' => 'No puedes eliminar una categoría con subcategorías.',
             ]);
 
             return;
@@ -56,7 +57,7 @@ class Index extends Component
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => 'Categoría eliminada correctamente.'
+            'message' => 'Categoría eliminada correctamente.',
         ]);
     }
 }

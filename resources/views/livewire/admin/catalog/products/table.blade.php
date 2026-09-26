@@ -1,131 +1,61 @@
-<div class="table-responsive">
-
-    <table class="table table-bordered table-hover align-middle">
-
-        <thead>
-
-            <tr>
-
-                <th width="70">ID</th>
-
-                <th>Producto</th>
-
-                <th>Categoría</th>
-
-                <th>Marca</th>
-
-                <th class="text-center">Estado</th>
-
-                <th width="120" class="text-center">
-                    Acciones
-                </th>
-
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th class="px-6 py-3">ID</th>
+                <th class="px-6 py-3">Producto</th>
+                <th class="px-6 py-3">Categoría</th>
+                <th class="px-6 py-3">Marca</th>
+                <th class="px-6 py-3 text-center">Estado</th>
+                <th class="px-6 py-3 text-center">Acciones</th>
             </tr>
-
         </thead>
-
-        <tbody>
-
+        <tbody class="divide-y divide-gray-100">
             @forelse($products as $product)
-                <tr wire:key="product-{{ $product->id }}">
-
-                    <td>
-
-                        {{ $product->id }}
-
+                <tr wire:key="product-{{ $product->id }}" class="transition hover:bg-gray-50">
+                    <td class="px-6 py-4 text-gray-500">{{ $product->id }}</td>
+                    <td class="px-6 py-4">
+                        <p class="font-semibold text-gray-900">{{ $product->name }}</p>
+                        <code class="mt-0.5 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">{{ $product->slug }}</code>
                     </td>
-
-                    <td>
-
-                        <strong>
-
-                            {{ $product->name }}
-
-                        </strong>
-
-                        <br>
-
-                        <small class="text-muted">
-
-                            {{ $product->slug }}
-
-                        </small>
-
-                    </td>
-
-                    <td>
-
-                        {{ $product->category?->name }}
-
-                    </td>
-
-                    <td>
-
-                        {{ $product->brand?->name ?? '-' }}
-
-                    </td>
-
-                    <td class="text-center">
-
+                    <td class="px-6 py-4 text-gray-600">{{ $product->category?->name }}</td>
+                    <td class="px-6 py-4 text-gray-600">{{ $product->brand?->name ?? '-' }}</td>
+                    <td class="px-6 py-4 text-center">
                         @if ($product->status)
-                            <span class="badge bg-success">
-
-                                Activo
-
-                            </span>
+                            <x-bravera.badge color="success">Activo</x-bravera.badge>
                         @else
-                            <span class="badge bg-danger">
-
-                                Inactivo
-
-                            </span>
+                            <x-bravera.badge color="danger">Inactivo</x-bravera.badge>
                         @endif
-
                     </td>
-
-                    <td class="text-center">
-
-                        <button type="button" class="btn btn-sm btn-outline-primary"
-                            wire:click="$dispatch('product-edit', { id: {{ $product->id }} })" title="Editar">
-
-                            <i class="bi bi-pencil-square"></i>
-
-                        </button>
-
-                        <button type="button" class="btn btn-sm btn-outline-danger"
-                            wire:click="delete({{ $product->id }})"
-                            wire:confirm="¿Está seguro de eliminar este producto?" title="Eliminar">
-
-                            <i class="bi bi-trash"></i>
-
-                        </button>
-
-
+                    <td class="px-6 py-4 text-center">
+                        <div class="inline-flex gap-2">
+                            <button type="button" wire:click="$dispatch('product-edit', { id: {{ $product->id }} })"
+                                class="rounded-full border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-50"
+                                aria-label="Editar" title="Editar">
+                                <flux:icon name="pencil" class="size-4" />
+                            </button>
+                            <button type="button" wire:click="delete({{ $product->id }})"
+                                wire:confirm="¿Está seguro de eliminar este producto?"
+                                class="rounded-full border border-red-300 p-2 text-red-600 transition hover:bg-red-50"
+                                aria-label="Eliminar" title="Eliminar">
+                                <flux:icon name="trash" class="size-4" />
+                            </button>
+                        </div>
                     </td>
-
                 </tr>
-
             @empty
-
                 <tr>
-
-                    <td colspan="6" class="text-center text-muted py-5">
-
-                        No existen productos registrados.
-
+                    <td colspan="6" class="px-6 py-14 text-center">
+                        <x-bravera.empty-state icon="cube" title="No existen productos registrados" description="Crea el primer producto para comenzar." />
                     </td>
-
                 </tr>
             @endforelse
-
         </tbody>
-
     </table>
-
 </div>
 
-<div class="mt-3">
-
-    {{ $products->links() }}
-
-</div>
+@if ($products->hasPages())
+    <div class="border-t border-gray-100 p-4">
+        {{ $products->links() }}
+    </div>
+@endif

@@ -19,9 +19,10 @@ class ModuleServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadViewsFrom(
-            app_path('Modules/Product/Views'),
-            'product'
-        );
+        $views = app_path('Modules/Product/Views');
+
+        if (is_dir($views)) {
+            $this->loadViewsFrom($views, 'product');
+        }
     }
 }

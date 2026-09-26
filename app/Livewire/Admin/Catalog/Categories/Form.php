@@ -3,22 +3,47 @@
 namespace App\Livewire\Admin\Catalog\Categories;
 
 use App\Models\Category;
+use App\Services\CloudinaryImageService;
 use Illuminate\Support\Str;
-use Livewire\Component;
-use Livewire\Attributes\On;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Form extends Component
 {
+    use WithFileUploads;
+
     public ?Category $category = null;
 
     public bool $show = false;
 
     public string $name = '';
+
     public string $slug = '';
+
     public ?int $parent_id = null;
+
+    public ?string $image = null;
+
     public bool $is_visible = true;
+
     public int $position = 0;
+
+    /**
+     * Imagen seleccionada para subir a Cloudinary.
+     */
+    public $image_file = null;
+
+    /**
+     * Marca si el usuario quiere quitar la imagen actual.
+     */
+    public bool $remove_image = false;
+
+    /**
+     * URL de la imagen anterior quitada, para borrarla al guardar.
+     */
+    public ?string $removed_image = null;
 
     protected function rules()
     {
@@ -38,11 +63,39 @@ class Form extends Component
 
             'parent_id' => 'nullable|exists:categories,id',
 
+            'image' => 'nullable|string|max:255',
+
             'position' => 'required|integer|min:0',
 
             'is_visible' => 'boolean',
 
         ];
+    }
+
+    /**
+     * Al elegir una imagen la valida y muestra la vista previa.
+     */
+    public function updatedImageFile(): void
+    {
+        $this->validate([
+            'image_file' => ['nullable', 'image', 'max:5120'],
+        ]);
+    }
+
+    /**
+     * Quita la imagen actual (solo la marca; se elimina al guardar).
+     */
+    public function removeImage(): void
+    {
+        if ($this->image) {
+            $this->removed_image = $this->image;
+        }
+
+        $this->image = null;
+
+        $this->image_file = null;
+
+        $this->remove_image = true;
     }
 
     #[On('category-create')]
@@ -63,10 +116,17 @@ class Form extends Component
             'name' => $this->category->name,
             'slug' => $this->category->slug,
             'parent_id' => $this->category->parent_id,
+            'image' => $this->category->image,
             'position' => $this->category->position,
             'is_visible' => $this->category->is_visible,
 
         ]);
+
+        $this->image_file = null;
+
+        $this->remove_image = false;
+
+        $this->removed_image = null;
 
         $this->show = true;
     }
@@ -76,10 +136,34 @@ class Form extends Component
         $this->slug = Str::slug($this->name);
     }
 
-    public function save()
+    public function save(CloudinaryImageService $cloudinary)
     {
+        // Validar la imagen si se eligió un archivo nuevo.
+        if ($this->image_file) {
+            $this->validate([
+                'image_file' => ['required', 'image', 'max:5120'],
+            ]);
+        }
+
+        // Subir la imagen a Cloudinary si se eligió una nueva.
+        if ($this->image_file) {
+            $uploaded = $cloudinary->upload($this->image_file, CloudinaryImageService::FOLDER_CATEGORIES);
+
+            // Eliminar la imagen anterior en Cloudinary si existía.
+            if ($this->image) {
+                $cloudinary->delete($cloudinary->publicIdFromUrl($this->image));
+            }
+
+            $this->image = $uploaded['secure_url'];
+        }
+
+        // Eliminar en Cloudinary una imagen que fue quitada.
+        if ($this->remove_image && $this->removed_image) {
+            $cloudinary->delete($cloudinary->publicIdFromUrl($this->removed_image));
+        }
+
         // Si es una categoría nueva, buscar primero en eliminadas
-        if (!$this->category) {
+        if (! $this->category) {
 
             $deleted = Category::onlyTrashed()
                 ->where('slug', $this->slug)
@@ -93,13 +177,14 @@ class Form extends Component
                 $deleted->update([
                     'name' => $this->name,
                     'parent_id' => $this->parent_id,
+                    'image' => $this->image,
                     'position' => $this->position,
                     'is_visible' => $this->is_visible,
                 ]);
 
                 $this->dispatch('notify', [
                     'type' => 'success',
-                    'message' => 'La categoría fue restaurada correctamente.'
+                    'message' => 'La categoría fue restaurada correctamente.',
                 ]);
 
                 $this->dispatch('category-saved');
@@ -119,11 +204,12 @@ class Form extends Component
 
             // EDITAR
             $this->category->update([
-                'name'        => $this->name,
-                'slug'        => $this->slug,
-                'parent_id'   => $this->parent_id,
-                'position'    => $this->position,
-                'is_visible'  => $this->is_visible,
+                'name' => $this->name,
+                'slug' => $this->slug,
+                'parent_id' => $this->parent_id,
+                'image' => $this->image,
+                'position' => $this->position,
+                'is_visible' => $this->is_visible,
             ]);
 
             $category = $this->category;
@@ -131,20 +217,21 @@ class Form extends Component
 
             // CREAR
             $category = Category::create([
-                'name'        => $this->name,
-                'slug'        => $this->slug,
-                'parent_id'   => $this->parent_id,
-                'position'    => $this->position,
-                'is_visible'  => $this->is_visible,
+                'name' => $this->name,
+                'slug' => $this->slug,
+                'parent_id' => $this->parent_id,
+                'image' => $this->image,
+                'position' => $this->position,
+                'is_visible' => $this->is_visible,
 
                 // Valor temporal para evitar el error de MySQL
-                'path'        => '',
+                'path' => '',
             ]);
         }
 
         // Generar el path correcto
         $path = $category->parent_id
-            ? $category->parent->path . '/' . $category->slug
+            ? $category->parent->path.'/'.$category->slug
             : $category->slug;
 
         if ($category->path !== $path) {
@@ -156,7 +243,7 @@ class Form extends Component
             'type' => 'success',
             'message' => $this->category
                 ? 'Categoría actualizada correctamente.'
-                : 'Categoría creada correctamente.'
+                : 'Categoría creada correctamente.',
         ]);
 
         $this->dispatch('category-saved');
@@ -173,11 +260,17 @@ class Form extends Component
             'name',
             'slug',
             'parent_id',
-            'position'
+            'position',
+            'image',
+            'image_file',
+            'removed_image',
         ]);
 
         $this->is_visible = true;
+
+        $this->remove_image = false;
     }
+
     protected function messages()
     {
         return [

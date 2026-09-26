@@ -1,189 +1,102 @@
-<div class="card shadow-sm">
+<div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-5">
+        <div>
+            <h1 class="text-xl font-bold tracking-tight text-gray-900">Zonas de envío</h1>
+            <p class="mt-0.5 text-sm text-gray-500">Administra las zonas de envío.</p>
+        </div>
 
-    <div class="card-header d-flex justify-content-between align-items-center">
-
-        <h5 class="mb-0">
-            <i class="bi bi-truck me-2"></i>
-            Zonas de envío
-        </h5>
-
-        <button class="btn btn-primary" wire:click="$dispatch('shipping-zone-create')">
-
-            <i class="bi bi-plus-lg"></i>
-
-            Nueva zona
-
+        <button wire:click="$dispatch('shipping-zone-create')"
+            class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
+            <flux:icon name="plus" class="size-4" /> Nueva zona
         </button>
+    </header>
 
+    <div class="border-b border-gray-100 p-6">
+        <div class="relative max-w-sm">
+            <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Buscar zona..." wire:model.live.debounce.300ms="search"
+                class="w-full rounded-full border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+        </div>
     </div>
 
-    <div class="card-body">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th class="px-6 py-3">ID</th>
+                    <th class="px-6 py-3">Nombre</th>
+                    <th class="px-6 py-3">Nivel</th>
+                    <th class="px-6 py-3">Ubicación</th>
+                    <th class="px-6 py-3">Estado</th>
+                    <th class="px-6 py-3 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @forelse($zones as $zone)
+                    <tr class="transition hover:bg-gray-50">
+                        <td class="px-6 py-4 text-gray-500">{{ $zone->id }}</td>
+                        <td class="px-6 py-4 font-semibold text-gray-900">{{ $zone->name }}</td>
+                        <td class="px-6 py-4">
+                            @switch($zone->type->value)
+                                @case('department')
+                                    <x-bravera.badge color="primary">Departamento</x-bravera.badge>
+                                @break
 
-        <div class="row mb-3">
+                                @case('province')
+                                    <x-bravera.badge color="info">Provincia</x-bravera.badge>
+                                @break
 
-            <div class="col-md-4">
+                                @case('district')
+                                    <x-bravera.badge color="neutral">Distrito</x-bravera.badge>
+                                @break
 
-                <x-input placeholder="Buscar zona..." wire:model.live.debounce.300ms="search" />
-
-            </div>
-
-        </div>
-
-        <div class="table-responsive">
-
-            <table class="table table-hover align-middle">
-
-                <thead class="table-light">
-
-                    <tr>
-
-                        <th width="80">
-                            ID
-                        </th>
-
-                        <th>
-                            Nombre
-                        </th>
-
-                        <th width="150">
-                            Nivel
-                        </th>
-
-                        <th>
-                            Ubicación
-                        </th>
-
-                        <th width="120">
-                            Estado
-                        </th>
-
-                        <th width="140" class="text-center">
-                            Acciones
-                        </th>
-
+                                @default
+                                    <x-bravera.badge color="dark">{{ $zone->type->value }}</x-bravera.badge>
+                            @endswitch
+                        </td>
+                        <td class="px-6 py-4 text-gray-600">{{ $zone->location?->name ?? '-' }}</td>
+                        <td class="px-6 py-4">
+                            @if ($zone->status)
+                                <x-bravera.badge color="success">Activo</x-bravera.badge>
+                            @else
+                                <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="inline-flex gap-2">
+                                <button wire:click="$dispatch('shipping-zone-edit', { id: {{ $zone->id }} })"
+                                    class="rounded-full border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-50"
+                                    aria-label="Editar">
+                                    <flux:icon name="pencil" class="size-4" />
+                                </button>
+                                <button wire:click="toggleStatus({{ $zone->id }})"
+                                    class="rounded-full border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-50"
+                                    aria-label="Cambiar estado">
+                                    <flux:icon name="power" class="size-4" />
+                                </button>
+                                <button wire:click="delete({{ $zone->id }})"
+                                    wire:confirm="¿Eliminar esta zona de envío?"
+                                    class="rounded-full border border-red-300 p-2 text-red-600 transition hover:bg-red-50"
+                                    aria-label="Eliminar">
+                                    <flux:icon name="trash" class="size-4" />
+                                </button>
+                            </div>
+                        </td>
                     </tr>
-
-                </thead>
-
-                <tbody>
-
-                    @forelse($zones as $zone)
-                        <tr>
-
-                            <td>
-
-                                <strong>
-                                    {{ $zone->id }}
-                                </strong>
-
-                            </td>
-
-                            <td>
-
-                                {{ $zone->name }}
-
-                            </td>
-
-                            <td>
-
-                                @switch($zone->type->value)
-                                    @case('department')
-                                        <span class="badge bg-primary">
-                                            Departamento
-                                        </span>
-                                    @break
-
-                                    @case('province')
-                                        <span class="badge bg-info">
-                                            Provincia
-                                        </span>
-                                    @break
-
-                                    @case('district')
-                                        <span class="badge bg-secondary">
-                                            Distrito
-                                        </span>
-                                    @break
-
-                                    @default
-                                        <span class="badge bg-dark">
-                                            {{ $zone->type->value }}
-                                        </span>
-                                @endswitch
-
-                            </td>
-
-                            <td>
-
-                                {{ $zone->location?->name ?? '-' }}
-
-                            </td>
-
-                            <td>
-
-                                @if ($zone->status)
-                                    <span class="badge bg-success">
-                                        Activo
-                                    </span>
-                                @else
-                                    <span class="badge bg-danger">
-                                        Inactivo
-                                    </span>
-                                @endif
-
-                            </td>
-
-                            <td class="text-center">
-
-                                <button class="btn btn-warning btn-sm"
-                                    wire:click="$dispatch('shipping-zone-edit', { id: {{ $zone->id }} })">
-
-                                    <i class="bi bi-pencil"></i>
-
-                                </button>
-
-                                <button class="btn btn-secondary btn-sm" wire:click="toggleStatus({{ $zone->id }})">
-
-                                    <i class="bi bi-power"></i>
-
-                                </button>
-
-                                <button class="btn btn-danger btn-sm" wire:click="delete({{ $zone->id }})"
-                                    wire:confirm="¿Eliminar esta zona de envío?">
-
-                                    <i class="bi bi-trash"></i>
-
-                                </button>
-
-                            </td>
-
-                        </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td colspan="6" class="text-center py-4">
-
-                                    No existen zonas de envío registradas.
-
-                                </td>
-
-                            </tr>
-                        @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <div class="mt-3">
-
-                {{ $zones->links() }}
-
-            </div>
-
-        </div>
-
+                @empty
+                    <tr>
+                        <td colspan="6" class="px-6 py-14 text-center">
+                            <x-bravera.empty-state icon="truck" title="No existen zonas de envío registradas" description="Crea la primera zona de envío para comenzar." />
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
+
+    @if ($zones->hasPages())
+        <div class="border-t border-gray-100 p-4">
+            {{ $zones->links() }}
+        </div>
+    @endif
+</div>

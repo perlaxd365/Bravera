@@ -4,15 +4,15 @@ namespace App\Livewire\Admin\Catalog\AttributeValues;
 
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\On;
 
 class Index extends Component
 {
     use WithPagination;
 
-    protected $paginationTheme = 'bootstrap';
+    protected $paginationTheme = 'tailwind';
 
     public string $search = '';
 
@@ -40,7 +40,7 @@ class Index extends Component
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => 'Valor eliminado correctamente.'
+            'message' => 'Valor eliminado correctamente.',
         ]);
     }
 

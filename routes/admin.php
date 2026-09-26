@@ -1,20 +1,63 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
-use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
-use App\Livewire\Admin\Catalog\Brands\Index as BrandIndex;
 use App\Livewire\Admin\Catalog\Attributes\Index as AttributeIndex;
 use App\Livewire\Admin\Catalog\AttributeValues\Index as AttributeValueIndex;
-use App\Livewire\Admin\Catalog\Suppliers\Index as SupplierIndex;
+use App\Livewire\Admin\Catalog\Brands\Index as BrandIndex;
+use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
 use App\Livewire\Admin\Catalog\Products\Index as ProductIndex;
-use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
+use App\Livewire\Admin\Catalog\Suppliers\Index as SupplierIndex;
+use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
+use App\Livewire\Admin\Discounts\Coupons\Index as CouponIndex;
+use App\Livewire\Admin\Dropshipping\Orders\Index as SupplierOrderIndex;
+use App\Livewire\Admin\Orders\Index as OrderIndex;
+use App\Livewire\Admin\Orders\Show as OrderShow;
 use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
+use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
 
     Route::get('/', DashboardIndex::class)
         ->name('dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ventas
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('orders')->name('orders.')->group(function () {
+
+        Route::get('/', OrderIndex::class)
+            ->name('index');
+
+        Route::get('/{order}', OrderShow::class)
+            ->name('show');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dropshipping
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('dropshipping')->name('dropshipping.')->group(function () {
+
+        Route::get('/orders', SupplierOrderIndex::class)
+            ->name('orders.index');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Descuentos
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('discounts')->name('discounts.')->group(function () {
+
+        Route::get('/coupons', CouponIndex::class)
+            ->name('coupons.index');
+    });
 
     /*
     |--------------------------------------------------------------------------

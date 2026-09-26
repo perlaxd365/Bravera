@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,52 +21,108 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-       $this->redirectIntended(default: route('admin.dashboard', absolute: false), navigate: true);
+        $user = Auth::user();
+
+        if ($user && ! $user->hasVerifiedEmail()) {
+            $this->redirectRoute('verification.notice', navigate: true);
+
+            return;
+        }
+
+        $this->redirectIntended(
+            default: $this->redirectAfterLogin(),
+            navigate: true,
+        );
+    }
+
+    /**
+     * Personal según el rol: administrativo va al panel, cliente a la tienda.
+     */
+    private function redirectAfterLogin(): string
+    {
+        $user = Auth::user();
+
+        if ($user && $user->hasAnyRole([
+            'Super Admin',
+            'Administrador',
+            'Operador',
+            'Marketing',
+            'Atención al Cliente',
+        ])) {
+            return route('admin.dashboard');
+        }
+
+        return route('home');
     }
 }; ?>
 
 <div>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <x-bravera.auth-card
+        title="¡Hola, bienvenido de nuevo!"
+        subtitle="Ingresa con tu cuenta para seguir comprando en Bravera."
+    >
+        <x-bravera.google-button />
 
-    <form wire:submit="login">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
-        </div>
+        <x-bravera.auth-divider />
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input wire:model="form.password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember" class="inline-flex items-center">
-                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
+        <form wire:submit="login" class="space-y-5" novalidate>
+            @if (session('status'))
+                <div class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <flux:icon name="check" class="mt-0.5 size-4 shrink-0" />
+                    <span>{{ session('status') }}</span>
+                </div>
             @endif
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
+            <x-bravera.floating-input
+                wire:model="form.email"
+                id="email"
+                label="Correo electrónico"
+                type="email"
+                icon="mail"
+                autocomplete="username"
+                required
+            />
+
+            <x-bravera.password-input
+                wire:model="form.password"
+                id="password"
+                label="Contraseña"
+                autocomplete="current-password"
+                required
+            />
+
+            <div class="flex items-center justify-between">
+                <label for="remember" class="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+                    <span class="relative inline-flex">
+                        <input
+                            wire:model="form.remember"
+                            id="remember"
+                            type="checkbox"
+                            class="size-4 rounded border-gray-300 text-gray-900 shadow-sm focus:ring-gray-900/20"
+                        >
+                    </span>
+                    Recuérdame
+                </label>
+
+                @if (Route::has('password.request'))
+                    <a href="{{ route('password.request') }}" wire:navigate class="text-sm font-semibold text-gray-900 underline-offset-4 transition hover:underline">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                @endif
+            </div>
+
+            <x-bravera.button class="w-full">
+                Iniciar sesión
+            </x-bravera.button>
+        </form>
+
+        <x-slot:footer>
+            <p class="text-center text-sm text-gray-500">
+                ¿Aún no tienes cuenta?
+                <a href="{{ route('register') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
+                    Crea una gratis
+                </a>
+            </p>
+        </x-slot:footer>
+    </x-bravera.auth-card>
 </div>

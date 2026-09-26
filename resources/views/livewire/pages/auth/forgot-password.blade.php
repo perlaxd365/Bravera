@@ -17,12 +17,7 @@ new #[Layout('layouts.guest')] class extends Component
             'email' => ['required', 'string', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $this->only('email')
-        );
+        $status = Password::sendResetLink($this->only('email'));
 
         if ($status != Password::RESET_LINK_SENT) {
             $this->addError('email', __($status));
@@ -32,30 +27,46 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->reset('email');
 
-        session()->flash('status', __($status));
+        session()->flash('status', __('password.sent'));
     }
 }; ?>
 
 <div>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
-    </div>
+    <x-bravera.auth-card
+        title="¿Olvidaste tu contraseña?"
+        subtitle="Sin problema. Escríbenos tu correo y te enviaremos un enlace para crear una nueva."
+        icon="lock"
+    >
+        @if (session('status'))
+            <div class="auth-rise flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" style="animation-delay: 60ms">
+                <flux:icon name="check" class="mt-0.5 size-4 shrink-0" />
+                <span>Si el correo está registrado, recibirás en unos minutos un enlace para restablecer tu contraseña.</span>
+            </div>
+        @endif
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+        <form wire:submit="sendPasswordResetLink" class="space-y-5" novalidate>
+            <x-bravera.floating-input
+                wire:model="email"
+                id="email"
+                label="Correo electrónico"
+                type="email"
+                icon="mail"
+                autocomplete="username"
+                required
+            />
 
-    <form wire:submit="sendPasswordResetLink">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+            <x-bravera.button class="w-full">
+                Enviar enlace de recuperación
+            </x-bravera.button>
+        </form>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
-    </form>
+        <x-slot:footer>
+            <p class="text-center text-sm text-gray-500">
+                ¿Recordaste tu contraseña?
+                <a href="{{ route('login') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
+                    Inicia sesión
+                </a>
+            </p>
+        </x-slot:footer>
+    </x-bravera.auth-card>
 </div>

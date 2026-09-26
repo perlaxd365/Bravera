@@ -1,3 +1,370 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+@import './variables.css';
+@import './pages/dashboard.css';
+
+@plugin "@tailwindcss/forms";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+    /* Bravera design tokens */
+    --color-primary: #111827;
+    --color-canvas: #f9fafb;
+    --color-surface: #ffffff;
+    --color-line: #e5e7eb;
+    --color-muted: #6b7280;
+    --color-success: #16a34a;
+    --color-warning: #f59e0b;
+    --color-danger: #dc2626;
+
+    --color-dark: #09090b;
+    --color-dark-surface: #18181b;
+    --color-dark-border: #27272a;
+}
+
+body {
+    font-synthesis-weight: none;
+}
+
+/* Hide Alpine-powered elements before hydration */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Focus rings consistent with the Bravera language */
+:focus-visible {
+    outline-color: var(--color-primary);
+}
+
+/* Elegant, slow Ken Burns drift for the product gallery */
+@keyframes bravera-kenburns {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.07) translate(0.8%, -0.8%);
+    }
+}
+
+.animate-kenburns {
+    animation: bravera-kenburns 24s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+/* Slow cinematic pan for hero banners */
+@keyframes bravera-hero-pan {
+    from {
+        transform: scale(1.03) translateX(0);
+    }
+    to {
+        transform: scale(1.12) translateX(-1.6%);
+    }
+}
+
+.animate-hero-pan {
+    animation: bravera-hero-pan 16s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+/* Scroll-reveal entrance (only when JS is present) */
+.js .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.js .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* Cart badge pop when its Livewire key changes */
+@keyframes bravera-badge-pop {
+    0% {
+        transform: scale(0.5);
+    }
+    60% {
+        transform: scale(1.25);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.animate-badge-pop {
+    animation: bravera-badge-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: top right;
+}
+
+/* ============================================================
+   Auth UI — entradas elegantes con estilo Ripley / Falabella
+   ============================================================ */
+
+/* Entrada suave de los bloques del formulario */
+@keyframes bravera-auth-rise {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.auth-rise {
+    animation: bravera-auth-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Sacudida corta para errores de validación */
+@keyframes bravera-auth-shake {
+    10%, 90% {
+        transform: translateX(-1px);
+    }
+    20%, 80% {
+        transform: translateX(2px);
+    }
+    30%, 50%, 70% {
+        transform: translateX(-4px);
+    }
+    40%, 60% {
+        transform: translateX(4px);
+    }
+}
+
+.auth-shake {
+    animation: bravera-auth-shake 0.5s ease-in-out both;
+}
+
+/* Flotación del panel de marca (estilo storefront) */
+@keyframes bravera-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.animate-float {
+    animation: bravera-float 6s ease-in-out infinite;
+}
+
+/* Pulso suave para el código de verificación */
+@keyframes bravera-pop-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    70% {
+        transform: scale(1.03);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-pop-in {
+    animation: bravera-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Línea de progreso de expiración del código */
+@keyframes bravera-countdown {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+/* Transición del botón: desplazamiento de tinte brillante */
+@keyframes bravera-shimmer {
+    0% {
+        transform: translateX(-120%);
+    }
+    100% {
+        transform: translateX(220%);
+    }
+}
+
+.btn-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    animation: bravera-shimmer 2.6s ease-in-out infinite;
+}
+
+/* Feedback hover uniforme para TODOS los botones (iconos, chips, outline)
+   y enlaces con estilo de botón. Se coloca ANTES de las reglas específicas
+   para que estas (de mayor o igual especificidad, más abajo) prevalezcan. */
+button:not(:disabled),
+a.rounded-full,
+a.rounded-xl,
+a.rounded-lg {
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+@media (pointer: fine) {
+    button:not(:disabled):hover,
+    a.rounded-full:hover,
+    a.rounded-xl:hover,
+    a.rounded-lg:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -12px rgb(17 24 39 / 0.22);
+    }
+}
+
+button:not(:disabled):active,
+a.rounded-full:active,
+a.rounded-xl:active,
+a.rounded-lg:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 6px -2px rgb(17 24 39 / 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button:not(:disabled),
+    a.rounded-full,
+    a.rounded-xl,
+    a.rounded-lg {
+        transition: none;
+    }
+
+    button:not(:disabled):hover,
+    a.rounded-full:hover,
+    a.rounded-xl:hover,
+    a.rounded-lg:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Botones de acción primarios: feedback táctil claro al hover (estilo Apple).
+   Reglas sin capa para que venzan al `transition` de Tailwind e incluyan
+   transform + box-shadow sin perder la transición de color de fondo. */
+button.bg-gray-900:not(:disabled),
+a.bg-gray-900 {
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        opacity 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease,
+        filter 0.2s ease,
+        backdrop-filter 0.2s ease;
+}
+
+@media (pointer: fine) {
+    button.bg-gray-900:not(:disabled):hover,
+    a.bg-gray-900:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px -12px rgb(17 24 39 / 0.45);
+    }
+}
+
+button.bg-gray-900:not(:disabled):active,
+a.bg-gray-900:active {
+    transform: translateY(0) scale(0.985);
+    box-shadow: 0 4px 10px -4px rgb(17 24 39 / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button.bg-gray-900:not(:disabled),
+    a.bg-gray-900 {
+        transition: none;
+    }
+
+    button.bg-gray-900:not(:disabled):hover,
+    a.bg-gray-900:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Botones secundarios y de éxito: misma elevación sutil. */
+button.bg-gray-100:not(:disabled),
+button.bg-emerald-600:not(:disabled),
+a.bg-emerald-600 {
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+@media (pointer: fine) {
+    button.bg-gray-100:not(:disabled):hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 22px -14px rgb(17 24 39 / 0.3);
+    }
+
+    button.bg-emerald-600:not(:disabled):hover,
+    a.bg-emerald-600:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 26px -12px rgb(22 163 74 / 0.4);
+    }
+}
+
+button.bg-gray-100:not(:disabled):active,
+button.bg-emerald-600:not(:disabled):active {
+    transform: translateY(0) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button.bg-gray-100:not(:disabled),
+    button.bg-emerald-600:not(:disabled),
+    a.bg-emerald-600 {
+        transition: none;
+    }
+
+    button.bg-gray-100:not(:disabled):hover,
+    button.bg-emerald-600:not(:disabled):hover,
+    a.bg-emerald-600:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* OTP: estado "pegado" al escribir */
+.otp-input {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.otp-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
+    transform: translateY(-2px);
+}
+
+.otp-input.otp-filled {
+    border-color: var(--color-primary);
+    background: rgba(17, 24, 39, 0.04);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

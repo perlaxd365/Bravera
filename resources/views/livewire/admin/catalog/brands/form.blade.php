@@ -1,164 +1,100 @@
 <div>
-
     @if ($show)
-        <div class="modal fade show d-block" style="background:rgba(0,0,0,.4)">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data @keydown.escape.window="$wire.set('show', false)">
+            <div class="absolute inset-0 bg-gray-950/40 backdrop-blur-sm" @click="$wire.set('show', false)"></div>
 
-            <div class="modal-dialog modal-lg">
-
-                <div class="modal-content">
-
-                    <div class="modal-header">
-
-                        <h5 class="modal-title">
-
-                            {{ $brand ? 'Editar marca' : 'Nueva marca' }}
-
-                        </h5>
-
-                        <button type="button" class="btn-close" wire:click="$set('show',false)">
-                        </button>
-
-                    </div>
-
-                    <div class="modal-body">
-
-                        <div class="row">
-
-                            <div class="col-md-8">
-
-                                <div class="mb-3">
-
-                                    <label class="form-label">
-                                        Nombre
-                                    </label>
-
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                        wire:model.live="name">
-
-                                    @error('name')
-                                        <div class="invalid-feedback">
-                                            {{ $message }}
-                                        </div>
-                                    @enderror
-
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-4">
-
-                                <div class="mb-3">
-
-                                    <label class="form-label">
-                                        Orden
-                                    </label>
-
-                                    <input type="number" class="form-control @error('sort_order') is-invalid @enderror"
-                                        wire:model="sort_order">
-
-                                    @error('sort_order')
-                                        <div class="invalid-feedback">
-                                            {{ $message }}
-                                        </div>
-                                    @enderror
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="mb-3">
-
-                            <label class="form-label">
-
-                                Slug
-
-                            </label>
-
-                            <input type="text" class="form-control @error('slug') is-invalid @enderror"
-                                wire:model.live="slug">
-
-                            @error('slug')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-
-                        </div>
-
-                        <div class="mb-3">
-
-                            <label class="form-label">
-
-                                Descripción
-
-                            </label>
-
-                            <textarea rows="4" class="form-control @error('description') is-invalid @enderror" wire:model="description"></textarea>
-
-                            @error('description')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-
-                        </div>
-
-                        <div class="mb-3">
-
-                            <label class="form-label">
-
-                                Logo
-
-                            </label>
-
-                            <input type="text" class="form-control @error('image') is-invalid @enderror"
-                                wire:model="image" placeholder="Ruta o URL del logo">
-
-                            @error('image')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-
-                        </div>
-
-                        <div class="form-check">
-
-                            <input class="form-check-input" type="checkbox" wire:model="is_active">
-
-                            <label class="form-check-label">
-
-                                Marca activa
-
-                            </label>
-
-                        </div>
-
-                    </div>
-
-                    <div class="modal-footer">
-
-                        <button class="btn btn-secondary" wire:click="$set('show',false)">
-
-                            Cancelar
-
-                        </button>
-
-                        <button class="btn btn-primary" wire:click="save">
-
-                            Guardar
-
-                        </button>
-
-                    </div>
-
+            <div class="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-950/10">
+                <div class="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
+                    <h3 class="text-base font-semibold tracking-tight text-gray-900">
+                        {{ $brand ? 'Editar marca' : 'Nueva marca' }}
+                    </h3>
+                    <button wire:click="$set('show', false)" class="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600" aria-label="Cerrar">
+                        <flux:icon name="x-mark" variant="mini" class="size-5" />
+                    </button>
                 </div>
 
-            </div>
+                <div class="space-y-4 px-6 py-5">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700">Nombre</label>
+                            <input type="text" wire:model.live="name"
+                                class="{{ $errors->has('name') ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-300 focus:border-gray-900 focus:ring-gray-900/10' }} w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2">
+                            @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
+                        <div>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700">Orden</label>
+                            <input type="number" wire:model="sort_order"
+                                class="{{ $errors->has('sort_order') ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-300 focus:border-gray-900 focus:ring-gray-900/10' }} w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2">
+                            @error('sort_order') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-gray-700">Slug</label>
+                        <input type="text" wire:model.live="slug"
+                            class="{{ $errors->has('slug') ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-300 focus:border-gray-900 focus:ring-gray-900/10' }} w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2">
+                        @error('slug') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-gray-700">Descripción</label>
+                        <textarea rows="4" wire:model="description"
+                            class="{{ $errors->has('description') ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-gray-300 focus:border-gray-900 focus:ring-gray-900/10' }} w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2"></textarea>
+                        @error('description') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-gray-700">Logo</label>
+
+                        @if ($logo)
+                            <img src="{{ $logo->temporaryUrl() }}" alt="Vista previa del logo"
+                                class="mb-3 h-24 w-24 rounded-lg border border-gray-200 object-cover">
+                        @elseif ($image && !$remove_logo)
+                            <img src="{{ $image }}" alt="Logo actual"
+                                class="mb-3 h-24 w-24 rounded-lg border border-gray-200 object-cover">
+                        @endif
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <label
+                                class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="photo" class="size-4" />
+                                {{ $logo ? 'Cambiar logo' : ($image ? 'Reemplazar logo' : 'Subir logo') }}
+                                <input type="file" wire:model="logo" accept="image/*" class="sr-only">
+                            </label>
+
+                            @if ($image && !$remove_logo)
+                                <button type="button" wire:click="removeImage"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50">
+                                    <flux:icon name="trash" class="size-4" /> Quitar
+                                </button>
+                            @endif
+                        </div>
+
+                        <p class="mt-1.5 text-xs text-gray-400">JPG, PNG o WebP. Máximo 5 MB.</p>
+
+                        @error('image') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('logo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" wire:model="is_active"
+                            class="size-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900/30">
+                        Marca activa
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+                    <button wire:click="$set('show',false)"
+                        class="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100">
+                        Cancelar
+                    </button>
+                    <button wire:click="save"
+                        class="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
+                        Guardar
+                    </button>
+                </div>
+            </div>
         </div>
     @endif
-
 </div>
