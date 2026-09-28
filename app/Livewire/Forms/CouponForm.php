@@ -97,7 +97,7 @@ class CouponForm extends Form
 
     public function generateCode(): void
     {
-        $prefixes = ['BRAVERA', 'BIENVENIDO', 'PROMO', 'OFERTA'];
+        $prefixes = ['BREVARE', 'BIENVENIDO', 'PROMO', 'OFERTA'];
         $this->code = $prefixes[array_rand($prefixes)].'-'.strtoupper(Str::random(6));
     }
 }

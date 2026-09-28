@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Modules\Ordering\Data\CheckoutData;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,7 @@ class OrderService
     {
         return DB::transaction(function () use ($data) {
             $order = Order::create([
+                'cart_id' => $data->cart->id,
                 'order_number' => $this->orderNumberGenerator->next(),
                 'user_id' => $data->user->id,
                 'status' => OrderStatus::PENDING,
@@ -56,7 +58,7 @@ class OrderService
 
             $this->registerCouponUsage($order, $data);
 
-            $data->cart->update(['status' => 'converted']);
+            //$data->cart->update(['status' => 'converted']);
 
             return $order->fresh();
         });
@@ -116,6 +118,86 @@ class OrderService
 
             $supplierVariant->increment('reserved_stock', $item->quantity);
         }
+    }
+
+    /**
+     * Libera el stock reservado de un pedido.
+     *
+     * Se invoca cuando el pago falla de forma definitiva: el pedido existe,
+     * pero nunca se despacha, así que la reserva no debe seguir bloqueando
+     * unidades. No se llama cuando el pago queda pendiente (Yape/QR), porque
+     * ahí la reserva debe mantenerse mientras el cliente paga.
+     */
+    public function releaseStock(Order $order): void
+    {
+        foreach ($order->items()->with('supplierVariant')->get() as $item) {
+            $supplierVariant = $item->supplierVariant;
+
+            if (! $supplierVariant) {
+                continue;
+            }
+
+            // Nunca dejar el contador en negativo.
+            $reserved = (int) $supplierVariant->reserved_stock;
+            $quantity = min($reserved, (int) $item->quantity);
+
+            if ($quantity > 0) {
+                $supplierVariant->decrement('reserved_stock', $quantity);
+            }
+        }
+    }
+
+    /**
+     * Cancela un pedido que nadie llegó a pagar y devuelve su stock.
+     *
+     * El checkout en modal crea el pedido y reserva el stock antes de abrir el
+     * pago, porque Culqi exige una orden previa para los métodos asíncronos. Si
+     * el comprador cierra sin pagar, esa reserva quedaría bloqueada para
+     * siempre: este método es el que la devuelve.
+     *
+     * Solo toca pedidos que siguen en pendiente. Si ya se pagaron, cancelaron o
+     * caducaron, no hace nada, así que se puede repetir cada hora sin riesgo de
+     * liberar dos veces el mismo stock.
+     */
+    public function abandonPendingOrder(Order $order, ?string $reason = null): bool
+    {
+        return DB::transaction(function () use ($order, $reason) {
+            $pending = Order::query()
+                ->whereKey($order->getKey())
+                ->where('status', OrderStatus::PENDING->value)
+                ->where('payment_status', PaymentStatus::PENDING->value)
+                ->lockForUpdate()
+                ->first();
+
+            if ($pending === null) {
+                return false;
+            }
+
+            $pending->update([
+                'status' => OrderStatus::CANCELLED,
+                'payment_status' => PaymentStatus::EXPIRED,
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason
+                    ?? 'El pago no se completó dentro del plazo establecido.',
+            ]);
+
+            // Los pagos que esperaban confirmación ya no pueden cobrar: la orden
+            // de Culqi venció junto con el plazo.
+            Payment::query()
+                ->where('order_id', $pending->id)
+                ->where('status', PaymentStatus::PENDING->value)
+                ->update(['status' => PaymentStatus::EXPIRED->value]);
+
+            // El uso del cupón se cuenta por filas en coupon_usages, así que un
+            // pedido que nunca se pagó no debe seguir consumiendo un uso.
+            CouponUsage::query()
+                ->where('order_id', $pending->id)
+                ->delete();
+
+            $this->releaseStock($pending);
+
+            return true;
+        });
     }
 
     private function registerCouponUsage(Order $order, CheckoutData $data): void

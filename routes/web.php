@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Webhooks\CulqiWebhookController;
 use App\Livewire\Account\Addresses;
 use App\Livewire\Account\OrderDetail;
 use App\Livewire\Account\Orders;
@@ -12,6 +13,20 @@ use App\Livewire\Store\Home;
 use App\Livewire\Store\OrderPlaced;
 use App\Livewire\Store\ProductDetail;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Webhooks de pasarelas
+|--------------------------------------------------------------------------
+|
+| Rutas server-to-server. La seguridad no depende del cuerpo del request:
+| el controlador re-consulta a la API de Culqi antes de confirmar un pago.
+| Están exentas de CSRF en bootstrap/app.php.
+|
+*/
+
+Route::post('webhooks/culqi', CulqiWebhookController::class)
+    ->name('webhooks.culqi');
 
 /*
 |--------------------------------------------------------------------------

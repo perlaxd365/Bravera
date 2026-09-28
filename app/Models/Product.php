@@ -120,6 +120,15 @@ class Product extends Model
 
     public function coverImage(): ?string
     {
+        return $this->coverImageModel()?->imageUrl();
+    }
+
+    /**
+     * Foto que representa al producto en listados y correos: la principal de la
+     * variante predeterminada o, si no tiene, la primera que exista.
+     */
+    public function coverImageModel(): ?ProductImage
+    {
         $variant = $this->variants
             ->sortByDesc('is_default')
             ->first(function ($variant) {
@@ -130,9 +139,7 @@ class Product extends Model
             return null;
         }
 
-        $image = $variant->images->firstWhere('is_primary', true)
+        return $variant->images->firstWhere('is_primary', true)
             ?? $variant->images->first();
-
-        return $image->secure_url ?? $image->url;
     }
 }

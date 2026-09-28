@@ -53,9 +53,9 @@
                             <td class="px-6 py-4 text-gray-600">{{ $brand->sort_order }}</td>
                             <td class="px-6 py-4">
                                 @if ($brand->is_active)
-                                    <x-bravera.badge color="success">Activa</x-bravera.badge>
+                                    <x-brevare.badge color="success">Activa</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="neutral">Inactiva</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">Inactiva</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -77,7 +77,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="tags" title="No existen marcas registradas" description="Crea la primera marca para comenzar." />
+                                <x-brevare.empty-state icon="tags" title="No existen marcas registradas" description="Crea la primera marca para comenzar." />
                             </td>
                         </tr>
                     @endforelse

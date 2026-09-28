@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payments\Contracts;
 
+use App\Enums\RefundReason;
 use App\Models\Payment;
 
 interface PaymentGateway
@@ -23,5 +24,5 @@ interface PaymentGateway
      *
      * @return array{success: bool, transaction_id: ?string, status: string, message: string, raw: array}
      */
-    public function refund(Payment $payment): array;
+    public function refund(Payment $payment, ?RefundReason $reason = null): array;
 }

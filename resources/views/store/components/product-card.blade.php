@@ -26,7 +26,7 @@
             </p>
 
             <div class="mt-auto pt-3 flex items-baseline gap-2">
-                <x-bravera.price :amount="$minPrice" size="sm" />
+                <x-brevare.price :amount="$minPrice" size="sm" />
                 @if ($maxPrice > $minPrice && $minPrice > 0)
                     <span class="text-xs text-gray-400">hasta S/ {{ number_format((float) $maxPrice, 2) }}</span>
                 @endif

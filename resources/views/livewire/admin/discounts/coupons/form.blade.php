@@ -17,7 +17,7 @@
                     <div class="grid gap-3 px-6 py-5 sm:grid-cols-2">
                         <div>
                             <x-input label="Código" wire:model.live="form.code"
-                                placeholder="BRAVERA-XXXXXX" />
+                                placeholder="BREVARE-XXXXXX" />
 
                             <div class="mt-1">
                                 <a href="#" wire:click.prevent="form.generateCode"

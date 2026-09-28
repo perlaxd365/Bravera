@@ -6,7 +6,7 @@
                     <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
                         <flux:icon name="shopping-bag" class="size-4" />
                     </span>
-                    Bravera
+                    Brevare
                 </a>
                 <p class="mt-3 max-w-sm text-sm leading-relaxed text-gray-500">
                     Marketplace de productos con envío a todo el Perú.
@@ -37,7 +37,7 @@
         </div>
 
         <div class="mt-12 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 sm:flex-row">
-            <p class="text-sm text-gray-400">&copy; {{ date('Y') }} Bravera. Todos los derechos reservados.</p>
+            <p class="text-sm text-gray-400">&copy; {{ date('Y') }} Brevare. Todos los derechos reservados.</p>
             <p class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-gray-400">
                 <span class="flex items-center gap-1"><flux:icon name="credit-card" class="size-4" /> Tarjeta</span>
                 <span class="flex items-center gap-1"><flux:icon name="device-phone-mobile" class="size-4" /> Yape / Plin</span>

@@ -15,7 +15,7 @@
         },
         close() { this.open = false; },
     }"
-    @bravera-cart-added.window="show($event.detail)"
+    @brevare-cart-added.window="show($event.detail)"
     x-show="open"
     x-cloak
     x-transition:enter="transition ease-out duration-500"

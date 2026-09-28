@@ -56,7 +56,7 @@
 
             Livewire.on('cart-added', (event) => {
                 const data = Array.isArray(event) ? event[0] : event;
-                window.dispatchEvent(new CustomEvent('bravera-cart-added', { detail: data }));
+                window.dispatchEvent(new CustomEvent('brevare-cart-added', { detail: data }));
             });
         });
     </script>

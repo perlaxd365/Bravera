@@ -50,9 +50,9 @@
                             <td class="px-6 py-4 text-gray-600">{{ optional($category->parent)->name ?? '-' }}</td>
                             <td class="px-6 py-4">
                                 @if ($category->is_visible)
-                                    <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                    <x-brevare.badge color="success">Activo</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -74,7 +74,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="cube" title="No existen categorías registradas" description="Crea la primera categoría para comenzar." />
+                                <x-brevare.empty-state icon="cube" title="No existen categorías registradas" description="Crea la primera categoría para comenzar." />
                             </td>
                         </tr>
                     @endforelse

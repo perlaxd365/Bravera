@@ -62,13 +62,13 @@
                             <td class="px-6 py-4 text-right font-semibold text-gray-900">S/ {{ number_format((float) $so->total_cost, 2) }}</td>
                             <td class="px-6 py-4 text-center">
                                 @if ($so->payment)
-                                    <x-bravera.badge color="success">Pagado</x-bravera.badge>
+                                    <x-brevare.badge color="success">Pagado</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="warning">Pendiente</x-bravera.badge>
+                                    <x-brevare.badge color="warning">Pendiente</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <x-bravera.badge :color="$so->status->badgeColor()">{{ $so->status->label() }}</x-bravera.badge>
+                                <x-brevare.badge :color="$so->status->badgeColor()">{{ $so->status->label() }}</x-brevare.badge>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
@@ -91,7 +91,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="truck" title="No hay órdenes a proveedores" description="Las órdenes de compra enviadas a los proveedores aparecerán en esta lista." />
+                                <x-brevare.empty-state icon="truck" title="No hay órdenes a proveedores" description="Las órdenes de compra enviadas a los proveedores aparecerán en esta lista." />
                             </td>
                         </tr>
                     @endforelse

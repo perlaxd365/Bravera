@@ -1,4 +1,6 @@
 import './bootstrap';
+import Swal from 'sweetalert2';
+import './checkout';
 
 document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('js');

@@ -9,7 +9,7 @@
                 <flux:icon name="shopping-bag" class="size-4.5" />
             </span>
             <span class="leading-tight">
-                <span class="block text-base font-bold tracking-tight text-gray-900">Bravera</span>
+                <span class="block text-base font-bold tracking-tight text-gray-900">Brevare</span>
                 <span class="block text-xs text-gray-400">Sistema Ecommerce</span>
             </span>
         </a>

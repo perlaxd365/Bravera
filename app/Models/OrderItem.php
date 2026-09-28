@@ -101,4 +101,33 @@ class OrderItem extends Model
 
         return collect($attrs)->map(fn ($value, $key) => ucfirst($key).': '.$value)->implode(', ');
     }
+
+    /**
+     * Foto del producto pedido para mostrarlo en el detalle del pedido y en los
+     * correos: primero la de la variante que se compró y, si esa variante no
+     * tiene foto, la portada del producto.
+     *
+     * @param  int|null  $size  Lado en píxeles de la miniatura servida por Cloudinary.
+     */
+    public function imageUrl(?int $size = null): ?string
+    {
+        $image = $this->image();
+
+        if (! $image) {
+            return null;
+        }
+
+        return $size ? $image->sizedUrl($size) : $image->imageUrl();
+    }
+
+    /**
+     * Imagen de la variante pedida, o la portada del producto como respaldo.
+     */
+    public function image(): ?ProductImage
+    {
+        $image = $this->variant?->images->firstWhere('is_primary', true)
+            ?? $this->variant?->images->first();
+
+        return $image ?? $this->product?->coverImageModel();
+    }
 }

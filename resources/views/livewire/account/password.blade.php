@@ -79,13 +79,13 @@
                             ¡Tu contraseña se actualizó correctamente!
                         </h2>
                         <p class="mt-2 text-sm leading-relaxed text-gray-500">
-                            A partir de ahora usa tu nueva contraseña para iniciar sesión en Bravera.
+                            A partir de ahora usa tu nueva contraseña para iniciar sesión en Brevare.
                         </p>
 
                         <div class="mt-6 flex justify-center">
-                            <x-bravera.button :block="false" wire:click="cancel">
+                            <x-brevare.button :block="false" wire:click="cancel">
                                 Finalizar
-                            </x-bravera.button>
+                            </x-brevare.button>
                         </div>
                     </div>
 
@@ -105,9 +105,9 @@
                         </p>
 
                         <div class="mt-6 flex flex-wrap justify-center gap-3">
-                            <x-bravera.button :block="false" wire:click="requestCode" wire:target="requestCode" x-show="canResend">
+                            <x-brevare.button :block="false" wire:click="requestCode" wire:target="requestCode" x-show="canResend">
                                 Enviar código
-                            </x-bravera.button>
+                            </x-brevare.button>
                             <span x-show="!canResend" x-cloak
                                 class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-5 py-3.5 text-sm font-medium text-gray-500">
                                 <flux:icon name="clock" class="size-4" />
@@ -134,9 +134,9 @@
                         </p>
 
                         <div class="mt-6 flex flex-wrap items-center gap-3">
-                            <x-bravera.button :block="false" wire:click="verifyCode" wire:target="verifyCode">
+                            <x-brevare.button :block="false" wire:click="verifyCode" wire:target="verifyCode">
                                 Verificar código
-                            </x-bravera.button>
+                            </x-brevare.button>
                             <button type="button" wire:click="requestCode" x-show="canResend"
                                 class="inline-flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100">
                                 <flux:icon name="arrow-path" class="size-4" /> Reenviar código
@@ -174,9 +174,9 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3 pt-1">
-                            <x-bravera.button :block="false" wire:click="updatePassword" wire:target="updatePassword">
+                            <x-brevare.button :block="false" wire:click="updatePassword" wire:target="updatePassword">
                                 Actualizar contraseña
-                            </x-bravera.button>
+                            </x-brevare.button>
                             <button type="button" wire:click="cancel"
                                 class="rounded-xl px-4 py-3 text-sm font-medium text-gray-500 transition hover:bg-gray-100">
                                 Cancelar

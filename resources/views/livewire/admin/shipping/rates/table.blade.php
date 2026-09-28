@@ -56,9 +56,9 @@
                         </td>
                         <td class="px-6 py-4">
                             @if ($rate->status)
-                                <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                <x-brevare.badge color="success">Activo</x-brevare.badge>
                             @else
-                                <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-right">
@@ -88,7 +88,7 @@
                 @empty
                     <tr>
                         <td colspan="8" class="px-6 py-14 text-center">
-                            <x-bravera.empty-state icon="truck" title="No existen tarifas de envío registradas" description="Crea la primera tarifa de envío para comenzar." />
+                            <x-brevare.empty-state icon="truck" title="No existen tarifas de envío registradas" description="Crea la primera tarifa de envío para comenzar." />
                         </td>
                     </tr>
                 @endforelse

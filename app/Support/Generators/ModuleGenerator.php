@@ -44,7 +44,7 @@ class ModuleGenerator
         foreach ($directories as $directory) {
 
             File::makeDirectory(
-                $basePath . ($directory ? "/{$directory}" : ''),
+                $basePath.($directory ? "/{$directory}" : ''),
                 0755,
                 true
             );
@@ -62,7 +62,7 @@ class ModuleGenerator
     ): void {
 
         $content = File::get(
-            base_path("stubs/bravera/{$stub}")
+            base_path("stubs/brevare/{$stub}")
         );
 
         foreach ($replace as $search => $value) {

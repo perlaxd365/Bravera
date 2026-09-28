@@ -51,16 +51,16 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <x-bravera.auth-card
+    <x-brevare.auth-card
         title="Crea tu cuenta"
-        subtitle="Únete a Bravera y compra con los mejores precios del mercado."
+        subtitle="Únete a Brevare y compra con los mejores precios del mercado."
     >
-        <x-bravera.google-button label="Regístrate con Google" />
+        <x-brevare.google-button label="Regístrate con Google" />
 
-        <x-bravera.auth-divider />
+        <x-brevare.auth-divider />
 
         <form wire:submit="register" class="space-y-5" novalidate>
-            <x-bravera.floating-input
+            <x-brevare.floating-input
                 wire:model="name"
                 id="name"
                 label="Nombre completo"
@@ -70,7 +70,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.floating-input
+            <x-brevare.floating-input
                 wire:model="email"
                 id="email"
                 label="Correo electrónico"
@@ -80,7 +80,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password"
                 id="password"
                 label="Contraseña"
@@ -89,7 +89,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password_confirmation"
                 id="password_confirmation"
                 label="Confirmar contraseña"
@@ -110,13 +110,13 @@ new #[Layout('layouts.guest')] class extends Component
                     <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Términos y condiciones</a>
                     y la
                     <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Política de privacidad</a>
-                    de Bravera.
+                    de Brevare.
                 </span>
             </label>
 
-            <x-bravera.button class="w-full">
+            <x-brevare.button class="w-full">
                 Crear cuenta
-            </x-bravera.button>
+            </x-brevare.button>
         </form>
 
         <x-slot:footer>
@@ -127,5 +127,5 @@ new #[Layout('layouts.guest')] class extends Component
                 </a>
             </p>
         </x-slot:footer>
-    </x-bravera.auth-card>
+    </x-brevare.auth-card>
 </div>

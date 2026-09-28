@@ -24,12 +24,21 @@ class OrderStatusChangedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Tu pedido '.$this->order->order_number.' — '.$this->newStatus->label().' | Bravera',
+            subject: 'Tu pedido '.$this->order->order_number.' — '.$this->newStatus->label().' | Brevare',
         );
     }
 
     public function content(): Content
     {
+        // Las fotos viajan en el correo, así que se cargan aquí y no en el
+        // constructor: al encolar el mailable el modelo se serializa y las
+        // relaciones cargadas en el constructor se pierden.
+        $this->order->loadMissing([
+            'user',
+            'items.variant.images',
+            'items.product.variants.images',
+        ]);
+
         return new Content(
             view: 'emails.order-status-changed',
             with: [

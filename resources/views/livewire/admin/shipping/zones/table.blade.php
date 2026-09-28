@@ -39,27 +39,27 @@
                         <td class="px-6 py-4">
                             @switch($zone->type->value)
                                 @case('department')
-                                    <x-bravera.badge color="primary">Departamento</x-bravera.badge>
+                                    <x-brevare.badge color="primary">Departamento</x-brevare.badge>
                                 @break
 
                                 @case('province')
-                                    <x-bravera.badge color="info">Provincia</x-bravera.badge>
+                                    <x-brevare.badge color="info">Provincia</x-brevare.badge>
                                 @break
 
                                 @case('district')
-                                    <x-bravera.badge color="neutral">Distrito</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">Distrito</x-brevare.badge>
                                 @break
 
                                 @default
-                                    <x-bravera.badge color="dark">{{ $zone->type->value }}</x-bravera.badge>
+                                    <x-brevare.badge color="dark">{{ $zone->type->value }}</x-brevare.badge>
                             @endswitch
                         </td>
                         <td class="px-6 py-4 text-gray-600">{{ $zone->location?->name ?? '-' }}</td>
                         <td class="px-6 py-4">
                             @if ($zone->status)
-                                <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                <x-brevare.badge color="success">Activo</x-brevare.badge>
                             @else
-                                <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-right">
@@ -86,7 +86,7 @@
                 @empty
                     <tr>
                         <td colspan="6" class="px-6 py-14 text-center">
-                            <x-bravera.empty-state icon="truck" title="No existen zonas de envío registradas" description="Crea la primera zona de envío para comenzar." />
+                            <x-brevare.empty-state icon="truck" title="No existen zonas de envío registradas" description="Crea la primera zona de envío para comenzar." />
                         </td>
                     </tr>
                 @endforelse

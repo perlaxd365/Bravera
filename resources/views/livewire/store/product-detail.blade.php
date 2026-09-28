@@ -87,7 +87,7 @@
                             },
                         }"
                         wire:key="gallery-{{ $currentVariant?->id ?? 'default' }}"
-                        @bravera-fly-to-cart.window="flyToCart()"
+                        @brevare-fly-to-cart.window="flyToCart()"
                         @keydown.arrow-right.window.prevent="if (lightbox) next()"
                         @keydown.arrow-left.window.prevent="if (lightbox) prev()"
                         @keydown.escape.window="lightbox = false">
@@ -215,7 +215,7 @@
                 </div>
 
                 <form wire:submit="addToCart"
-                    x-on:submit="window.dispatchEvent(new CustomEvent('bravera-fly-to-cart'))"
+                    x-on:submit="window.dispatchEvent(new CustomEvent('brevare-fly-to-cart'))"
                     class="mt-6 space-y-5">
 
                     {{-- Atributos (selector de variante) --}}

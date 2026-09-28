@@ -11,7 +11,7 @@ class PruneCloudinaryCommand extends Command
     /**
      * Nombre del comando.
      */
-    protected $signature = 'bravera:prune-cloudinary {--days=30 : Productos en papelera con más de X días}';
+    protected $signature = 'brevare:prune-cloudinary {--days=30 : Productos en papelera con más de X días}';
 
     /**
      * Descripción.

@@ -12,13 +12,13 @@
     </div>
 
     @if ($orders->isEmpty())
-        <x-bravera.empty-state icon="cube" title="Aún no has realizado pedidos"
-            description="Cuando compres algo en Bravera, podrás seguirlo desde aquí.">
+        <x-brevare.empty-state icon="cube" title="Aún no has realizado pedidos"
+            description="Cuando compres algo en Brevare, podrás seguirlo desde aquí.">
             <a href="{{ route('store.search') }}"
                 class="inline-flex items-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
                 Explorar catálogo
             </a>
-        </x-bravera.empty-state>
+        </x-brevare.empty-state>
     @else
         <div class="grid gap-4 sm:grid-cols-3">
             <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -47,7 +47,7 @@
                             <th class="px-5 py-3.5">Total</th>
                             <th class="px-5 py-3.5">Pago</th>
                             <th class="px-5 py-3.5">Estado</th>
-                            <th class="px-5 py-3.5 text-right">Acción</th>
+                            <th class="px-5 py-3.5 text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -62,16 +62,32 @@
                                 <td class="px-5 py-4 text-gray-500">{{ $order->created_at->format('d M Y, H:i') }}</td>
                                 <td class="px-5 py-4 font-bold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</td>
                                 <td class="px-5 py-4">
-                                    <x-bravera.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-bravera.badge>
+                                    <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-brevare.badge>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <x-bravera.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-bravera.badge>
+                                    <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
                                 </td>
-                                <td class="px-5 py-4 text-right">
-                                    <a href="{{ route('account.orders.show', ['order' => $order->order_number]) }}"
-                                        class="inline-flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-900 transition hover:bg-gray-50">
-                                        Ver <flux:icon name="arrow-right" class="size-3.5" />
-                                    </a>
+                                <td class="px-5 py-4">
+                                    {{-- Una sola acción primaria y una secundaria. Antes
+                                         iban sueltas en la celda con mr-2, y al tener
+                                         pesos visuales distintos se leían como dos
+                                         botones compitiendo entre sí. --}}
+                                    <div class="flex items-center justify-end gap-2">
+                                        @if ($order->isPayable())
+                                            {{-- El pedido quedó esperando el pago porque el
+                                                 comprador cerró el modal o la sesión del
+                                                 checkout se perdió. Sin este acceso se
+                                                 queda sin forma de pagarlo. --}}
+                                            <a href="{{ route('checkout', ['pagar' => $order->order_number]) }}"
+                                                class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800">
+                                                <flux:icon name="credit-card" class="size-4" /> Pagar ahora
+                                            </a>
+                                        @endif
+                                        <a href="{{ route('account.orders.show', ['order' => $order->order_number]) }}"
+                                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
+                                            Ver <flux:icon name="arrow-right" class="size-4" />
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

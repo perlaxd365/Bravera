@@ -19,12 +19,22 @@ class SupplierOrderNotificationMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Nueva orden: '.$this->supplierOrder->supplier_order_number.' — Bravera',
+            subject: 'Nueva orden: '.$this->supplierOrder->supplier_order_number.' — Brevare',
         );
     }
 
     public function content(): Content
     {
+        // Las fotos viajan en el correo, así que se cargan aquí y no en el
+        // constructor: al encolar el mailable el modelo se serializa y las
+        // relaciones cargadas en el constructor se pierden.
+        $this->supplierOrder->loadMissing([
+            'supplier',
+            'order',
+            'items.orderItem.variant.images',
+            'items.orderItem.product.variants.images',
+        ]);
+
         return new Content(
             view: 'emails.supplier-order-notification',
             with: [

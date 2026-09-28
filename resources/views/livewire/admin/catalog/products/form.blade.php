@@ -236,16 +236,16 @@
                                                         </td>
                                                         <td class="px-4 py-3 text-center">
                                                             @if ($variant->is_default)
-                                                                <x-bravera.badge color="primary">Principal</x-bravera.badge>
+                                                                <x-brevare.badge color="primary">Principal</x-brevare.badge>
                                                             @else
                                                                 <span class="text-gray-400">—</span>
                                                             @endif
                                                         </td>
                                                         <td class="px-4 py-3 text-center">
                                                             @if ($variant->is_active)
-                                                                <x-bravera.badge color="success">Activa</x-bravera.badge>
+                                                                <x-brevare.badge color="success">Activa</x-brevare.badge>
                                                             @else
-                                                                <x-bravera.badge color="neutral">Inactiva</x-bravera.badge>
+                                                                <x-brevare.badge color="neutral">Inactiva</x-brevare.badge>
                                                             @endif
                                                         </td>
                                                         <td class="px-4 py-3 text-right">
@@ -356,7 +356,7 @@
                                                                     class="aspect-square w-full object-cover">
                                                                 <div class="absolute inset-x-0 top-0 flex justify-between p-2">
                                                                     @if ($image->is_primary)
-                                                                        <x-bravera.badge color="primary">Principal</x-bravera.badge>
+                                                                        <x-brevare.badge color="primary">Principal</x-brevare.badge>
                                                                     @endif
                                                                 </div>
                                                                 <div class="flex items-center justify-between gap-1 border-t border-gray-100 bg-white p-2">
@@ -517,16 +517,16 @@
                                                                 <td class="px-4 py-3 text-right text-gray-900">{{ $supplierVariant->stock }}</td>
                                                                 <td class="px-4 py-3 text-center">
                                                                     @if ($supplierVariant->is_default)
-                                                                        <x-bravera.badge color="primary">Principal</x-bravera.badge>
+                                                                        <x-brevare.badge color="primary">Principal</x-brevare.badge>
                                                                     @else
                                                                         <span class="text-gray-400">—</span>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-4 py-3 text-center">
                                                                     @if ($supplierVariant->is_active)
-                                                                        <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                                                        <x-brevare.badge color="success">Activo</x-brevare.badge>
                                                                     @else
-                                                                        <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                                                        <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-4 py-3 text-right">

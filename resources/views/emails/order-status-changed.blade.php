@@ -13,7 +13,7 @@
         'delivered' => [
             'accent' => 'success',
             'heading' => 'Tu pedido fue entregado',
-            'body' => 'Esperamos que disfrutes tu pedido. ¡Gracias por comprar en Bravera!',
+            'body' => 'Esperamos que disfrutes tu pedido. ¡Gracias por comprar en Brevare!',
         ],
         'cancelled' => [
             'accent' => 'danger',
@@ -36,9 +36,12 @@
             'body' => 'Te informamos que el estado de tu pedido fue actualizado.',
         ],
     };
+
+    $thumb = 56;
 @endphp
 
-<x-bravera.mail-layout :title="'Pedido '.$order->order_number" :heading="$copy['heading']" :accent="$copy['accent']">
+<x-brevare.mail-layout :title="'Pedido '.$order->order_number" :heading="$copy['heading']" :accent="$copy['accent']"
+    :preheader="'Tu pedido '.$order->order_number.' ahora está en: '.$newStatus->label().'.'">
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
         Hola <strong style="color:#111827;">{{ $order->customer_snapshot['name'] ?? $order->user?->name ?? '' }}</strong>,
     </p>
@@ -103,7 +106,10 @@
             style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;border-collapse:separate;">
             <thead>
                 <tr style="background-color:#f9fafb;">
-                    <th align="left" style="padding:10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
+                    <th width="{{ $thumb + 20 }}" style="padding:0;font-size:11px;line-height:1px;">
+                        <span style="display:none;font-size:1px;line-height:1px;">&nbsp;</span>
+                    </th>
+                    <th align="left" style="padding:10px 4px 10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
                         Producto
                     </th>
                     <th align="center" style="padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:52px;">
@@ -116,9 +122,20 @@
             </thead>
             <tbody>
                 @foreach ($activeItems as $item)
+                    @php $image = $item->imageUrl(160); @endphp
                     <tr>
-                        <td style="padding:12px 14px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;">
+                        <td width="{{ $thumb + 20 }}" valign="top"
+                            style="padding:12px 0 12px 14px;border-top:1px solid #f3f4f6;">
+                            <x-brevare.mail-thumb :src="$image" :alt="$item->product_name" :size="$thumb" />
+                        </td>
+                        <td style="padding:12px 14px 12px 4px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;vertical-align:top;">
                             {{ $item->product_name }}
+                            @if ($item->variant_attributes)
+                                <br>
+                                <span style="font-size:12px;color:#6b7280;">
+                                    {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' · ') }}
+                                </span>
+                            @endif
                             @if ($item->supplier_name)
                                 <br>
                                 <span style="font-size:11px;color:#9ca3af;">Proveedor: {{ $item->supplier_name }}</span>
@@ -142,4 +159,4 @@
             Ver mis pedidos
         </a>
     </p>
-</x-bravera.mail-layout>
+</x-brevare.mail-layout>

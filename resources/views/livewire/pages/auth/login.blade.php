@@ -57,13 +57,13 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <x-bravera.auth-card
+    <x-brevare.auth-card
         title="¡Hola, bienvenido de nuevo!"
-        subtitle="Ingresa con tu cuenta para seguir comprando en Bravera."
+        subtitle="Ingresa con tu cuenta para seguir comprando en Brevare."
     >
-        <x-bravera.google-button />
+        <x-brevare.google-button />
 
-        <x-bravera.auth-divider />
+        <x-brevare.auth-divider />
 
         <form wire:submit="login" class="space-y-5" novalidate>
             @if (session('status'))
@@ -73,7 +73,7 @@ new #[Layout('layouts.guest')] class extends Component
                 </div>
             @endif
 
-            <x-bravera.floating-input
+            <x-brevare.floating-input
                 wire:model="form.email"
                 id="email"
                 label="Correo electrónico"
@@ -83,7 +83,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="form.password"
                 id="password"
                 label="Contraseña"
@@ -111,9 +111,9 @@ new #[Layout('layouts.guest')] class extends Component
                 @endif
             </div>
 
-            <x-bravera.button class="w-full">
+            <x-brevare.button class="w-full">
                 Iniciar sesión
-            </x-bravera.button>
+            </x-brevare.button>
         </form>
 
         <x-slot:footer>
@@ -124,5 +124,5 @@ new #[Layout('layouts.guest')] class extends Component
                 </a>
             </p>
         </x-slot:footer>
-    </x-bravera.auth-card>
+    </x-brevare.auth-card>
 </div>

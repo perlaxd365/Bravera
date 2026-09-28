@@ -23,7 +23,7 @@ new #[Layout('layouts.guest')] class extends Component
     }
 
     /**
-     * Crea la contraseña de Bravera confirmándola dos veces.
+     * Crea la contraseña de Brevare confirmándola dos veces.
      */
     public function savePassword(): void
     {
@@ -58,7 +58,7 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <x-bravera.auth-card
+    <x-brevare.auth-card
         title="Crea tu contraseña"
         subtitle="Tu cuenta de Google está vinculada. Solo falta crear una contraseña para entrar también con tu correo."
     >
@@ -79,7 +79,7 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <form wire:submit="savePassword" class="mt-6 space-y-5" novalidate>
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password"
                 id="password"
                 label="Nueva contraseña"
@@ -88,7 +88,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password_confirmation"
                 id="password_confirmation"
                 label="Confirma tu contraseña"
@@ -96,9 +96,9 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.button class="w-full">
+            <x-brevare.button class="w-full">
                 Guardar y continuar
-            </x-bravera.button>
+            </x-brevare.button>
         </form>
 
         <x-slot:footer>
@@ -111,5 +111,5 @@ new #[Layout('layouts.guest')] class extends Component
                 Cerrar sesión
             </button>
         </x-slot:footer>
-    </x-bravera.auth-card>
+    </x-brevare.auth-card>
 </div>

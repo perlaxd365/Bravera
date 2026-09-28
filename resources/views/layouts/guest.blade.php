@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Bravera') }} · Acceso</title>
+        <title>{{ config('app.name', 'Brevare') }} · Acceso</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +37,7 @@
                         <span class="flex size-9 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg">
                             <flux:icon name="shopping-bag" class="size-4" variant="solid" />
                         </span>
-                        <span class="text-xl font-extrabold tracking-tight text-white">Bravera</span>
+                        <span class="text-xl font-extrabold tracking-tight text-white">Brevare</span>
                     </a>
 
                     <div>
@@ -75,7 +75,7 @@
                     </div>
 
                     <p class="text-xs text-gray-400">
-                        &copy; {{ date('Y') }} Bravera &middot; Tu tienda online
+                        &copy; {{ date('Y') }} Brevare &middot; Tu tienda online
                     </p>
                 </div>
             </aside>
@@ -87,7 +87,7 @@
                         <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
                             <flux:icon name="shopping-bag" class="size-4" variant="solid" />
                         </span>
-                        <span class="text-lg font-extrabold tracking-tight text-gray-900">Bravera</span>
+                        <span class="text-lg font-extrabold tracking-tight text-gray-900">Brevare</span>
                     </a>
                 </div>
 
@@ -96,7 +96,7 @@
                 </div>
 
                 <p class="pb-6 text-center text-xs text-gray-400 lg:hidden">
-                    &copy; {{ date('Y') }} Bravera &middot; Tu tienda online
+                    &copy; {{ date('Y') }} Brevare &middot; Tu tienda online
                 </p>
             </main>
         </div>

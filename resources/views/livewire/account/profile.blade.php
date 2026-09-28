@@ -63,9 +63,9 @@
             </div>
 
             <div class="flex justify-end border-t border-gray-100 pt-5">
-                <x-bravera.button type="submit" :block="false" wire:target="updateProfile">
+                <x-brevare.button type="submit" :block="false" wire:target="updateProfile">
                     Guardar cambios
-                </x-bravera.button>
+                </x-brevare.button>
             </div>
         </form>
     </section>

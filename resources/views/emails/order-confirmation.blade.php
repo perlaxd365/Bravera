@@ -1,9 +1,11 @@
 @php
     $customerName = $order->customer_snapshot['name'] ?? $order->user?->name ?? '';
     $items = $order->items;
+    $thumb = 56;
 @endphp
 
-<x-bravera.mail-layout :title="'Pedido '.$order->order_number.' confirmado'" heading="¡Tu pedido fue confirmado!" accent="success">
+<x-brevare.mail-layout :title="'Pedido '.$order->order_number.' confirmado'" heading="¡Tu pedido fue confirmado!" accent="success"
+    preheader="Tu pedido {{ $order->order_number }} por S/ {{ number_format((float) $order->total, 2) }} fue confirmado.">
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
         Hola <strong style="color:#111827;">{{ $customerName }}</strong>,
     </p>
@@ -22,7 +24,10 @@
 
         <thead>
             <tr style="background-color:#f9fafb;">
-                <th align="left" style="padding:10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
+                <th width="{{ $thumb + 20 }}" style="padding:0;font-size:11px;line-height:1px;">
+                    <span style="display:none;font-size:1px;line-height:1px;">&nbsp;</span>
+                </th>
+                <th align="left" style="padding:10px 4px 10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
                     Producto
                 </th>
                 <th align="center" style="padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:52px;">
@@ -39,8 +44,13 @@
 
         <tbody>
             @foreach ($items as $item)
+                @php $image = $item->imageUrl(160); @endphp
                 <tr>
-                    <td style="padding:12px 14px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;vertical-align:top;">
+                    <td width="{{ $thumb + 20 }}" valign="top"
+                        style="padding:12px 0 12px 14px;border-top:1px solid #f3f4f6;">
+                        <x-brevare.mail-thumb :src="$image" :alt="$item->product_name" :size="$thumb" />
+                    </td>
+                    <td style="padding:12px 14px 12px 4px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;vertical-align:top;">
                         {{ $item->product_name }}
                         @if ($item->variant_attributes)
                             <br>
@@ -110,4 +120,4 @@
             Ver mis pedidos
         </a>
     </p>
-</x-bravera.mail-layout>
+</x-brevare.mail-layout>

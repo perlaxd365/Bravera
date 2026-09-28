@@ -6,9 +6,22 @@
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-bold tracking-tight text-gray-900">Pedido {{ $order->order_number }}</h1>
-        <div class="flex flex-wrap gap-2">
-            <x-bravera.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-bravera.badge>
-            <x-bravera.badge :color="$order->payment_status->badgeColor()">Pago: {{ $order->payment_status->label() }}</x-bravera.badge>
+        {{-- Las etiquetas de estado y la acción van en grupos separados: mezcladas
+             en la misma fila, el botón filled se leía como una tercera etiqueta. --}}
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
+                <x-brevare.badge :color="$order->payment_status->badgeColor()">Pago: {{ $order->payment_status->label() }}</x-brevare.badge>
+            </div>
+            @if ($order->isPayable())
+                {{-- El checkout se cierra con el pedido ya creado, así que el pago
+                     se retoma aquí con el mismo pedido y la misma orden, sin que el
+                     comprador tenga que rehacer el carrito. --}}
+                <a href="{{ route('checkout', ['pagar' => $order->order_number]) }}"
+                    class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800">
+                    <flux:icon name="credit-card" class="size-4" /> Pagar ahora
+                </a>
+            @endif
         </div>
     </div>
 
@@ -20,7 +33,7 @@
                     <header class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
                         <span class="font-bold text-gray-900">Productos</span>
                         @if ($order->hasCancelledItems())
-                            <x-bravera.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-bravera.badge>
+                            <x-brevare.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-brevare.badge>
                         @endif
                     </header>
                     <div class="overflow-x-auto">
@@ -36,12 +49,25 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 @foreach ($order->items as $item)
+                                    @php $image = $item->imageUrl(160); @endphp
                                     <tr class="{{ $item->isActive() ? '' : 'bg-red-50/40' }}">
                                         <td class="px-6 py-4">
-                                            <div class="font-semibold text-gray-900 {{ $item->isActive() ? '' : 'line-through opacity-60' }}">
-                                                {{ $item->product_name }}
+                                            <div class="flex items-center gap-3">
+                                                @if ($image)
+                                                    <img src="{{ $image }}" alt="{{ $item->product_name }}" loading="lazy"
+                                                        class="size-14 shrink-0 rounded-xl border border-gray-100 object-cover {{ $item->isActive() ? '' : 'opacity-50 grayscale' }}">
+                                                @else
+                                                    <span class="flex size-14 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-300">
+                                                        <flux:icon name="cube" class="size-5" />
+                                                    </span>
+                                                @endif
+                                                <div class="min-w-0">
+                                                    <div class="font-semibold text-gray-900 {{ $item->isActive() ? '' : 'line-through opacity-60' }}">
+                                                        {{ $item->product_name }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">{{ $item->variant_sku }}</div>
+                                                </div>
                                             </div>
-                                            <div class="text-xs text-gray-500">{{ $item->variant_sku }}</div>
                                         </td>
                                         <td class="px-6 py-4 text-gray-600">{{ $item->supplier_name }}</td>
                                         <td class="px-6 py-4 text-center text-gray-900">{{ $item->quantity }}</td>
@@ -49,7 +75,7 @@
                                             S/ {{ number_format((float) $item->unit_price, 2) }}
                                         </td>
                                         <td class="px-6 py-4 text-right">
-                                            <x-bravera.badge :color="$item->status->badgeColor()">{{ $item->status->label() }}</x-bravera.badge>
+                                            <x-brevare.badge :color="$item->status->badgeColor()">{{ $item->status->label() }}</x-brevare.badge>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -67,7 +93,7 @@
                                 <div>
                                     <span class="flex items-center gap-2 font-semibold text-gray-900">
                                         {{ $supplierOrder->supplier?->business_name }}
-                                        <x-bravera.badge :color="$supplierOrder->status->badgeColor()">{{ $supplierOrder->status->label() }}</x-bravera.badge>
+                                        <x-brevare.badge :color="$supplierOrder->status->badgeColor()">{{ $supplierOrder->status->label() }}</x-brevare.badge>
                                     </span>
                                     <span class="mt-1 block text-xs text-gray-500">
                                         {{ $supplierOrder->supplier_order_number }}

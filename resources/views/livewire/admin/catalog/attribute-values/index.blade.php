@@ -68,9 +68,9 @@
                                 <td class="px-6 py-4 text-gray-600">{{ $value->sort_order }}</td>
                                 <td class="px-6 py-4">
                                     @if ($value->is_active)
-                                        <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                        <x-brevare.badge color="success">Activo</x-brevare.badge>
                                     @else
-                                        <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                        <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -92,7 +92,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-14 text-center">
-                                    <x-bravera.empty-state icon="swatch" title="No existen registros" description="Crea el primer valor para comenzar." />
+                                    <x-brevare.empty-state icon="swatch" title="No existen registros" description="Crea el primer valor para comenzar." />
                                 </td>
                             </tr>
                         @endforelse

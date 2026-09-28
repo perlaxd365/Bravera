@@ -49,7 +49,7 @@ class Cart extends Model
      */
     public function subtotal(): float
     {
-        return $this->items->sum(fn ($item) => $item->unit_price * $item->quantity);
+        return $this->items->sum(fn($item) => $item->unit_price * $item->quantity);
     }
 
     /**
@@ -57,11 +57,17 @@ class Cart extends Model
      */
     public function costTotal(): float
     {
-        return $this->items->sum(fn ($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity);
+        return $this->items->sum(fn($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity);
     }
 
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }

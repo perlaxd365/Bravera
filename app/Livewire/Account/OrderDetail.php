@@ -14,7 +14,8 @@ class OrderDetail extends Component
     public function mount(?Order $order): void
     {
         $this->order = $order?->load([
-            'items.variant.product',
+            'items.variant.images',
+            'items.product.variants.images',
             'items.supplierVariant.supplier',
             'payment',
             'supplierOrders.supplier',

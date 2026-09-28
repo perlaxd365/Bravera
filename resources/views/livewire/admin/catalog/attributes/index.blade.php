@@ -44,27 +44,27 @@
                             <td class="px-6 py-4 font-semibold text-gray-900">{{ $attribute->name }}</td>
                             <td class="px-6 py-4"><code class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">{{ $attribute->slug }}</code></td>
                             <td class="px-6 py-4">
-                                <x-bravera.badge color="info">{{ ucfirst($attribute->type) }}</x-bravera.badge>
+                                <x-brevare.badge color="info">{{ ucfirst($attribute->type) }}</x-brevare.badge>
                             </td>
                             <td class="px-6 py-4">
                                 @if ($attribute->is_filter)
-                                    <x-bravera.badge color="success">Sí</x-bravera.badge>
+                                    <x-brevare.badge color="success">Sí</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="neutral">No</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">No</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
                                 @if ($attribute->is_required)
-                                    <x-bravera.badge color="warning">Sí</x-bravera.badge>
+                                    <x-brevare.badge color="warning">Sí</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="neutral">No</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">No</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
                                 @if ($attribute->is_active)
-                                    <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                    <x-brevare.badge color="success">Activo</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                    <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-gray-600">{{ $attribute->sort_order }}</td>
@@ -87,7 +87,7 @@
                     @empty
                         <tr>
                             <td colspan="9" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="adjustments-horizontal" title="No existen atributos registrados" description="Crea el primer atributo para comenzar." />
+                                <x-brevare.empty-state icon="adjustments-horizontal" title="No existen atributos registrados" description="Crea el primer atributo para comenzar." />
                             </td>
                         </tr>
                     @endforelse

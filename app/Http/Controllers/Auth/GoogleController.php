@@ -60,7 +60,7 @@ class GoogleController extends Controller
 
         $user->registerLogin();
 
-        // Los usuarios nuevos vía Google aún no tienen contraseña en Bravera:
+        // Los usuarios nuevos vía Google aún no tienen contraseña en Brevare:
         // se les pide crearla una vez (confirmándola dos veces) y quedan listos.
         if ($user->needsPasswordSetup()) {
             return redirect()->route('set-password');
@@ -70,7 +70,7 @@ class GoogleController extends Controller
     }
 
     /**
-     * Busca la cuenta Bravera correspondiente al usuario de Google:
+     * Busca la cuenta Brevare correspondiente al usuario de Google:
      * primero por proveedor y luego por correo (cuentas ya registradas).
      */
     private function resolveExistingUser(OAuthUser $googleUser): ?User

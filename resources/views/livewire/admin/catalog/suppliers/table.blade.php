@@ -51,9 +51,9 @@
                             <td class="px-6 py-4 text-gray-600">{{ $supplier->whatsapp ?: '-' }}</td>
                             <td class="px-6 py-4">
                                 @if ($supplier->status === 'active')
-                                    <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                    <x-brevare.badge color="success">Activo</x-brevare.badge>
                                 @else
-                                    <x-bravera.badge color="danger">Inactivo</x-bravera.badge>
+                                    <x-brevare.badge color="danger">Inactivo</x-brevare.badge>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -75,7 +75,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="truck" title="No existen proveedores registrados" description="Crea el primer proveedor para comenzar." />
+                                <x-brevare.empty-state icon="truck" title="No existen proveedores registrados" description="Crea el primer proveedor para comenzar." />
                             </td>
                         </tr>
                     @endforelse

@@ -5,17 +5,17 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
-class BraveraMakeModule extends Command
+class BrevareMakeModule extends Command
 {
     /**
      * Nombre del comando.
      */
-    protected $signature = 'bravera:make-module {name}';
+    protected $signature = 'brevare:make-module {name}';
 
     /**
      * Descripción.
      */
-    protected $description = 'Crear un módulo para la arquitectura Bravera';
+    protected $description = 'Crear un módulo para la arquitectura Brevare';
 
     /**
      * Directorios del módulo.

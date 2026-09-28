@@ -87,7 +87,7 @@
                                 <td class="px-6 py-3.5 text-gray-600">{{ $order->customer_snapshot['name'] ?? $order->user?->name }}</td>
                                 <td class="px-6 py-3.5 text-right font-semibold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</td>
                                 <td class="px-6 py-3.5 text-center">
-                                    <x-bravera.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-bravera.badge>
+                                    <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
                                 </td>
                                 <td class="px-6 py-3.5 text-right text-xs text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }}</td>
                             </tr>

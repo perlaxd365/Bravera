@@ -1,7 +1,7 @@
 <x-mail::message>
 # Restablece tu contraseña, {{ $user->name }}!
 
-Recibimos una solicitud para restablecer la contraseña de tu cuenta en **Bravera**.
+Recibimos una solicitud para restablecer la contraseña de tu cuenta en **Brevare**.
 
 @component('mail::button', ['url' => $url, 'color' => 'primary'])
 Crear nueva contraseña
@@ -10,5 +10,5 @@ Crear nueva contraseña
 Este enlace expira en **60 minutos**. Si no solicitaste este cambio, ignora este correo y tu contraseña seguirá igual.
 
 Saludos,<br>
-El equipo de **Bravera**.
+El equipo de **Brevare**.
 </x-mail::message>

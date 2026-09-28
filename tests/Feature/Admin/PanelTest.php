@@ -31,7 +31,7 @@ class PanelTest extends TestCase
 
     private function admin(): User
     {
-        return User::where('email', 'admin@bravera.com')->firstOrFail();
+        return User::where('email', 'administracion@brevare.com')->firstOrFail();
     }
 
     private function customer(): User

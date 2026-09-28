@@ -13,11 +13,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $fillable = [
-        'order_number', 'user_id', 'status', 'payment_status',
-        'subtotal', 'shipping_total', 'discount_total', 'total', 'cost_total',
-        'coupon_id', 'coupon_code', 'customer_snapshot', 'address_snapshot',
-        'currency', 'notes', 'paid_at',
-        'cancelled_at', 'cancelled_by', 'cancellation_reason',
+        'order_number',
+        'user_id',
+        'cart_id',
+        'status',
+        'payment_status',
+        'subtotal',
+        'shipping_total',
+        'discount_total',
+        'total',
+        'cost_total',
+        'coupon_id',
+        'coupon_code',
+        'customer_snapshot',
+        'address_snapshot',
+        'currency',
+        'notes',
+        'paid_at',
+        'gateway_order_id',
+        'cancelled_at',
+        'cancelled_by',
+        'cancellation_reason',
     ];
 
     protected function casts(): array
@@ -72,6 +88,16 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
+    /**
+     * Un pedido acumula varios pagos: el que falló, el pendiente del webhook y
+     * el que sí se acreditó. El singular de arriba se queda con el primero, así
+     * que para historial está es el que hay que usar.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function supplierOrders(): HasMany
     {
         return $this->hasMany(SupplierOrder::class);
@@ -104,5 +130,27 @@ class Order extends Model
     {
         return $this->items()->exists()
             && $this->activeItems()->doesntExist();
+    }
+
+    /**
+     * Si el pedido sigue esperando un pago que el comprador puede terminar.
+     *
+     * Un pedido con el pago pendiente se puede reabrir con su modal mientras no
+     * haya pasado el plazo de reserva: pasado ese plazo, el comando de
+     * expiración lo cancela y ofrecer "pagar ahora" sería una promesa falsa.
+     */
+    public function isPayable(): bool
+    {
+        if ($this->status !== OrderStatus::PENDING || $this->payment_status !== PaymentStatus::PENDING) {
+            return false;
+        }
+
+        $hours = (int) config('payments.pending_order_hours', 24);
+
+        return $this->created_at->gte(now()->subHours(max(1, $hours)));
+    }
+    public function cart(): BelongsTo
+    {
+        return $this->belongsTo(Cart::class);
     }
 }

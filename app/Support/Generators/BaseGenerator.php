@@ -2,9 +2,9 @@
 
 namespace App\Support\Generators;
 
+use App\Support\Generators\Contracts\GeneratorInterface;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use App\Support\Generators\Contracts\GeneratorInterface;
 
 abstract class BaseGenerator implements GeneratorInterface
 {
@@ -16,21 +16,21 @@ abstract class BaseGenerator implements GeneratorInterface
     {
         return [
 
-            '{{module}}'     => $this->module,
+            '{{module}}' => $this->module,
 
-            '{{model}}'      => $this->module,
+            '{{model}}' => $this->module,
 
-            '{{variable}}'   => Str::camel($this->module),
+            '{{variable}}' => Str::camel($this->module),
 
-            '{{snake}}'      => Str::snake($this->module),
+            '{{snake}}' => Str::snake($this->module),
 
-            '{{plural}}'     => Str::plural(Str::snake($this->module)),
+            '{{plural}}' => Str::plural(Str::snake($this->module)),
 
-            '{{table}}'      => Str::plural(Str::snake($this->module)),
+            '{{table}}' => Str::plural(Str::snake($this->module)),
 
-            '{{kebab}}'      => Str::kebab($this->module),
+            '{{kebab}}' => Str::kebab($this->module),
 
-            '{{namespace}}'  => "App\\Modules\\{$this->module}",
+            '{{namespace}}' => "App\\Modules\\{$this->module}",
 
         ];
     }
@@ -42,7 +42,7 @@ abstract class BaseGenerator implements GeneratorInterface
     ): void {
 
         $content = File::get(
-            config('bravera.stubs_path') . "/{$stub}"
+            config('brevare.stubs_path')."/{$stub}"
         );
 
         foreach (

@@ -1,14 +1,14 @@
 ---
-name: bravera-apple-ui
-description: Design and implement modern, minimal, premium Apple-inspired UI for the Bravera ecommerce platform. Use when building or styling Laravel 13 / Livewire 3 / Vite / Tailwind CSS / Flux UI components, views, or pages with Blade syntax.
+name: brevare-apple-ui
+description: Design and implement modern, minimal, premium Apple-inspired UI for the Brevare ecommerce platform. Use when building or styling Laravel 13 / Livewire 3 / Vite / Tailwind CSS / Flux UI components, views, or pages with Blade syntax.
 ---
 
-# Apple UI — Bravera
+# Apple UI — Brevare
 
 ## Purpose
 
 Design and implement modern, minimal and premium user interfaces
-for the Bravera ecommerce platform.
+for the Brevare ecommerce platform.
 
 The visual language should be inspired by Apple's Human Interface
 Guidelines without copying proprietary Apple interfaces.
@@ -59,7 +59,7 @@ Avoid:
 - AdminLTE
 - Visually inconsistent components
 
-## Bravera Architecture
+## Brevare Architecture
 
 Business logic must remain inside:
 
@@ -71,7 +71,7 @@ resources/views/livewire
 
 Reusable UI components:
 
-resources/views/components/bravera
+resources/views/components/brevare
 
 Do not move business logic into Blade components.
 
@@ -137,7 +137,7 @@ Interfaces should provide:
 
 Before creating a new component:
 
-1. Check whether an existing Bravera component can be reused.
+1. Check whether an existing Brevare component can be reused.
 2. Reuse existing components whenever possible.
 3. Do not duplicate UI logic.
 4. Do not modify business logic for visual changes.

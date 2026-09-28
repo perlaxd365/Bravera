@@ -8,8 +8,8 @@
             <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">Pedido {{ $order->order_number }}</h1>
                 <div class="flex flex-wrap gap-2">
-                    <x-bravera.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-bravera.badge>
-                    <x-bravera.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-bravera.badge>
+                    <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
+                    <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-brevare.badge>
                 </div>
             </div>
         </div>
@@ -45,7 +45,7 @@
                         </h2>
                         <div class="flex flex-wrap items-center gap-2">
                             @if ($order->hasCancelledItems())
-                                <x-bravera.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-bravera.badge>
+                                <x-brevare.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-brevare.badge>
                             @endif
                             @if ($order->activeItems()->exists())
                                 <button wire:click="$toggle('cancelWholeOrder')"
@@ -93,20 +93,33 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 @foreach ($order->items as $item)
+                                    @php $image = $item->imageUrl(160); @endphp
                                     <tr wire:key="item-{{ $item->id }}" class="{{ $item->isActive() ? '' : 'bg-red-50/40' }}">
                                         <td class="px-6 py-4">
-                                            <div class="font-semibold text-gray-900 {{ $item->isActive() ? '' : 'line-through opacity-60' }}">
-                                                {{ $item->product_name }}
-                                            </div>
-                                            <div class="text-xs text-gray-500">{{ $item->supplier_name }}</div>
-                                            @unless ($item->isActive())
-                                                <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                                                    <x-bravera.badge :color="$item->status->badgeColor()">{{ $item->status->label() }}</x-bravera.badge>
-                                                    @if ($item->cancellation_reason)
-                                                        <span class="text-xs italic text-gray-500">{{ $item->cancellation_reason }}</span>
-                                                    @endif
+                                            <div class="flex items-center gap-3">
+                                                @if ($image)
+                                                    <img src="{{ $image }}" alt="{{ $item->product_name }}" loading="lazy"
+                                                        class="size-14 shrink-0 rounded-xl border border-gray-100 object-cover {{ $item->isActive() ? '' : 'opacity-50 grayscale' }}">
+                                                @else
+                                                    <span class="flex size-14 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-300">
+                                                        <flux:icon name="cube" class="size-5" />
+                                                    </span>
+                                                @endif
+                                                <div class="min-w-0">
+                                                    <div class="font-semibold text-gray-900 {{ $item->isActive() ? '' : 'line-through opacity-60' }}">
+                                                        {{ $item->product_name }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">{{ $item->supplier_name }}</div>
+                                                    @unless ($item->isActive())
+                                                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                                            <x-brevare.badge :color="$item->status->badgeColor()">{{ $item->status->label() }}</x-brevare.badge>
+                                                            @if ($item->cancellation_reason)
+                                                                <span class="text-xs italic text-gray-500">{{ $item->cancellation_reason }}</span>
+                                                            @endif
+                                                        </div>
+                                                    @endunless
                                                 </div>
-                                            @endunless
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 text-center text-gray-900">{{ $item->quantity }}</td>
                                         <td class="px-6 py-4 text-right text-gray-900">S/ {{ number_format((float) $item->unit_price, 2) }}</td>
@@ -184,11 +197,11 @@
                                     <div class="mt-0.5 text-xs text-gray-500">{{ $so->supplier?->business_name }}</div>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <x-bravera.badge :color="$so->status->badgeColor()">{{ $so->status->label() }}</x-bravera.badge>
+                                    <x-brevare.badge :color="$so->status->badgeColor()">{{ $so->status->label() }}</x-brevare.badge>
                                     @if ($so->payment)
-                                        <x-bravera.badge color="success">Pagado S/ {{ number_format((float) $so->payment->amount, 2) }}</x-bravera.badge>
+                                        <x-brevare.badge color="success">Pagado S/ {{ number_format((float) $so->payment->amount, 2) }}</x-brevare.badge>
                                     @else
-                                        <x-bravera.badge color="warning">Pago pendiente</x-bravera.badge>
+                                        <x-brevare.badge color="warning">Pago pendiente</x-brevare.badge>
                                     @endif
                                 </div>
                             </div>
@@ -274,7 +287,7 @@
                         </div>
                     @empty
                         <div class="px-6 py-14 text-center">
-                            <x-bravera.empty-state icon="truck" title="Este pedido no generó órdenes a proveedores" description="Las órdenes de compra a proveedores aparecerán aquí." />
+                            <x-brevare.empty-state icon="truck" title="Este pedido no generó órdenes a proveedores" description="Las órdenes de compra a proveedores aparecerán aquí." />
                         </div>
                     @endforelse
                 </div>

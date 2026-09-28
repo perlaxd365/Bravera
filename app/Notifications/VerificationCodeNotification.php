@@ -32,7 +32,7 @@ class VerificationCodeNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Tu código de verificación de Bravera')
+            ->subject('Tu código de verificación de Brevare')
             ->markdown('emails.auth.verification-code', [
                 'user' => $notifiable,
                 'code' => $this->code,

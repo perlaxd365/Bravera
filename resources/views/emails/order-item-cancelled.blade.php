@@ -1,10 +1,14 @@
 @php
     $name = $order->customer_snapshot['name'] ?? $order->user?->name ?? '';
+    $itemImage = $item?->imageUrl(160);
 @endphp
 
-<x-bravera.mail-layout :title="'Pedido '.$order->order_number.' — Actualización'"
+<x-brevare.mail-layout :title="'Pedido '.$order->order_number.' — Actualización'"
     :heading="$wholeOrderCancelled ? 'Tu pedido fue cancelado' : 'Actualización de tu pedido'"
-    :accent="$wholeOrderCancelled ? 'danger' : 'warning'">
+    :accent="$wholeOrderCancelled ? 'danger' : 'warning'"
+    :preheader="$wholeOrderCancelled
+        ? 'Tu pedido '.$order->order_number.' fue cancelado por completo.'
+        : 'Un producto de tu pedido '.$order->order_number.' fue cancelado.'">
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
         Hola <strong style="color:#111827;">{{ $name }}</strong>,
     </p>
@@ -16,11 +20,18 @@
             máximo de 5 días hábiles.
         </p>
     @else
-        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4b5563;">
-            El producto <strong style="color:#111827;">{{ $item?->product_name ?? 'seleccionado' }}</strong>
-            fue cancelado de tu pedido <strong style="color:#111827;">{{ $order->order_number }}</strong>.
-            El resto de los productos de tu pedido sigue vigente.
-        </p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+            <tr>
+                <td width="76" valign="top" style="padding:0;">
+                    <x-brevare.mail-thumb :src="$itemImage" :alt="$item?->product_name ?? ''" :size="56" />
+                </td>
+                <td valign="top" style="padding:0 0 0 12px;font-size:15px;line-height:1.6;color:#4b5563;">
+                    El producto <strong style="color:#111827;">{{ $item?->product_name ?? 'seleccionado' }}</strong>
+                    fue cancelado de tu pedido <strong style="color:#111827;">{{ $order->order_number }}</strong>.
+                    El resto de los productos de tu pedido sigue vigente.
+                </td>
+            </tr>
+        </table>
     @endif
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -64,4 +75,4 @@
             Ver mis pedidos
         </a>
     </p>
-</x-bravera.mail-layout>
+</x-brevare.mail-layout>

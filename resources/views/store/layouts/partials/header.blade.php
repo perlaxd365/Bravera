@@ -5,7 +5,7 @@
                 <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
                     <flux:icon name="shopping-bag" class="size-4" />
                 </span>
-                Bravera
+                Brevare
             </a>
         </div>
 

@@ -3,6 +3,7 @@
 namespace App\Modules\Payments\Gateways;
 
 use App\Enums\PaymentStatus;
+use App\Enums\RefundReason;
 use App\Models\Payment;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
@@ -49,7 +50,7 @@ class DemoGateway implements PaymentGateway
         ];
     }
 
-    public function refund(Payment $payment): array
+    public function refund(Payment $payment, ?RefundReason $reason = null): array
     {
         $this->guardEnabled();
 

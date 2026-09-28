@@ -28,6 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
         ]);
+
+        // Webhooks de pasarela: peticiones server-to-server sin sesión ni token.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

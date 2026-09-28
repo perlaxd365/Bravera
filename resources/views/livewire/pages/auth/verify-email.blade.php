@@ -111,7 +111,7 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <x-bravera.auth-card
+    <x-brevare.auth-card
         title="Verifica tu correo"
         subtitle="Te enviamos un código de 6 dígitos para confirmar tu cuenta."
     >
@@ -146,7 +146,7 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="mt-6">
             <p class="mb-2 text-center text-sm font-semibold text-gray-900">Ingresa el código</p>
 
-            <x-bravera.otp-input wire:model="code" :length="6" method="verify" />
+            <x-brevare.otp-input wire:model="code" :length="6" method="verify" />
 
             @error('code')
                 <div class="auth-shake mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
@@ -186,9 +186,9 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-slot:footer>
             <div class="space-y-3">
-                <x-bravera.button type="button" wire:click="verify">
+                <x-brevare.button type="button" wire:click="verify">
                     Verificar mi correo
-                </x-bravera.button>
+                </x-brevare.button>
 
                 <button
                     type="button"
@@ -200,5 +200,5 @@ new #[Layout('layouts.guest')] class extends Component
                 </button>
             </div>
         </x-slot:footer>
-    </x-bravera.auth-card>
+    </x-brevare.auth-card>
 </div>

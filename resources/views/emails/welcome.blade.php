@@ -1,7 +1,7 @@
 <x-mail::message>
-# ¡Bienvenido a Bravera, {{ $user->name }}!
+# ¡Bienvenido a Brevare, {{ $user->name }}!
 
-Gracias por crear tu cuenta en **Bravera**. A partir de ahora puedes:
+Gracias por crear tu cuenta en **Brevare**. A partir de ahora puedes:
 
 - Explorar nuestro catálogo de productos.
 - Agregar productos a tu carrito y completar tu compra.
@@ -12,5 +12,5 @@ Ir a la tienda
 @endcomponent
 
 Saludos,<br>
-El equipo de **Bravera**.
+El equipo de **Brevare**.
 </x-mail::message>

@@ -65,9 +65,9 @@
                             <td class="px-6 py-4 text-center">
                                 <button wire:click="toggle({{ $coupon->id }})" class="transition hover:opacity-80" aria-label="Cambiar estado">
                                     @if ($coupon->is_active)
-                                        <x-bravera.badge color="success">Activo</x-bravera.badge>
+                                        <x-brevare.badge color="success">Activo</x-brevare.badge>
                                     @else
-                                        <x-bravera.badge color="neutral">Inactivo</x-bravera.badge>
+                                        <x-brevare.badge color="neutral">Inactivo</x-brevare.badge>
                                     @endif
                                 </button>
                             </td>
@@ -90,7 +90,7 @@
                     @empty
                         <tr>
                             <td colspan="8" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="ticket" title="No hay cupones" description="Crea el primer cupón para comenzar." />
+                                <x-brevare.empty-state icon="ticket" title="No hay cupones" description="Crea el primer cupón para comenzar." />
                             </td>
                         </tr>
                     @endforelse

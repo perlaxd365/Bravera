@@ -5,9 +5,11 @@
         $order->items->sum(fn ($item) => (float) $item->supplier_shipping_cost * (int) $item->quantity),
         2
     );
+    $thumb = 52;
 @endphp
 
-<x-bravera.mail-layout :title="'Orden '.$order->supplier_order_number" heading="Nueva orden de compra" accent="primary">
+<x-brevare.mail-layout :title="'Orden '.$order->supplier_order_number" heading="Nueva orden de compra" accent="primary"
+    :preheader="'Debes despachar '.$order->items->count().' producto(s) por S/ '.number_format((float) $order->total_cost, 2).'.'">
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
         Hola <strong style="color:#111827;">{{ $order->supplier?->business_name }}</strong>,
     </p>
@@ -24,7 +26,10 @@
         style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;border-collapse:separate;">
         <thead>
             <tr style="background-color:#f9fafb;">
-                <th align="left" style="padding:10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
+                <th width="{{ $thumb + 20 }}" style="padding:0;font-size:11px;line-height:1px;">
+                    <span style="display:none;font-size:1px;line-height:1px;">&nbsp;</span>
+                </th>
+                <th align="left" style="padding:10px 8px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
                     Producto
                 </th>
                 <th align="left" style="padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:110px;">
@@ -46,8 +51,13 @@
         </thead>
         <tbody>
             @foreach ($order->items as $item)
+                @php $image = $item->orderItem?->imageUrl(160); @endphp
                 <tr>
-                    <td style="padding:12px 14px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;">
+                    <td width="{{ $thumb + 20 }}" valign="top"
+                        style="padding:12px 0 12px 14px;border-top:1px solid #f3f4f6;">
+                        <x-brevare.mail-thumb :src="$image" :alt="$item->orderItem?->product_name ?? 'Producto'" :size="$thumb" />
+                    </td>
+                    <td style="padding:12px 8px 12px 4px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;vertical-align:top;">
                         {{ $item->orderItem?->product_name ?? 'Producto' }}
                     </td>
                     <td style="padding:12px 8px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;">
@@ -70,7 +80,7 @@
         </tbody>
         <tfoot>
             <tr style="background-color:#f9fafb;">
-                <td colspan="4" align="right" style="padding:12px 14px;border-top:1px solid #e5e7eb;font-size:13px;font-weight:600;color:#111827;">
+                <td colspan="5" align="right" style="padding:12px 14px;border-top:1px solid #e5e7eb;font-size:13px;font-weight:600;color:#111827;">
                     Total a pagar
                 </td>
                 <td align="right" style="padding:12px 8px;border-top:1px solid #e5e7eb;font-size:13px;font-weight:600;color:#4b5563;white-space:nowrap;">
@@ -101,4 +111,4 @@
     <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">
         Por favor confirma la disponibilidad y el despacho de la orden lo antes posible.
     </p>
-</x-bravera.mail-layout>
+</x-brevare.mail-layout>

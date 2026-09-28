@@ -5,7 +5,9 @@ namespace Tests\Feature\Store;
 use App\Enums\CouponType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Livewire\Account\Orders as AccountOrders;
 use App\Livewire\Store\Checkout;
+use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\CustomerAddress;
@@ -20,16 +22,21 @@ use App\Models\Supplier;
 use App\Models\SupplierVariant;
 use App\Models\User;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
+use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\DemoGateway;
 use App\Modules\Shipping\Enums\ShippingZoneType;
 use App\Services\CartService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\DatabaseTransactionsManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Locked;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Support\CulqiResponses;
+use Tests\Support\StubGateway;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -171,7 +178,7 @@ class CheckoutTest extends TestCase
     private function coupon(array $overrides = []): Coupon
     {
         return Coupon::create(array_merge([
-            'code' => 'BRAVERA10',
+            'code' => 'BREVARE10',
             'name' => 'Diez por ciento',
             'type' => CouponType::PERCENTAGE->value,
             'value' => 10,
@@ -228,7 +235,7 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('couponCode', 'BRAVERA10')
+            ->set('couponCode', 'BREVARE10')
             ->call('placeOrder')
             ->assertHasNoErrors();
 
@@ -342,7 +349,7 @@ class CheckoutTest extends TestCase
 
         $component = new Checkout;
         $component->selectedAddressId = $address->id;
-        $component->couponCode = 'BRAVERA10';
+        $component->couponCode = 'BREVARE10';
 
         // Envenenamiento: importes inventados en las propiedades del componente.
         $this->poisonProperty($component, 'quote', ['items' => [], 'total' => 0.0]);
@@ -491,7 +498,7 @@ class CheckoutTest extends TestCase
 
         $component = Livewire::actingAs($user)->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('couponCode', 'BRAVERA10');
+            ->set('couponCode', 'BREVARE10');
 
         $component->call('applyCoupon')->assertSet('couponError', null);
 
@@ -517,7 +524,7 @@ class CheckoutTest extends TestCase
 
         $component = Livewire::actingAs($user)->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('couponCode', 'BRAVERA10');
+            ->set('couponCode', 'BREVARE10');
 
         $component->call('applyCoupon')->assertSet('couponError', null);
 
@@ -544,7 +551,7 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('couponCode', 'BRAVERA10')
+            ->set('couponCode', 'BREVARE10')
             ->call('placeOrder')
             ->assertHasNoErrors();
 
@@ -706,12 +713,1308 @@ class CheckoutTest extends TestCase
 
         $component = Livewire::actingAs($user)->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('couponCode', 'BRAVERA10')
+            ->set('couponCode', 'BREVARE10')
             ->call('placeOrder');
 
         $component->assertDispatched('notify');
 
         $this->assertSame(0, Order::count());
         $this->assertSame(0, Payment::count());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Frontera transaccional del cobro
+    |--------------------------------------------------------------------------
+    |
+    | Culqi no ofrece idempotency key. Si el cobro ocurriera dentro de una
+    | transacción y esta revirtiera después, el cliente habría pagado sin
+    | pedido ni pago registrados. Por eso el cobro va sin transacción abierta.
+    |
+    */
+
+    private function useStubGateway(): void
+    {
+        config([
+            'payments.default_gateway' => 'stub',
+            'payments.gateways.stub' => StubGateway::class,
+        ]);
+    }
+
+    public function test_el_cobro_no_ocurre_dentro_de_una_transaccion(): void
+    {
+        $this->useStubGateway();
+        StubGateway::approved();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        // RefreshDatabase ya envuelve el test en una transacción, así que lo
+        // que importa es que el cobro no abra una NUEVA: si el nivel durante el
+        // cobro fuera mayor que este baseline, el dinero se movería con la
+        // transacción abierta.
+        $baseline = DB::transactionLevel();
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $this->assertSame($baseline, StubGateway::$transactionLevelDuringCharge);
+    }
+
+    public function test_un_pago_rechazado_libera_el_stock_reservado(): void
+    {
+        $this->useStubGateway();
+        StubGateway::declined();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder');
+
+        $order = Order::firstOrFail();
+
+        // El pedido existe con el fallo registrado, pero nada de stock queda
+        // retenido para un pedido que nunca se despachará.
+        $this->assertSame(PaymentStatus::FAILED->value, $order->payment_status->value);
+        $this->assertSame(0, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    public function test_un_pago_pendiente_conserva_el_stock_reservado(): void
+    {
+        $this->useStubGateway();
+        StubGateway::pendingAsync();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder');
+
+        $order = Order::firstOrFail();
+
+        // Yape sigue pendiente: la reserva se mantiene mientras el cliente paga.
+        $this->assertSame(PaymentStatus::PENDING->value, $order->payment_status->value);
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    public function test_liberar_stock_nunca_deja_el_contador_negativo(): void
+    {
+        $this->useStubGateway();
+        StubGateway::declined();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $supplierVariant = SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail();
+        $supplierVariant->update(['reserved_stock' => 0]);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder');
+
+        $this->assertSame(0, (int) $supplierVariant->fresh()->reserved_stock);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token de tarjeta con pasarela real
+    |--------------------------------------------------------------------------
+    |
+    | Con Culqi el número de tarjeta nunca llega al servidor: el navegador lo
+    | tokeniza y manda un tkn_ opaco. Si no llega, el pedido no debe avanzar.
+    |
+    */
+
+    private function useCulqi(): void
+    {
+        config([
+            'payments.default_gateway' => 'culqi',
+            'payments.modal_gateways' => ['culqi'],
+            'payments.allow_demo_gateway' => false,
+            'payments.card_token_gateways' => ['culqi'],
+            'payments.gateway_methods' => ['culqi' => ['card', 'yape']],
+            'payments.culqi.public_key' => 'pk_test_123',
+            'payments.culqi.secret_key' => 'sk_test_456',
+            'payments.culqi.api_url' => 'https://api.culqi.com/v2',
+            'payments.culqi.secure_url' => 'https://secure.culqi.com/v2',
+        ]);
+    }
+
+    public function test_con_culqi_no_se_avanza_sin_token_de_tarjeta(): void
+    {
+        $this->useCulqi();
+        Http::fake();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'card')
+            ->call('placeOrder');
+
+        $component->assertDispatched('notify');
+        $this->assertSame(0, Order::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_con_culqi_se_rechaza_un_token_con_formato_invalido(): void
+    {
+        $this->useCulqi();
+        Http::fake();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'card')
+            ->call('placeOrder', 'numero-de-tarjeta-en-crudo');
+
+        $component->assertDispatched('notify');
+        $this->assertSame(0, Order::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_con_culqi_el_token_llega_a_la_pasarela(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/charges' => Http::response(
+            CulqiResponses::approvedCharge('chr_real_1', 11200), 201
+        )]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'card')
+            ->call('placeOrder', 'tkn_test_123')
+            ->assertHasNoErrors();
+
+        $payment = Payment::firstOrFail();
+
+        $this->assertSame('tkn_test_123', $payment->source_id);
+        $this->assertSame('chr_real_1', $payment->gateway_transaction_id);
+        $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
+
+        Http::assertSent(fn ($request) => $request['source_id'] === 'tkn_test_123');
+    }
+
+    public function test_yape_no_exige_token_de_tarjeta(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(
+            CulqiResponses::pendingOrder('ord_yape_1'), 201
+        )]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'yape')
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $payment = Payment::firstOrFail();
+
+        $this->assertSame('ord_yape_1', $payment->source_id);
+        $this->assertSame('ord_yape_1', $payment->gateway_transaction_id);
+        $this->assertSame(PaymentStatus::PENDING->value, $payment->status->value);
+        // El pedido no se confirma hasta que Yape notifique el pago.
+        $this->assertSame(OrderStatus::PENDING->value, Order::firstOrFail()->status->value);
+    }
+
+    /**
+     * Con una pasarela de modal el selector es el del proveedor: la tienda no
+     * dibuja radios propios ni un formulario de tarjeta. Si añadiera su propio
+     * selector, el comprador podría elegir un medio y la app cobrar otro, y con
+     * el pedido ya creado no habría forma de corregirlo.
+     */
+    public function test_con_culqi_el_selector_de_metodos_es_el_del_proveedor(): void
+    {
+        $this->useCulqi();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertDontSee('type="radio" name="payment_method"', false)
+            ->assertDontSee('Tarjeta de débito/crédito')
+            // El pago se completa dentro del modal de Culqi, no con un botón
+            // de la tienda que competiría con el botón de Culqi.
+            ->assertSee('Continuar al pago')
+            ->assertDontSee('Realizar pedido y pagar');
+    }
+
+    /**
+     * El modal se abre con el pedido y su orden ya creados: es lo que permite
+     * que Culqi ofrezca Yape y el resto de métodos asíncronos, que sin
+     * `settings.order` no se pueden pagar. Si la orden faltara, el modal
+     * mostraría esos medios y fallarían al pagarlos.
+     */
+    public function test_el_modal_de_culqi_se_abre_con_la_orden_ya_creada(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(
+            CulqiResponses::pendingOrder('ord_modal_1'), 201
+        )]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->assertHasNoErrors()
+            ->assertDispatched('culqi:open');
+
+        $order = Order::firstOrFail();
+
+        // El pedido existe y guarda su orden para poder conciliarlo.
+        $this->assertSame('ord_modal_1', $order->gateway_order_id);
+
+        $session = $component->get('culqiSession');
+
+        $this->assertSame('ord_modal_1', $session['gatewayOrderId']);
+        // El importe viaja en céntimos: 112.00 soles = 11200.
+        $this->assertSame(11200, $session['amount']);
+        $this->assertSame('PEN', $session['currency']);
+
+        // Todos los métodos declarados, para que Culqi muestre los que la
+        // cuenta tenga y esconda el resto.
+        foreach (['tarjeta', 'yape', 'billetera', 'bancaMovil', 'agente', 'cuotealo'] as $method) {
+            $this->assertTrue($session['methods'][$method] ?? false, "Falta habilitar {$method}.");
+        }
+
+        // Con pasarela real no debe anunciarse el modo demostración.
+        $component->assertDontSee('Modo demostración');
+    }
+
+    /**
+     * Livewire serializa los arrays como la tupla [valor, {"s":"arr"}] y solo
+     * revierte esa forma en su propio estado, no en la carga de los eventos.
+     *
+     * Al abrir el modal desde el botón, los métodos llegaban así y Culqi, que
+     * valida la configuración con un esquema, rechazaba el modal sin lanzar
+     * ningún error: el comprador pulsaba y no veía nada. La prueba fija la
+     * forma real que viaja por el evento y la limpieza que hace el script.
+     */
+    public function test_el_script_normaliza_la_forma_de_tupla_que_livewire_envia_en_los_eventos(): void
+    {
+        $script = file_get_contents(resource_path('js/checkout.js'));
+
+        $this->assertStringContainsString('const plain = (value) =>', $script);
+        $this->assertStringContainsString("'s' in value[1]", $script);
+
+        // El oyente normaliza antes de abrir, y openModal vuelve a normalizar.
+        $this->assertMatchesRegularExpression(
+            '/plain\(event\?\.session/',
+            $script,
+            'La sesión del evento debe normalizarse antes de abrir el modal.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/export const openModal = async \(rawSession, publicKey, state\) => \{\s*const session = plain\(rawSession\)/',
+            $script,
+            'openModal debe normalizar la sesión que recibe.'
+        );
+
+        // Y si aun así los métodos no fueran un objeto, se avisa en vez de
+        // dejar la pantalla sin reacción.
+        $this->assertStringContainsString("typeof session.methods === 'object' && !Array.isArray(session.methods)", $script);
+    }
+
+    /**
+     * La tarjeta nunca debe tener un input propio: cualquier campo de número o
+     * CVV en nuestra página es una superficie de PCI que no queremos.
+     */
+    public function test_la_vista_no_pide_la_tarjeta_en_claro(): void
+    {
+        $this->useCulqi();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'card')
+            ->assertDontSee('card-number')
+            ->assertDontSee('card-cvv')
+            ->assertDontSee('autocomplete="cc-number"', false);
+    }
+
+    /**
+     * El bundle v2 fue retirado (secure.culqi.com/js/culqi.js responde 403) y su
+     * createToken ya no existe. El producto vigente es Checkout Custom, que se
+     * carga desde js.culqi.com y expone el constructor CulqiCheckout.
+     *
+     * Si alguien vuelve al bundle viejo o al Tokens API a mano, el checkout se
+     * rompe en produccion y el único síntoma es un toast que el cliente no puede
+     * resolver, así que lo fijamos con una prueba.
+     */
+    public function test_el_checkout_usa_el_checkout_custom_vigente_de_culqi(): void
+    {
+        $script = file_get_contents(resource_path('js/checkout.js'));
+
+        $this->assertIsString($script);
+
+        $this->assertStringNotContainsString(
+            'secure.culqi.com/js/culqi.js',
+            $script,
+            'El bundle v2 de Culqi fue retirado y responde 403.'
+        );
+
+        $this->assertStringNotContainsString(
+            'Culqi.createToken',
+            $script,
+            'createToken pertenece a la API v2, incompatible con la librería vigente.'
+        );
+
+        $this->assertStringContainsString(
+            'https://js.culqi.com/checkout-js',
+            $script,
+            'El formulario debe montarlo con el bundle oficial de Checkout Custom.'
+        );
+
+        $this->assertStringContainsString(
+            'new Ctor(publicKey',
+            $script,
+            'Culqi expone el constructor global CulqiCheckout(publicKey, config).'
+        );
+
+        // Los tres resultados que documenta Culqi. Si solo se leyera `token`, un
+        // pago asíncrono o un error se quedarían sin reaccionar.
+        foreach (['checkout.token', 'checkout.order', 'checkout.error'] as $result) {
+            $this->assertStringContainsString($result, $script, "Falta manejar {$result}.");
+        }
+
+        // El bundle minificado no ofrece Luhn público: la validez la decide Culqi.
+        $this->assertStringNotContainsString('luhn', strtolower($script));
+    }
+
+    /**
+     * .live en el selector de método. Sin él el servidor no conoce el cambio
+     * hasta una acción, y los campos del medio anterior siguen en pantalla: el
+     * cliente elige Yape y sigue viendo (y podendo pagar) la tarjeta.
+     */
+    public function test_el_selector_de_metodo_es_live(): void
+    {
+        $view = file_get_contents(resource_path('views/livewire/store/checkout.blade.php'));
+
+        $this->assertIsString($view);
+
+        $this->assertStringContainsString(
+            'wire:model.live="paymentMethod"',
+            $view,
+            'El método de pago debe viajar al servidor en el acto.'
+        );
+    }
+
+    /**
+     * El mensaje de Culqi cuando el problema es del comercio ("contactate con
+     * soporte") no debe llegar al cliente: no es accionable y lo invita a
+     * escribirle al comercio. El detalle real queda en el log.
+     */
+    public function test_no_se_muestra_el_mensaje_de_soporte_de_culqi(): void
+    {
+        $this->useCulqi();
+
+        Http::fake(['api.culqi.com/v2/charges' => Http::response([
+            'id' => 'chr_rechazada_1',
+            'outcome' => [
+                'type' => 'venta_rechazada',
+                'code' => 'DECLINED_BY_FRAUD',
+                'user_message' => 'Contactáte con soporte',
+                'merchant_message' => 'No se encuentra el Bin de la tarjeta, contactarse con Culqi para mayor información a culqi.com/soporte .',
+            ],
+        ], 402)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'card')
+            ->call('placeOrder', 'tkn_test_123');
+
+        $payment = Payment::firstOrFail();
+
+        $this->assertSame(PaymentStatus::FAILED->value, $payment->status->value);
+        $this->assertStringNotContainsStringIgnoringCase(
+            'soporte',
+            $payment->raw_response['outcome']['user_message'] ?? '',
+            'La respuesta cruda de Culqi se guarda tal cual, para conciliar.'
+        );
+
+        // El mensaje que se muestra al cliente sale del gateway, no de Culqi.
+        $gateway = app(CulqiGateway::class);
+        $result = $gateway->charge(
+            Payment::make([
+                'order_id' => $payment->order_id,
+                'method' => 'card',
+                'source_id' => 'tkn_test_123',
+                'amount' => 112.00,
+                'currency' => 'PEN',
+            ])
+        );
+
+        $this->assertFalse($result['success']);
+        $this->assertStringNotContainsStringIgnoringCase('soporte', $result['message']);
+        $this->assertNotSame('', $result['message']);
+    }
+
+    /**
+     * La pasarela activa decide qué métodos se ofrecen. Con Culqi el selector es
+     * suyo, así que la tienda no dibuja su catálogo: ni la tarjeta ni la
+     * transferencia que Culqi no admite, que produciría un pedido que solo
+     * podría fallar al cobrar con el stock ya reservado.
+     */
+    public function test_solo_se_ofrecen_metodos_que_la_pasarela_admite(): void
+    {
+        $this->useCulqi();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertDontSee('name="payment_method"', false)
+            ->assertDontSee('Transferencia bancaria')
+            ->assertDontSee('Tarjeta de débito/crédito');
+    }
+
+    /**
+     * Fuera del modal, el recorte por pasarela se sigue aplicando: la demo
+     * admite transferencia y la ofrece; Culqi no la aceptaría.
+     */
+    public function test_fuera_del_modal_la_pasarela_recorta_el_catalogo(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('name="payment_method"', false)
+            ->assertSee('Tarjeta de débito/crédito')
+            ->assertSee('Transferencia bancaria');
+    }
+
+    public function test_rechaza_un_metodo_que_la_pasarela_no_admite(): void
+    {
+        $this->useCulqi();
+        Http::fake();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        // Forzado desde el navegador: la validación también cierra esta puerta.
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('paymentMethod', 'transferencia')
+            ->call('placeOrder')
+            ->assertHasErrors(['paymentMethod']);
+
+        $this->assertSame(0, Order::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_la_vista_anuncia_modo_demostracion_sin_pasarela_real(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('Modo demostración')
+            ->assertDontSee('Pagar con Culqi');
+    }
+
+    /**
+     * El carrito queda convertido cuando se crea el pedido, así que si la vista
+     * siguiera calculando los importes desde el carrito mostraría 0.00 y el
+     * comprador creería que se le está cobrando en blanco.
+     *
+     * Con el modal, el evento culqi:open abre el checkout en el navegador.
+     * Si vuelve (o el modal se cierra), el resumen muestra el pedido real.
+     */
+    public function test_con_el_pedido_creado_el_resumen_muestra_el_pedido_y_no_un_cero(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->assertDispatched('culqi:open');
+
+        $order = Order::firstOrFail();
+
+        // El pedido se creó y se puede retomar desde la URL de pagar
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertHasNoErrors()
+            ->assertSee('S/')
+            ->assertSee('112.00')
+            ->assertDontSee('S/ 0.00')
+            ->assertSee('reservado')
+            ->assertSee('esperando')
+            ->assertSee('pago')
+            ->assertSee($order->order_number)
+            ->assertSee('Continuar al pago');
+
+        $this->assertSame(1, Order::count());
+    }
+
+    /**
+     * Livewire.on entrega el payload ya desenvuelto: el listener tiene que leer
+     * la sesión directamente del argumento. Si la leyera de event.detail, la
+     * sesión sería undefined y el modal no se abriría sin ningún aviso.
+     */
+    public function test_el_escucha_del_modal_acepta_el_payload_desenvuelto(): void
+    {
+        $script = file_get_contents(resource_path('js/checkout.js'));
+
+        $this->assertIsString($script);
+        $this->assertStringContainsString('event?.session', $script, 'El listener debe leer la sesión del payload directo de Livewire.on.');
+        $this->assertStringNotContainsString('openModal(event.detail?.session)', $script, 'Leer event.detail rompe el modal: Livewire.on ya lo desenvuelve.');
+    }
+
+    /**
+     * Sin clave pública el modal no se puede abrir. Un botón que creara un
+     * pedido y reservara stock sin dar forma de pagarlo sería peor que no
+     * ofrecerlo.
+     */
+    public function test_sin_clave_publica_no_se_ofrece_pagar_con_culqi(): void
+    {
+        config(['payments.culqi.public_key' => null]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertDontSee('Pagar con Culqi')
+            ->assertSee('El pago con Culqi no está disponible');
+    }
+
+    /**
+     * Un pedido ya cerrado no se puede volver a pagar: el botón de reintento
+     * desaparecería y no crearía una segunda orden.
+     */
+    public function test_un_pedido_ya_cobrado_no_ofrece_reabrir_el_pago(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->assertSee('Continuar al pago');
+
+        // El pago entra por el webhook, no por esta pantalla: se simula el
+        // estado final para comprobar que la vista deja de ofrecer el reintento.
+        Order::where('status', OrderStatus::PENDING->value)->update([
+            'status' => OrderStatus::CONFIRMED->value,
+            'payment_status' => PaymentStatus::PAID->value,
+        ]);
+
+        $component->call('$refresh');
+
+        $component
+            ->assertDontSee('wire:click="startCulqiCheckout"')
+            ->assertSee('ya está cerrado');
+    }
+
+    /* ---------------------------------------------------------------------
+    | Checkout en modal de Culqi
+    |----------------------------------------------------------------------
+    |
+    | El pedido y su orden se crean antes de abrir el modal, así que el flujo
+    | se parte en dos: abrir y luego confirmar. Lo que no puede cambiar es que
+    | se cobre el pedido que se creó, ni dos veces, ni el de otro comprador.
+    |
+    */
+
+    public function test_el_modal_cobra_la_tarjeta_sobre_el_pedido_que_ya_creo(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_modal_1', 11200), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        $component->call('completeCulqiCard', 'tkn_test_modal')
+            ->assertHasNoErrors()
+            // El servidor ya no manda al comprador: avisa del resultado y es el
+            // modal quien, tras la animación, navega a la página del pedido.
+            ->assertSet('paymentStage', 'paid')
+            ->assertDispatched('culqi:settled', kind: 'paid', url: route('store.order.placed', ['order' => $order->order_number]));
+
+        // El token se cobra contra el pedido del modal, sin crear un segundo.
+        $this->assertSame(1, Order::count());
+
+        $payment = Payment::firstOrFail();
+
+        $this->assertSame($order->id, $payment->order_id);
+        $this->assertSame('tkn_test_modal', $payment->source_id);
+        $this->assertSame('chr_modal_1', $payment->gateway_transaction_id);
+        $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
+        $this->assertSame(OrderStatus::CONFIRMED->value, $order->fresh()->status->value);
+    }
+
+    public function test_un_metodo_asincrono_deja_el_pago_pendiente_para_el_webhook(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_yape_modal'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        $component->call('completeCulqiAsync', 'yape')
+            ->assertHasNoErrors()
+            // Dentro del modal no hay a dónde redirigir: Yape se resuelve en el
+            // propio checkout de Culqi, así que el pago queda pendiente y el
+            // aviso acompaña al comprador hasta su pedido.
+            ->assertSet('paymentStage', 'pending')
+            ->assertDispatched('culqi:settled', kind: 'pending', url: route('store.order.placed', ['order' => $order->order_number]));
+
+        $payment = Payment::firstOrFail();
+
+        // El pago apunta a la orden de Culqi para que el webhook la encuentre.
+        $this->assertSame('yape', $payment->method);
+        $this->assertSame('ord_yape_modal', $payment->gateway_transaction_id);
+        $this->assertSame(PaymentStatus::PENDING->value, $payment->status->value);
+
+        // Pendiente no es fallido: la reserva de stock se mantiene.
+        $this->assertSame(PaymentStatus::PENDING->value, $order->fresh()->payment_status->value);
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    /**
+     * El método lo manda el navegador. Culqi llama "tarjeta" a la tarjeta y
+     * guarda el resto con su nombre, así que la traducción no puede ser la
+     * identidad ni proportionate a una tarjeta cobrada como Yape.
+     */
+    public function test_el_metodo_de_culqi_se_guarda_traducido(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_billetera_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiAsync', 'billetera')
+            ->assertHasNoErrors();
+
+        $this->assertSame('billetera', Payment::firstOrFail()->method);
+    }
+
+    /**
+     * Reintentar el pago reabre el mismo pedido. Crear otro dejaría al cliente
+     * con dos pedidos y el stock reservado por los dos.
+     */
+    public function test_reabrir_el_modal_no_crea_un_segundo_pedido(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('startCulqiCheckout')
+            ->assertDispatched('culqi:open');
+
+        $this->assertSame(1, Order::count());
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    /**
+     * Culqi no tiene idempotency key, así que la única defensa contra un doble
+     * cobro es no volver a cobrar un pedido que ya no está pendiente.
+     */
+    public function test_no_se_cobra_un_pedido_que_ya_esta_pagado(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_modal_1', 11200), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiCard', 'tkn_test_modal');
+
+        $order = Order::firstOrFail();
+
+        $component->call('completeCulqiCard', 'tkn_test_otro')
+            ->assertRedirect(route('store.order.placed', ['order' => $order->order_number]));
+
+        // Sigue habiendo un único cargo: el segundo intento no cobra.
+        $this->assertSame(1, Payment::count());
+        $this->assertSame('chr_modal_1', Payment::firstOrFail()->gateway_transaction_id);
+    }
+
+    /**
+     * El identificador del pedido no lo elige el navegador. Aunque se manipulase
+     * la sesión, el callback solo puede cobrar el pedido que este servidor creó
+     * para este usuario.
+     */
+    public function test_no_se_cobra_el_pedido_de_otro_comprador(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_ajeno_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        // El pedido pasa a ser de otro usuario, como si la sesión se hubiera
+        // trasvasado entre cuentas.
+        $order->update(['user_id' => User::create([
+            'name' => 'Otro Comprador',
+            'email' => 'otro@checkout.test',
+            'password' => bcrypt('12345678'),
+            'email_verified_at' => now(),
+        ])->id]);
+
+        $component->call('completeCulqiCard', 'tkn_test_ajeno')
+            ->assertDispatched('notify');
+
+        $this->assertSame(0, Payment::count());
+    }
+
+    /**
+     * Si la orden no llega a crearse, el modal solo podría ofrecer tarjeta. Es
+     * preferible no abrirlo a abrirlo con métodos que no se van a poder pagar,
+     * y el stock del pedido hay que devolverlo igualmente.
+     */
+    public function test_si_la_orden_no_se_crea_se_libera_el_stock_y_no_abre_el_modal(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response([
+            'type' => 'parameter_error',
+            'param' => 'payment_methods',
+            'merchant_message' => 'El tipo de metodo no esta habilitado.',
+            'user_message' => 'Metodo no disponible.',
+        ], 400)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->assertNotDispatched('culqi:open');
+
+        $order = Order::firstOrFail();
+
+        // El pedido se cierra y el stock vuelve al inventario: dejarlo
+        // reservado sería una venta fantasma.
+        $this->assertSame(OrderStatus::CANCELLED->value, $order->status->value);
+        $this->assertSame(PaymentStatus::EXPIRED->value, $order->payment_status->value);
+        $this->assertSame(0, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    public function test_sin_celular_valido_no_se_crea_la_orden_del_modal(): void
+    {
+        $this->useCulqi();
+        Http::fake();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        // Culqi rechaza la orden si phone_number no tiene entre 6 y 14
+        // caracteres, así que se avisa antes de dejar el pedido a medias.
+        $address->update(['phone' => '123']);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->assertNotDispatched('culqi:open');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    /**
+     * Un comprador que cierra el modal sin pagar deja el pedido y su stock
+     * reservados. El comando horario los devuelve.
+     */
+    public function test_el_comando_libera_los_pedidos_que_nadie_pago(): void
+    {
+        $this->useCulqi();
+        Http::fake(['api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_1'), 201)]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+        $this->coupon();
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('couponCode', 'BREVARE10')
+            ->call('applyCoupon')
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+        $this->assertSame(1, $order->coupon->usedCount());
+
+        // Todavía dentro del plazo: el comando no toca lo que puede pagarse.
+        $this->artisan('brevare:expire-pending-orders')->assertSuccessful();
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+
+        // Directo en la consulta: created_at no es un campo rellenable y el
+        // modelo lo ignoraría en silencio.
+        Order::whereKey($order->id)->update(['created_at' => now()->subHours(48)]);
+
+        $this->artisan('brevare:expire-pending-orders')->assertSuccessful();
+
+        $order->refresh();
+
+        $this->assertSame(OrderStatus::CANCELLED->value, $order->status->value);
+        $this->assertSame(PaymentStatus::EXPIRED->value, $order->payment_status->value);
+        $this->assertSame(0, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+        // Un pedido que nunca se pagó no debe seguir consumiendo un uso de cupón.
+        $this->assertSame(0, $order->coupon->usedCount());
+
+        // Reejecutarlo no libera dos veces el mismo stock.
+        $this->artisan('brevare:expire-pending-orders')->assertSuccessful();
+        $this->assertSame(0, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+
+        unset($component);
+    }
+
+    public function test_un_token_que_no_es_de_culqi_no_cobra_nada(): void
+    {
+        $this->useCulqi();
+        Http::fake();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiCard', 'numero-de-tarjeta-en-crudo');
+
+        $component->assertDispatched('notify');
+        $this->assertSame(0, Payment::count());
+    }
+
+    /**
+     * Deja un pedido esperando el pago, que es como queda el checkout si el
+     * comprador cierra el modal, se le corta la sesión o cierra la pestaña.
+     */
+    private function pendingOrderFor(User $user, ?string $gatewayOrderId = 'ord_pendiente_1', int $ageHours = 0): Order
+    {
+        $order = Order::where('user_id', $user->id)->firstOrFail();
+
+        // forceFill porque created_at no es un atributo rellenable: con update()
+        // se descartaría en silencio y el pedido seguiría pareciendo recién hecho.
+        $order->forceFill([
+            'gateway_order_id' => $gatewayOrderId,
+            'created_at' => now()->subHours($ageHours),
+        ])->save();
+
+        return $order->fresh();
+    }
+
+    /**
+     * El comprador entra a su cuenta y encuentra el pedido sin pagar. Desde ahí
+     * tiene que poder terminar de pagarlo sin rehacer el carrito ni que se cree
+     * un pedido nuevo con el stock reservado por duplicado.
+     */
+    public function test_se_puede_retomar_el_pago_de_un_pedido_pendiente_sin_carrito(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_pendiente_1'), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiAsync', 'yape');
+
+        $order = $this->pendingOrderFor($user);
+
+        // El carrito quedó convertido y vacío: no queda nada que pagar desde el
+        // carrito, que es justo el caso que dejaba al comprador sin salida.
+        $this->assertSame(1, Cart::where('user_id', $user->id)->where('status', 'converted')->count());
+        $this->assertTrue(app(CartService::class)->isEmpty());
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertHasNoErrors()
+            ->assertViewHas('awaitingPayment', true)
+            ->assertViewHas('pendingOrderNumber', $order->order_number);
+
+        $component->call('startCulqiCheckout')
+            ->assertDispatched('culqi:open');
+
+        // Retomar no crea otro pedido ni vuelve a reservar stock.
+        $this->assertSame(1, Order::count());
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+    }
+
+    /**
+     * Al retomar se reutiliza la orden que ya tiene Culqi. Crear otra dejaría la
+     * primera huérfana en el panel de Culqi y el pago se acreditaría al pedido
+     * equivocado.
+     */
+    public function test_retomar_el_pago_reutiliza_la_orden_de_culqi_del_pedido(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_pendiente_1'), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiAsync', 'yape');
+
+        $order = $this->pendingOrderFor($user);
+
+        Http::fake();
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->call('startCulqiCheckout')
+            ->assertDispatched('culqi:open');
+
+        // No hace falta volver a llamar a la API de órdenes de Culqi.
+        Http::assertNothingSent();
+    }
+
+    public function test_no_se_retoma_el_pago_del_pedido_de_otro_comprador(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_ajeno_2'), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = $this->pendingOrderFor($user, 'ord_ajeno_2');
+
+        $otro = User::create([
+            'name' => 'Otro Comprador',
+            'email' => 'otro@checkout.test',
+            'password' => bcrypt('12345678'),
+            'email_verified_at' => now(),
+        ]);
+
+        // Adivinar el número de pedido no sirve para abrir el pago de otro.
+        Livewire::actingAs($otro)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertRedirect(route('store.cart'));
+    }
+
+    /**
+     * Pasado el plazo de reserva, el comando de expiración ya canceló el pedido
+     * y el stock está en el inventario: ofrecer "pagar ahora" sería vender algo
+     * que ya no está apartado.
+     */
+    public function test_no_se_retoma_el_pago_de_un_pedido_vencido(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_vencido_1'), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = $this->pendingOrderFor($user, 'ord_vencido_1', ageHours: 48);
+
+        $this->assertFalse($order->isPayable());
+
+        // Sin carrito, un pedido vencido no se puede reanudar.
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertRedirect(route('store.cart'));
+    }
+
+    /**
+     * El enlace de la cuenta es una URL normal con query, no una ruta con
+     * parámetro: se comprueba entrando por HTTP de verdad para que el
+     * parámetro llegue hasta mount() y no solo en las pruebas de componente.
+     */
+    public function test_la_url_de_pagar_ahora_abre_el_checkout_del_pedido_pendiente(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_enlace_1'), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiAsync', 'yape');
+
+        $order = $this->pendingOrderFor($user, 'ord_enlace_1');
+
+        $response = $this->actingAs($user)->get(route('checkout', ['pagar' => $order->order_number]));
+
+        $response->assertOk();
+        $response->assertSee($order->order_number);
+        $response->assertSee('Continuar al pago');
+
+        // El pedido se muestra con su importe real, no como un carrito en cero.
+        $response->assertDontSee('S/ 0.00');
+
+        // El modal no se abre solo: se abre al pulsar el botón de pago, tanto en
+        // un checkout normal como al reanudar un pedido pendiente.
+        $response->assertDontSee('const autoOpen', false);
+    }
+
+    public function test_la_cuenta_ofrece_pagar_ahora_solo_a_los_pedidos_pendientes(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_boton_1'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_boton_1', 11200), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $pendiente = Order::firstOrFail();
+
+        // El mismo recorrido, pero este sí termina pagado.
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiCard', 'tkn_test_boton');
+
+        $pagado = Order::where('order_number', '!=', $pendiente->order_number)->firstOrFail();
+
+        $this->assertFalse($pagado->isPayable());
+
+        $html = Livewire::actingAs($user)->test(AccountOrders::class)->html();
+
+        $this->assertStringContainsString(
+            route('checkout', ['pagar' => $pendiente->order_number]),
+            $html,
+        );
+
+        $this->assertStringNotContainsString(
+            route('checkout', ['pagar' => $pagado->order_number]),
+            $html,
+        );
     }
 }

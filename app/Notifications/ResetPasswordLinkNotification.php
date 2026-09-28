@@ -37,7 +37,7 @@ class ResetPasswordLinkNotification extends Notification implements ShouldQueue
         ], false));
 
         return (new MailMessage)
-            ->subject('Restablece tu contraseña de Bravera')
+            ->subject('Restablece tu contraseña de Brevare')
             ->markdown('emails.auth.reset-password-link', [
                 'user' => $notifiable,
                 'url' => $url,

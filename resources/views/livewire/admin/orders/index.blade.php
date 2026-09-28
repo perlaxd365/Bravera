@@ -51,10 +51,10 @@
                             </td>
                             <td class="px-6 py-4 text-right font-semibold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</td>
                             <td class="px-6 py-4 text-center">
-                                <x-bravera.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-bravera.badge>
+                                <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-brevare.badge>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <x-bravera.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-bravera.badge>
+                                <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
                             </td>
                             <td class="px-6 py-4 text-right whitespace-nowrap text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }}</td>
                             <td class="px-6 py-4 text-right">
@@ -68,7 +68,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-14 text-center">
-                                <x-bravera.empty-state icon="shopping-cart" title="No hay pedidos" description="Los pedidos que se realicen en la tienda aparecerán en esta lista." />
+                                <x-brevare.empty-state icon="shopping-cart" title="No hay pedidos" description="Los pedidos que se realicen en la tienda aparecerán en esta lista." />
                             </td>
                         </tr>
                     @endforelse

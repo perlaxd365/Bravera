@@ -45,7 +45,8 @@ class Show extends Component
     {
         $this->order = $order->load([
             'user',
-            'items',
+            'items.variant.images',
+            'items.product.variants.images',
             'coupon',
             'payment',
             'supplierOrders.supplier',
@@ -286,7 +287,7 @@ class Show extends Component
     }
 
     /**
-     * Margen de Bravera correspondiente a la orden del proveedor:
+     * Margen de Brevare correspondiente a la orden del proveedor:
      * lo que el cliente pagó por sus productos menos el costo del proveedor.
      */
     private function marginFor(SupplierOrder $supplierOrder): float

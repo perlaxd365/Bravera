@@ -22,7 +22,7 @@
                 </div>
                 <div>
                     <span class="block text-gray-500">Estado</span>
-                    <x-bravera.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-bravera.badge>
+                    <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-brevare.badge>
                 </div>
             </div>
 
@@ -30,8 +30,17 @@
                 <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500">Tu pedido</h2>
                 <ul class="mt-3 divide-y divide-gray-100">
                     @foreach ($order->items as $item)
+                        @php $image = $item->imageUrl(160); @endphp
                         <li class="flex items-center justify-between gap-4 py-3 text-sm">
-                            <div class="min-w-0">
+                            @if ($image)
+                                <img src="{{ $image }}" alt="{{ $item->product_name }}" loading="lazy"
+                                    class="size-14 shrink-0 rounded-xl border border-gray-100 object-cover">
+                            @else
+                                <span class="flex size-14 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-300">
+                                    <flux:icon name="cube" class="size-5" />
+                                </span>
+                            @endif
+                            <div class="min-w-0 flex-1">
                                 <p class="font-semibold text-gray-900">{{ $item->product_name }}</p>
                                 <p class="text-xs text-gray-500">
                                     {{ $item->variant_sku }}

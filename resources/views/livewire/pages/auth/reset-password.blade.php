@@ -64,13 +64,13 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <x-bravera.auth-card
+    <x-brevare.auth-card
         title="Crea una nueva contraseña"
-        subtitle="Elige una contraseña segura para tu cuenta de Bravera."
+        subtitle="Elige una contraseña segura para tu cuenta de Brevare."
         icon="key"
     >
         <form wire:submit="resetPassword" class="space-y-5" novalidate>
-            <x-bravera.floating-input
+            <x-brevare.floating-input
                 wire:model="email"
                 id="email"
                 label="Correo electrónico"
@@ -81,7 +81,7 @@ new #[Layout('layouts.guest')] class extends Component
                 readonly
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password"
                 id="password"
                 label="Nueva contraseña"
@@ -90,7 +90,7 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.password-input
+            <x-brevare.password-input
                 wire:model="password_confirmation"
                 id="password_confirmation"
                 label="Confirma tu contraseña"
@@ -98,9 +98,9 @@ new #[Layout('layouts.guest')] class extends Component
                 required
             />
 
-            <x-bravera.button class="w-full">
+            <x-brevare.button class="w-full">
                 Restablecer contraseña
-            </x-bravera.button>
+            </x-brevare.button>
         </form>
 
         <x-slot:footer>
@@ -110,5 +110,5 @@ new #[Layout('layouts.guest')] class extends Component
                 </a>
             </p>
         </x-slot:footer>
-    </x-bravera.auth-card>
+    </x-brevare.auth-card>
 </div>

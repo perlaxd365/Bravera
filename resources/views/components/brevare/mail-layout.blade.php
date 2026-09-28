@@ -2,6 +2,7 @@
     'title' => null,
     'heading' => null,
     'accent' => 'primary',
+    'preheader' => null,
 ])
 
 @php
@@ -14,6 +15,15 @@
         'neutral' => ['#374151', '#1f2937'],
     ];
     [$bg, $fg] = $palette[$accent] ?? $palette['primary'];
+
+    // Los clientes de correo toman de este bloque oculto el texto que se ve en la
+    // bandeja de entrada. Debe ser texto plano: si se escapara el HTML del slot,
+    // la vista previa mostraría las etiquetas en lugar del contenido del correo.
+    $preview = \Illuminate\Support\Str::of($preheader ?? html_entity_decode(strip_tags((string) $slot)))
+        ->replaceMatches('/\s+/u', ' ')
+        ->trim()
+        ->limit(150)
+        ->toString();
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -22,12 +32,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
-    <title>{{ $title ?? 'Bravera' }}</title>
+    <title>{{ $title ?? 'Brevare' }}</title>
 </head>
 
 <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2937;">
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-        {{ \Illuminate\Support\Str::limit($slot, 150) }}
+    <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+        {{ $preview }}
+        {!! str_repeat('&#847;&zwnj;&nbsp;', 30) !!}
     </div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -40,7 +51,7 @@
                     <tr>
                         <td style="background-color:{{ $bg }};padding:28px 32px;text-align:center;">
                             <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.7);">
-                                Bravera
+                                Brevare
                             </p>
                             @if ($heading)
                                 <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;font-weight:600;color:#ffffff;">
@@ -59,7 +70,7 @@
                     <tr>
                         <td style="background-color:#fafafa;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
                             <p style="margin:0;font-size:12px;line-height:1.6;color:#9ca3af;">
-                                Bravera · Perú<br>
+                                Brevare · Perú<br>
                                 Este es un mensaje automático, por favor no lo respondas.
                             </p>
                         </td>

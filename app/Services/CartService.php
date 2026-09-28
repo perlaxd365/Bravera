@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
@@ -12,27 +14,95 @@ use Illuminate\Support\Str;
 
 class CartService
 {
-    public const SESSION_KEY = 'bravera_cart_id';
+    public const SESSION_KEY = 'brevare_cart_id';
 
     /**
      * Obtiene (o crea) el carrito activo del cliente/sesión.
      */
     public function currentCart(): Cart
     {
-        if (Auth::check()) {
-            $cart = Cart::active()
-                ->where('user_id', Auth::id())
-                ->latest()
-                ->first();
-
-            if ($cart) {
-                return $cart;
-            }
-
-            return $this->adoptSessionCart();
+        if (! Auth::check()) {
+            return $this->sessionCart();
         }
 
-        return $this->sessionCart();
+        /*
+     * Si existe un carrito explícitamente asociado a la sesión,
+     * ese es el carrito actual.
+     *
+     * Esto es importante porque puede estar asociado a una orden
+     * PENDING que el cliente acaba de dejar abierta en Culqi.
+     */
+        $sessionCartId = Session::get(self::SESSION_KEY);
+
+        if ($sessionCartId) {
+            $sessionCart = Cart::active()
+                ->whereKey($sessionCartId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if ($sessionCart) {
+                return $sessionCart;
+            }
+        }
+
+        /*
+     * Si no existe carrito en sesión, buscamos un carrito activo
+     * que NO esté bloqueado por una orden pendiente.
+     *
+     * No reutilizamos aquí un carrito pendiente antiguo porque
+     * podría pertenecer a otro intento de pago.
+     */
+        $cart = Cart::active()
+            ->where('user_id', Auth::id())
+            ->whereDoesntHave('orders', function ($query) {
+                $query
+                    ->where('status', OrderStatus::PENDING)
+                    ->where('payment_status', PaymentStatus::PENDING);
+            })
+            ->latest()
+            ->first();
+
+        if ($cart) {
+            Session::put(self::SESSION_KEY, $cart->id);
+
+            return $cart;
+        }
+
+        return $this->adoptSessionCart();
+    }
+
+    /**
+     * Obtiene un carrito que puede ser modificado.
+     *
+     * Si el carrito actual pertenece a una orden pendiente,
+     * NO se modifica esa compra. Se crea un carrito nuevo para
+     * los productos que el cliente quiera agregar posteriormente.
+     */
+    private function writableCart(): Cart
+    {
+        $cart = $this->currentCart();
+
+        $hasPendingOrder = $cart->orders()
+            ->where('status', OrderStatus::PENDING)
+            ->where('payment_status', PaymentStatus::PENDING)
+            ->exists();
+
+        if (! $hasPendingOrder) {
+            return $cart;
+        }
+
+        /*
+     * El carrito anterior está reservado para el pedido pendiente.
+     * Creamos un carrito nuevo para una nueva compra.
+     */
+        $newCart = Cart::create([
+            'user_id' => Auth::id(),
+            'status' => 'active',
+        ]);
+
+        Session::put(self::SESSION_KEY, $newCart->id);
+
+        return $newCart;
     }
 
     private function sessionCart(): Cart
@@ -68,9 +138,18 @@ class CartService
             $sessionCart = Cart::active()->where('id', $sessionCartId)->first();
 
             if ($sessionCart && $sessionCart->user_id === null) {
-                $sessionCart->update(['user_id' => Auth::id(), 'session_id' => null]);
+                $sessionCart->update([
+                    'user_id' => Auth::id(),
+                    'session_id' => null,
+                ]);
 
-                Session::forget(self::SESSION_KEY);
+                /*
+     * Conservamos el ID en sesión.
+     *
+     * Así, después de iniciar sesión, este sigue siendo
+     * explícitamente el carrito actual del comprador.
+     */
+                Session::put(self::SESSION_KEY, $sessionCart->id);
 
                 return $sessionCart;
             }
@@ -90,7 +169,7 @@ class CartService
         ?int $supplierVariantId = null,
         int $quantity = 1,
     ): CartItem {
-        $cart = $this->currentCart();
+        $cart = $this->writableCart();
 
         $variant = ProductVariant::query()
             ->where('is_active', true)
@@ -147,7 +226,7 @@ class CartService
         // Cada intento necesita su propia consulta: reutilizar el mismo builder
         // arrastra el where y el limit de la consulta anterior, y la búsqueda
         // termina sin resultados aunque haya stock disponible.
-        $available = fn () => $variant->supplierVariants()->available();
+        $available = fn() => $variant->supplierVariants()->available();
 
         if ($supplierVariantId) {
             $supplierVariant = $available()
@@ -174,14 +253,19 @@ class CartService
 
     public function updateQuantity(int $itemId, int $quantity): void
     {
-        $item = $this->items()->firstWhere('id', $itemId);
+        $cart = $this->writableCart();
+
+        $item = CartItem::query()
+            ->where('cart_id', $cart->id)
+            ->whereKey($itemId)
+            ->first();
 
         if (! $item) {
             return;
         }
 
         if ($quantity <= 0) {
-            $this->remove($itemId);
+            $item->delete();
 
             return;
         }
@@ -189,15 +273,22 @@ class CartService
         $supplierVariant = $item->supplierVariant;
 
         if ($supplierVariant && $quantity > $supplierVariant->availableStock()) {
-            abort(422, 'Stock disponible: '.$supplierVariant->availableStock().' unidades.');
+            abort(
+                422,
+                'Stock disponible: ' . $supplierVariant->availableStock() . ' unidades.'
+            );
         }
 
-        $item->update(['quantity' => $quantity]);
+        $item->update([
+            'quantity' => $quantity,
+        ]);
     }
 
     public function remove(int $itemId): void
     {
-        CartItem::where('cart_id', $this->currentCart()->id)
+        $cart = $this->writableCart();
+
+        CartItem::where('cart_id', $cart->id)
             ->whereKey($itemId)
             ->delete();
     }
@@ -214,13 +305,13 @@ class CartService
 
     public function subtotal(): float
     {
-        return round($this->items()->sum(fn ($item) => $item->unit_price * $item->quantity), 2);
+        return round($this->items()->sum(fn($item) => $item->unit_price * $item->quantity), 2);
     }
 
     public function costTotal(): float
     {
         return round(
-            $this->items()->sum(fn ($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity),
+            $this->items()->sum(fn($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity),
             2
         );
     }
@@ -229,12 +320,12 @@ class CartService
     {
         return $this->count() === 0;
     }
-
     public function clear(): void
     {
-        CartItem::where('cart_id', $this->currentCart()->id)->delete();
-    }
+        $cart = $this->writableCart();
 
+        CartItem::where('cart_id', $cart->id)->delete();
+    }
     /**
      * Marca el carrito como convertido (ya generó pedido).
      */
