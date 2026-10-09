@@ -90,7 +90,7 @@ class Form extends Component
 
     public function updatedName()
     {
-        if (!$this->attribute) {
+        if (! $this->attribute) {
             $this->slug = Str::slug($this->name);
         }
     }

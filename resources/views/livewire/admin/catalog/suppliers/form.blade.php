@@ -3,7 +3,7 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data @keydown.escape.window="$wire.set('show', false)">
             <div class="absolute inset-0 bg-gray-950/40 backdrop-blur-sm" @click="$wire.set('show', false)"></div>
 
-            <div class="relative w-full max-w-3xl rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-950/10">
+            <div class="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-950/10">
                 <div class="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
                     <h3 class="text-base font-semibold tracking-tight text-gray-900">
                         {{ $form->id ? 'Editar Proveedor' : 'Nuevo Proveedor' }}
@@ -21,7 +21,7 @@
                             </h6>
 
                             <div class="grid gap-3 sm:grid-cols-3">
-                                <x-input label="Código" wire:model.live="form.code" placeholder="SUP000001" />
+                                <x-input label="Código" value="{{ $form->code ?? 'Se genera automáticamente' }}" disabled />
 
                                 <x-input label="Razón Social" wire:model.live="form.business_name"
                                     placeholder="Ingrese la razón social" />

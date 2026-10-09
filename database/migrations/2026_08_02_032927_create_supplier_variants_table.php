@@ -88,7 +88,7 @@ return new class extends Migration
             $table->unsignedInteger('minimum_stock')
                 ->default(0)
                 ->comment('Stock mínimo permitido para la variante.');
-                
+
             $table->json('extra_data')
                 ->nullable()
                 ->comment('Información adicional enviada por el proveedor.');
@@ -156,7 +156,7 @@ return new class extends Migration
             $table->unique(
                 [
                     'supplier_id',
-                    'product_variant_id'
+                    'product_variant_id',
                 ],
                 'supplier_variant_unique'
             );

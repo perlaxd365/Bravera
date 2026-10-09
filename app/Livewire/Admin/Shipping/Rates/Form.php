@@ -3,7 +3,6 @@
 namespace App\Livewire\Admin\Shipping\Rates;
 
 use App\Livewire\Forms\ShippingRateForm;
-use App\Models\ShippingRate;
 use App\Models\Supplier;
 use App\Models\SupplierVariant;
 use App\Modules\Shipping\Repositories\ShippingRateRepository;

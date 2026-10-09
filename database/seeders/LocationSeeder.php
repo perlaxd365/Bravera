@@ -17,9 +17,9 @@ class LocationSeeder extends Seeder
     {
         $basePath = database_path('data/locations');
 
-        $departmentsFile = $basePath . '/1_ubigeo_departamentos.csv';
-        $provincesFile = $basePath . '/2_ubigeo_provincias.csv';
-        $districtsFile = $basePath . '/3_ubigeo_distritos.csv';
+        $departmentsFile = $basePath.'/1_ubigeo_departamentos.csv';
+        $provincesFile = $basePath.'/2_ubigeo_provincias.csv';
+        $districtsFile = $basePath.'/3_ubigeo_distritos.csv';
 
         $this->validateFiles([
             $departmentsFile,
@@ -171,7 +171,7 @@ class LocationSeeder extends Seeder
         }
 
         $headers = array_map(
-            static fn($header) => trim($header),
+            static fn ($header) => trim($header),
             $headers
         );
 

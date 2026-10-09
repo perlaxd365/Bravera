@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 72" role="img" aria-label="Métodos de pago aceptados: Visa, Mastercard, Yape, Plin y efectivo">
+    <style>
+        .chip { fill: #ffffff; stroke: #E5E7EB; stroke-width: 1.5; }
+        .lbl { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+        .sub { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size: 10px; fill: #4B5563; }
+    </style>
+
+    <!-- Visa -->
+    <g transform="translate(0,4)">
+        <rect class="chip" x="0" y="0" width="116" height="64" rx="14"/>
+        <text class="lbl" x="58" y="41" text-anchor="middle" font-size="24" font-style="italic" fill="#1A1F71" letter-spacing="1">VISA</text>
+    </g>
+
+    <!-- Mastercard -->
+    <g transform="translate(126,4)">
+        <rect class="chip" x="0" y="0" width="116" height="64" rx="14"/>
+        <circle cx="50" cy="26" r="12" fill="#EB001B"/>
+        <circle cx="68" cy="26" r="12" fill="#F79E1B" fill-opacity="0.9"/>
+        <text class="sub" x="58" y="52" text-anchor="middle">Mastercard</text>
+    </g>
+
+    <!-- Yape -->
+    <g transform="translate(252,4)">
+        <rect class="chip" x="0" y="0" width="116" height="64" rx="14"/>
+        <circle cx="58" cy="26" r="13" fill="#6E2B8E"/>
+        <text class="lbl" x="58" y="31" text-anchor="middle" font-size="15" fill="#ffffff">Y</text>
+        <text class="sub" x="58" y="52" text-anchor="middle" fill="#6E2B8E">Yape</text>
+    </g>
+
+    <!-- Plin -->
+    <g transform="translate(378,4)">
+        <rect class="chip" x="0" y="0" width="116" height="64" rx="14"/>
+        <circle cx="48" cy="26" r="11" fill="none" stroke="#00A9E0" stroke-width="4"/>
+        <circle cx="68" cy="26" r="11" fill="none" stroke="#7BC143" stroke-width="4"/>
+        <text class="sub" x="58" y="52" text-anchor="middle" fill="#0089B7">Plin</text>
+    </g>
+
+    <!-- Efectivo -->
+    <g transform="translate(504,4)">
+        <rect class="chip" x="0" y="0" width="116" height="64" rx="14"/>
+        <g stroke="#374151" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="44" y="17" width="28" height="18" rx="3"/>
+            <circle cx="58" cy="26" r="4"/>
+            <path d="M50 17v-3M66 17v-3M50 38v-3M66 38v-3"/>
+        </g>
+        <text class="sub" x="58" y="52" text-anchor="middle">Efectivo</text>
+    </g>
+</svg>

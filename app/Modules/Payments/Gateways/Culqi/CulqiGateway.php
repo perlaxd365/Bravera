@@ -25,8 +25,9 @@ use Throwable;
  * tkn_ opaco. Aquí se crea el cargo contra api.culqi.com, que responde de
  * forma síncrona.
  *
- * Yape y demás asíncronos: la orden ya está creada, así que el pago queda
- * pendiente y se confirma únicamente cuando llega el webhook.
+ * Yape: Checkout devuelve un token `ype_` y aquí se crea un cargo síncrono.
+ * Billeteras, banca móvil, agentes y Cuotéalo: Checkout usa la orden `ord_`
+ * creada al abrir el modal; el resultado se confirma por webhook.
  *
  * IMPORTANTE: Culqi no ofrece idempotency key. Si createCharge se responde con
  * error de red no sabemos si el cargo se creó. Por eso, si el pago ya tiene un
@@ -268,9 +269,6 @@ class CulqiGateway implements PaymentGateway
                 'charge_request_failed'
             );
         }
-        Log::info('[Culqi] RESPUESTA CARGO YAPE', [
-            'charge' => $charge,
-        ]);
         return $this->mapCharge($charge);
     }
 
@@ -315,14 +313,14 @@ class CulqiGateway implements PaymentGateway
             'description' => 'Pago del pedido ' . $order->order_number,
             'client_details' => $clientDetails,
             'expiration_date' => $this->expirationDate($minutes),
+
+            'confirm' => false,
+
             'payment_methods' => array_map(
                 static fn(string $type): array => ['type' => $type],
                 array_values($methods)
             ),
         ];
-
-        \Log::info('[Culqi] Creating order with payload', $payload);
-
         try {
             $created = $this->client->createOrder($payload);
         } catch (\Exception $e) {
@@ -338,8 +336,9 @@ class CulqiGateway implements PaymentGateway
             throw $e;
         }
 
-        \Log::info('[Culqi] Full order response', $created);
-        \Log::info('[Culqi] Order created successfully', ['id' => $created['id'] ?? null, 'url_pe' => $created['url_pe'] ?? null]);
+        \Log::info('[Culqi] Payment order created.', [
+            'order_id' => $created['id'] ?? null,
+        ]);
 
         $orderId = (string) ($created['id'] ?? '');
 
@@ -383,16 +382,11 @@ class CulqiGateway implements PaymentGateway
         $parts = preg_split('/\s+/', $name, 2) ?: ['', ''];
         $phone = preg_replace('/\D+/', '', (string) data_get($address, 'phone', '')) ?? '';
 
-        \Log::info('[Culqi] clientDetails input', [
-            'name' => $name,
-            'phone_raw' => data_get($address, 'phone', ''),
-            'phone_clean' => $phone,
-            'email' => $order?->user?->email ?? data_get($order?->customer_snapshot, 'email', ''),
-            'address_snapshot' => $address,
-        ]);
-
         if (strlen($phone) < 6 || strlen($phone) > 14) {
-            \Log::warning('[Culqi] Invalid phone number', ['phone' => $phone, 'length' => strlen($phone)]);
+            \Log::warning('[Culqi] Invalid customer phone number for payment order.', [
+                'length' => strlen($phone),
+            ]);
+
             return null;
         }
 
@@ -402,8 +396,6 @@ class CulqiGateway implements PaymentGateway
             'last_name' => $parts[1] ?? '',
             'phone_number' => $phone,
         ], fn($value) => $value !== '');
-
-        \Log::info('[Culqi] clientDetails output', $details);
 
         return $details === [] ? null : $details;
     }

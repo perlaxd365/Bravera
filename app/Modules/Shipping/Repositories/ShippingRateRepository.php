@@ -34,27 +34,27 @@ class ShippingRateRepository
                             "%{$search}%"
                         );
                     })
-                    ->orWhereHas('supplier', function ($supplier) use ($search) {
-                        $supplier->where(
-                            'name',
-                            'like',
-                            "%{$search}%"
-                        );
-                    })
-                    ->orWhereHas('product', function ($product) use ($search) {
-                        $product->where(
-                            'name',
-                            'like',
-                            "%{$search}%"
-                        );
-                    })
-                    ->orWhereHas('variant', function ($variant) use ($search) {
-                        $variant->where(
-                            'sku',
-                            'like',
-                            "%{$search}%"
-                        );
-                    });
+                        ->orWhereHas('supplier', function ($supplier) use ($search) {
+                            $supplier->where(
+                                'name',
+                                'like',
+                                "%{$search}%"
+                            );
+                        })
+                        ->orWhereHas('product', function ($product) use ($search) {
+                            $product->where(
+                                'name',
+                                'like',
+                                "%{$search}%"
+                            );
+                        })
+                        ->orWhereHas('variant', function ($variant) use ($search) {
+                            $variant->where(
+                                'sku',
+                                'like',
+                                "%{$search}%"
+                            );
+                        });
                 });
             })
             ->latest()

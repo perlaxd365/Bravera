@@ -20,15 +20,15 @@ class ProductRepository
     ): LengthAwarePaginator {
 
         return Product::query()
-            ->with(['category', 'brand'])
+            ->with(['category', 'brand', 'variants.images'])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                         ->orWhere('slug', 'like', "%{$search}%");
                 });
             })
-            ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
-            ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
+            ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
+            ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
             ->latest()
             ->paginate($perPage);
     }

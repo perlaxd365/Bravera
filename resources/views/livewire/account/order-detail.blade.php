@@ -25,6 +25,15 @@
         </div>
     </div>
 
+    {{-- Línea de tiempo del estado --}}
+    <x-order-timeline
+        :status="$order->status->value"
+        :cancelled="$order->status->value === 'cancelled'"
+        :cancelledAt="$order->cancelled_at"
+        :cancelledReason="$order->cancellation_reason"
+        :history="$order->getStatusHistory()"
+    />
+
         <div class="grid gap-6 lg:grid-cols-3">
 
             {{-- Detalle --}}

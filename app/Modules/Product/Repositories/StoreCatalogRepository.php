@@ -23,7 +23,9 @@ class StoreCatalogRepository
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.supplierVariants', 'variants.images'])
+            ->with(['brand', 'category', 'variants.supplierVariants', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->withCount(['reviews' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereHas('variants', function ($query) {
                 $query->where('is_active', true)
                     ->whereHas('supplierVariants', function ($q) {
@@ -31,9 +33,22 @@ class StoreCatalogRepository
                     });
             })
             ->when($categoryPath, function ($query, $path) {
-                $query->whereHas('category', function ($q) use ($path) {
+                // Las categorías principales Hombre/Mujer agrupan temporalmente
+                // las antiguas subcategorías Moda/Hombre y Moda/Mujer sin
+                // cambiar la categoría guardada de los productos existentes.
+                $legacyPaths = match ($path) {
+                    'hombre' => ['moda/hombre'],
+                    'mujer' => ['moda/mujer'],
+                    default => [],
+                };
+
+                $query->whereHas('category', function ($q) use ($path, $legacyPaths) {
                     $q->where('path', $path)
                         ->orWhere('path', 'like', $path.'/%');
+
+                    if ($legacyPaths !== []) {
+                        $q->orWhereIn('path', $legacyPaths);
+                    }
                 });
             })
             ->when($brandId, fn ($query) => $query->where('brand_id', $brandId))

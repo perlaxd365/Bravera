@@ -3,8 +3,10 @@
 namespace App\Livewire\Store;
 
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Services\CartService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -15,6 +17,10 @@ class ProductDetail extends Component
 
     public int $quantity = 1;
 
+    public int $reviewRating = 5;
+
+    public string $reviewComment = '';
+
     public ?int $selectedVariantId = null;
 
     public array $selectedAttributes = [];
@@ -23,7 +29,8 @@ class ProductDetail extends Component
 
     protected array $messages = [
         'quantity.min' => 'La cantidad mínima es 1.',
-        'selectedVariantId.required' => 'Selecciona una variante del producto.',
+        'selectedVariantId.required' => 'Selecciona la talla para continuar.',
+        'selectedSupplierVariantId.required' => 'Selecciona un proveedor para continuar.',
     ];
 
     public function mount(string $slug): void
@@ -44,6 +51,20 @@ class ProductDetail extends Component
 
         abort_unless($this->product, 404);
 
+        $requestedSku = request()->query('variant');
+        if (is_string($requestedSku) && $requestedSku !== '') {
+            $requestedVariant = $this->product->variants->firstWhere('sku', $requestedSku);
+
+            if ($requestedVariant?->is_active && $requestedVariant->supplierVariants->contains(
+                fn ($supplier) => $supplier->is_active && $supplier->availableStock() > 0
+            )) {
+                $this->selectedVariantId = $requestedVariant->id;
+                $this->selectedAttributes = $requestedVariant->attributeValues
+                    ->mapWithKeys(fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id])
+                    ->all();
+            }
+        }
+
         $this->recordRecentView();
     }
 
@@ -60,9 +81,73 @@ class ProductDetail extends Component
         session(['recently_viewed_product_ids' => array_slice($recent, 0, 8)]);
     }
 
+    private ?array $matrixCache = null;
+
+    private function variantMatrix(): array
+    {
+        if ($this->matrixCache !== null) {
+            return $this->matrixCache;
+        }
+
+        [$variants, $attributes, $previewVariant] = $this->buildVariantMatrix();
+
+        $this->matrixCache = [$variants, $attributes, $previewVariant];
+
+        return $this->matrixCache;
+    }
+
     public function updatedSelectedAttributes(): void
     {
+        $this->resetErrorBag(['selectedVariantId', 'selectedSupplierVariantId']);
+
+        [, $attributes] = $this->variantMatrix();
+
+        $requiredGroups = array_keys($attributes);
+        $chosen = array_keys(array_filter(
+            $this->selectedAttributes,
+            fn ($x) => $x !== null && $x !== ''
+        ));
+
+        sort($requiredGroups);
+        sort($chosen);
+
+        if ($chosen !== $requiredGroups) {
+            $this->selectedVariantId = null;
+            $this->selectedSupplierVariantId = null;
+
+            return;
+        }
+
         $this->resolveVariantFromAttributes();
+    }
+
+    public function updatedSelectedVariantId(): void
+    {
+        $this->resetErrorBag(['selectedVariantId', 'selectedSupplierVariantId']);
+
+        if ($this->selectedVariantId === null || $this->selectedVariantId === '') {
+            $this->selectedVariantId = null;
+            $this->selectedAttributes = [];
+            $this->selectedSupplierVariantId = null;
+
+            return;
+        }
+
+        $this->selectedVariantId = (int) $this->selectedVariantId;
+
+        $variant = $this->product->variants->first(
+            fn ($v) => (int) $v->id === $this->selectedVariantId
+        );
+
+        if ($variant) {
+            $this->selectedAttributes = $variant->attributeValues
+                ->mapWithKeys(
+                    fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id]
+                )
+                ->toArray();
+        }
+
+        $this->resolveSupplierForVariant();
     }
 
     public function selectVariant(int $variantId): void
@@ -77,8 +162,9 @@ class ProductDetail extends Component
     }
 
     /**
-     * Auto-selecciona el proveedor principal cuando la variante elegida
-     * tiene un único proveedor con stock disponible.
+     * Mantiene el proveedor elegido si sigue siendo válido para la variante
+     * actual; en caso contrario toma el principal o el primero con stock,
+     * de modo que el estado real coincida siempre con el radio marcado.
      */
     private function resolveSupplierForVariant(): void
     {
@@ -94,9 +180,23 @@ class ProductDetail extends Component
             ->filter(fn ($sv) => $sv->is_active && $sv->availableStock() > 0)
             ->values();
 
-        if ($suppliers->count() === 1) {
-            $this->selectedSupplierVariantId = (int) $suppliers->first()->id;
+        if ($suppliers->isEmpty()) {
+            $this->selectedSupplierVariantId = null;
+
+            return;
         }
+
+        $current = $suppliers->first(
+            fn ($sv) => (int) $sv->id === (int) $this->selectedSupplierVariantId
+        );
+
+        if ($current) {
+            return;
+        }
+
+        $preferred = $suppliers->firstWhere('is_default', true) ?? $suppliers->first();
+
+        $this->selectedSupplierVariantId = (int) $preferred->id;
     }
 
     private function resolveVariantFromAttributes(): void
@@ -107,14 +207,9 @@ class ProductDetail extends Component
             unset($this->selectedAttributes[$key]);
         }
 
-        if (count($this->selectedAttributes) === 0) {
-            $this->selectedVariantId = null;
-            $this->selectedSupplierVariantId = null;
+        [$matrixVariants] = $this->variantMatrix();
 
-            return;
-        }
-
-        $variant = $this->product->variants->first(function ($variant) {
+        $variant = $matrixVariants->first(function ($variant) {
             $attrs = $variant->attributeValues
                 ->pluck('attribute_value_id')
                 ->map(fn ($id) => (int) $id)
@@ -137,12 +232,35 @@ class ProductDetail extends Component
         }
     }
 
+    /**
+     * Un producto con atributos (talla, color, etc.) exige que el cliente
+     * elija una combinación completa antes de poder agregarlo al carrito.
+     */
+    private function requiresVariantSelection(): bool
+    {
+        return $this->product->variants
+            ->filter(fn ($variant) => $variant->is_active)
+            ->contains(fn ($variant) => $variant->attributeValues->isNotEmpty());
+    }
+
     public function addToCart(CartService $cart): void
     {
-        $this->validate([
+        $rules = [
             'selectedSupplierVariantId' => ['required'],
             'quantity' => ['required', 'integer', 'min:1'],
-        ]);
+        ];
+
+        if ($this->requiresVariantSelection()) {
+            $rules['selectedVariantId'] = ['required', 'integer'];
+        }
+
+        $this->validate($rules);
+
+        if (! $this->selectedVariantId) {
+            $this->addError('selectedVariantId', $this->messages['selectedVariantId.required']);
+
+            return;
+        }
 
         try {
             $item = $cart->add(
@@ -171,9 +289,60 @@ class ProductDetail extends Component
         }
     }
 
+    public function submitReview(): void
+    {
+        if (! auth()->check()) {
+            $this->redirect(route('login'), navigate: true);
+
+            return;
+        }
+
+        $this->validate([
+            'reviewRating' => ['required', 'integer', 'between:1,5'],
+            'reviewComment' => ['required', 'string', 'min:5', 'max:1500'],
+        ], [
+            'reviewComment.required' => 'Cuéntanos qué te pareció el producto.',
+            'reviewComment.min' => 'El comentario debe tener al menos 5 caracteres.',
+            'reviewComment.max' => 'El comentario no puede superar 1,500 caracteres.',
+        ]);
+
+        if ($this->product->reviews()->where('user_id', auth()->id())->exists()) {
+            $this->addError('reviewComment', 'Ya publicaste una opinión para este producto.');
+
+            return;
+        }
+
+        ProductReview::create([
+            'product_id' => $this->product->id,
+            'user_id' => auth()->id(),
+            'rating' => $this->reviewRating,
+            'comment' => trim($this->reviewComment),
+            'status' => ProductReview::STATUS_PENDING,
+        ]);
+
+        $this->reset('reviewComment');
+        $this->reviewRating = 5;
+        $this->dispatch('notify', type: 'success', message: '¡Gracias! Tu opinión será publicada tras ser revisada.');
+    }
+
     public function render(CartService $cart)
     {
-        [$variants, $attributes] = $this->buildVariantMatrix();
+        [$variants, $attributes, $previewVariant] = $this->variantMatrix();
+
+        $requiresVariantSelection = count($attributes) > 0;
+
+        $requiredGroups = array_keys($attributes);
+        $chosen = array_keys(array_filter(
+            $this->selectedAttributes,
+            fn ($x) => $x !== null && $x !== ''
+        ));
+
+        $missing = array_values(array_diff($requiredGroups, $chosen));
+        $missingAttributes = collect($missing)->map(
+            fn ($id) => $attributes[$id]['name'] ?? ''
+        )->filter()->values();
+
+        $selectionComplete = $missing === [];
 
         $cartItems = $cart->items();
 
@@ -192,16 +361,110 @@ class ProductDetail extends Component
 
         $recentlyViewed = $this->recentlyViewed();
 
+        $reviews = $this->product->reviews()
+            ->approved()
+            ->with('user:id,name')
+            ->latest()
+            ->limit(20)
+            ->get();
+        $reviewCount = $this->product->reviews()->approved()->count();
+        $reviewAverage = $this->product->reviews()->approved()->avg('rating');
+        $hasReviewed = auth()->check()
+            && $this->product->reviews()->where('user_id', auth()->id())->exists();
+
+        $schemaVariant = $this->selectedVariantId
+            ? $variants->firstWhere('id', $this->selectedVariantId)
+            : $previewVariant;
+        $seoTitle = $this->product->seo_title ?: $this->product->name.' | Brevare';
+        $seoDescription = $this->product->seo_description
+            ?: ($this->product->short_description ?: Str::limit(strip_tags((string) $this->product->description), 160));
+        $seoDescription = $seoDescription ?: 'Compra '.$this->product->name.' en Brevare.';
+        $seoImage = $this->product->coverImage();
+        $canonicalUrl = route('store.product', ['slug' => $this->product->slug]);
+        if ($schemaVariant && request()->query('variant') === $schemaVariant->sku) {
+            $canonicalUrl .= '?variant='.rawurlencode($schemaVariant->sku);
+        }
+
+        $productImages = collect($this->product->variants)
+            ->flatMap(fn ($variant) => $variant->images
+                ->where('is_active', true)
+                ->map(fn ($image) => $image->imageUrl()))
+            ->merge([$seoImage])
+            ->filter(fn ($image) => is_string($image) && filter_var($image, FILTER_VALIDATE_URL))
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
+
+        $productStructuredData = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $this->product->name,
+            'description' => $seoDescription,
+            'url' => $canonicalUrl,
+        ];
+
+        if ($productImages !== []) {
+            $productStructuredData['image'] = $productImages;
+        }
+
+        if ($this->product->category?->name) {
+            $productStructuredData['category'] = $this->product->category->name;
+        }
+
+        if ($this->product->brand?->name) {
+            $productStructuredData['brand'] = ['@type' => 'Brand', 'name' => $this->product->brand->name];
+        }
+
+        if ($schemaVariant) {
+            $productStructuredData['sku'] = $schemaVariant->sku;
+            $productStructuredData['offers'] = [
+                '@type' => 'Offer',
+                'url' => $canonicalUrl,
+                'priceCurrency' => 'PEN',
+                'price' => number_format((float) $schemaVariant->sale_price, 2, '.', ''),
+                'availability' => $schemaVariant->total_available > 0
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/OutOfStock',
+                'itemCondition' => 'https://schema.org/NewCondition',
+                'seller' => ['@type' => 'Organization', 'name' => 'Brevare'],
+            ];
+        }
+
+        if ($reviewCount > 0 && $reviewAverage !== null) {
+            $productStructuredData['aggregateRating'] = [
+                '@type' => 'AggregateRating',
+                'ratingValue' => number_format((float) $reviewAverage, 1, '.', ''),
+                'reviewCount' => $reviewCount,
+                'bestRating' => 5,
+                'worstRating' => 1,
+            ];
+        }
+
         return view('livewire.store.product-detail', compact(
             'variants',
             'attributes',
+            'previewVariant',
+            'requiresVariantSelection',
+            'missingAttributes',
+            'selectionComplete',
             'cartItems',
             'cartCount',
             'cartSubtotal',
             'currentInCart',
             'relatedProducts',
             'recentlyViewed',
-        ));
+            'reviews',
+            'reviewCount',
+            'reviewAverage',
+            'hasReviewed',
+            'productStructuredData',
+        ))->title($seoTitle)->layoutData([
+            'seoDescription' => $seoDescription,
+            'seoImage' => $seoImage,
+            'canonicalUrl' => $canonicalUrl,
+            'productStructuredData' => $productStructuredData,
+        ]);
     }
 
     /**
@@ -217,7 +480,9 @@ class ProductDetail extends Component
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants'])
+            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->withCount(['reviews' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->where('id', '!=', $this->product->id)
             ->where('category_id', $this->product->category_id)
             ->whereHas('variants', function ($query) {
@@ -253,7 +518,9 @@ class ProductDetail extends Component
         $products = Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants'])
+            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->withCount(['reviews' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereIn('id', $list)
             ->whereHas('variants', function ($query) {
                 $query->where('is_active', true)
@@ -273,6 +540,10 @@ class ProductDetail extends Component
     /**
      * Construye la matriz de atributos disponibles
      * y las variantes con stock por proveedor.
+     *
+     * Devuelve además la variante de solo vista previa: alimenta la galería y
+     * el precio, pero NO cuenta como elección del cliente, por lo que no
+     * habilita el botón de agregar al carrito.
      */
     private function buildVariantMatrix(): array
     {
@@ -313,29 +584,24 @@ class ProductDetail extends Component
             }
         }
 
-        // Al entrar sin selección, se preselecciona la primera variante
-        // disponible que tenga fotos (prefiriendo la variante por defecto),
-        // para que la galería nunca quede vacía.
+        $previewVariant = null;
+
         if ($this->selectedVariantId === null) {
-            $initial = $variants
+            $candidate = $variants
                 ->sortByDesc('is_default')
                 ->first(fn ($variant) => $variant->images->isNotEmpty())
                 ?? $variants->first();
 
-            if ($initial) {
-                $this->selectedVariantId = (int) $initial->id;
+            if ($candidate && $attributes === []) {
+                // Sin atributos no hay nada que elegir: se toma la única
+                // variante disponible para poder comprar directo.
+                $this->selectedVariantId = (int) $candidate->id;
                 $this->resolveSupplierForVariant();
-
-                if (count($this->selectedAttributes) === 0) {
-                    $this->selectedAttributes = $initial->attributeValues
-                        ->mapWithKeys(
-                            fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id]
-                        )
-                        ->toArray();
-                }
+            } else {
+                $previewVariant = $candidate;
             }
         }
 
-        return [$variants->values(), array_values($attributes)];
+        return [$variants->values(), $attributes, $previewVariant];
     }
 }

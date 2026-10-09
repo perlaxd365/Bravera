@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
 use App\Models\SupplierVariant;
+use App\Modules\Ordering\Services\OrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -69,6 +70,57 @@ class CartService
         }
 
         return $this->adoptSessionCart();
+    }
+
+    /**
+     * Si el comprador vuelve al carrito desde un pago pendiente, cancela ese
+     * intento, libera el stock reservado y reactiva el carrito original.
+     */
+    public function restorePendingCartForEditing(OrderService $orders): void
+    {
+        if (! Auth::check()) {
+            return;
+        }
+
+        $cartId = Session::get(self::SESSION_KEY);
+
+        if (! $cartId) {
+            return;
+        }
+
+        $cart = Cart::query()
+            ->whereKey($cartId)
+            ->where('user_id', Auth::id())
+            ->where('status', 'converted')
+            ->first();
+
+        if (! $cart) {
+            return;
+        }
+
+        $order = $cart->orders()->latest('id')->first();
+
+        if ($order?->payment_status === PaymentStatus::PAID) {
+            return;
+        }
+
+        if (
+            $order?->status === OrderStatus::PENDING
+            && $order->payment_status === PaymentStatus::PENDING
+        ) {
+            $orders->abandonPendingOrder(
+                $order,
+                'El comprador volvió al carrito antes de completar el pago.'
+            );
+
+            $order->refresh();
+
+            if ($order->payment_status === PaymentStatus::PAID) {
+                return;
+            }
+        }
+
+        $cart->update(['status' => 'active']);
     }
 
     /**
@@ -199,7 +251,7 @@ class CartService
             'product_variant_id' => $variant->id,
             'supplier_variant_id' => $supplierVariant->id,
             'quantity' => $newQuantity,
-            'unit_price' => $variant->sale_price,
+            'unit_price' => round((float) $variant->sale_price, 2),
             'unit_cost' => $supplierVariant->cost_price,
             'supplier_shipping_cost' => $supplierVariant->shipping_cost,
         ];
@@ -226,7 +278,7 @@ class CartService
         // Cada intento necesita su propia consulta: reutilizar el mismo builder
         // arrastra el where y el limit de la consulta anterior, y la búsqueda
         // termina sin resultados aunque haya stock disponible.
-        $available = fn() => $variant->supplierVariants()->available();
+        $available = fn () => $variant->supplierVariants()->available();
 
         if ($supplierVariantId) {
             $supplierVariant = $available()
@@ -275,7 +327,7 @@ class CartService
         if ($supplierVariant && $quantity > $supplierVariant->availableStock()) {
             abort(
                 422,
-                'Stock disponible: ' . $supplierVariant->availableStock() . ' unidades.'
+                'Stock disponible: '.$supplierVariant->availableStock().' unidades.'
             );
         }
 
@@ -305,13 +357,13 @@ class CartService
 
     public function subtotal(): float
     {
-        return round($this->items()->sum(fn($item) => $item->unit_price * $item->quantity), 2);
+        return round($this->items()->sum(fn ($item) => $item->unit_price * $item->quantity), 2);
     }
 
     public function costTotal(): float
     {
         return round(
-            $this->items()->sum(fn($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity),
+            $this->items()->sum(fn ($item) => ($item->unit_cost + $item->supplier_shipping_cost) * $item->quantity),
             2
         );
     }
@@ -320,12 +372,14 @@ class CartService
     {
         return $this->count() === 0;
     }
+
     public function clear(): void
     {
         $cart = $this->writableCart();
 
         CartItem::where('cart_id', $cart->id)->delete();
     }
+
     /**
      * Marca el carrito como convertido (ya generó pedido).
      */

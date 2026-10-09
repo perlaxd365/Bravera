@@ -5,12 +5,15 @@ use App\Livewire\Admin\Catalog\AttributeValues\Index as AttributeValueIndex;
 use App\Livewire\Admin\Catalog\Brands\Index as BrandIndex;
 use App\Livewire\Admin\Catalog\Categories\Index as CategoryIndex;
 use App\Livewire\Admin\Catalog\Products\Index as ProductIndex;
+use App\Livewire\Admin\Catalog\Reviews\Index as ReviewIndex;
 use App\Livewire\Admin\Catalog\Suppliers\Index as SupplierIndex;
+use App\Livewire\Admin\Customers\Index as CustomerIndex;
 use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
 use App\Livewire\Admin\Discounts\Coupons\Index as CouponIndex;
 use App\Livewire\Admin\Dropshipping\Orders\Index as SupplierOrderIndex;
 use App\Livewire\Admin\Orders\Index as OrderIndex;
 use App\Livewire\Admin\Orders\Show as OrderShow;
+use App\Livewire\Admin\Settings\Homepage as HomepageSettings;
 use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
 use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +22,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', DashboardIndex::class)
         ->name('dashboard');
+
+    Route::get('/settings/homepage', HomepageSettings::class)
+        ->name('settings.homepage');
+
+    Route::get('/customers', CustomerIndex::class)
+        ->name('customers.index');
 
     /*
     |--------------------------------------------------------------------------
@@ -84,6 +93,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/products', ProductIndex::class)
             ->name('products.index');
+
+        Route::get('/reviews', ReviewIndex::class)
+            ->name('reviews.index');
     });
 
     /*

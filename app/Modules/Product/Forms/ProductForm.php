@@ -27,7 +27,7 @@ class ProductForm extends Form
 
     public bool $is_featured = false;
 
-    public bool $is_visible = true;
+    public bool $is_visible = false;
 
     public ?string $seo_title = null;
 
@@ -59,7 +59,7 @@ class ProductForm extends Form
                 'required',
                 'string',
                 'max:255',
-                'unique:products,slug,' . $this->id,
+                'unique:products,slug,'.$this->id,
             ],
 
             'short_description' => [
@@ -94,6 +94,7 @@ class ProductForm extends Form
             'seo_description' => [
                 'nullable',
                 'string',
+                'max:320',
             ],
         ];
     }
@@ -104,32 +105,23 @@ class ProductForm extends Form
     public function messages(): array
     {
         return [
-            'category_id.required' =>
-            'Debe seleccionar una categoría.',
+            'category_id.required' => 'Debe seleccionar una categoría.',
 
-            'category_id.exists' =>
-            'La categoría seleccionada no es válida.',
+            'category_id.exists' => 'La categoría seleccionada no es válida.',
 
-            'brand_id.exists' =>
-            'La marca seleccionada no es válida.',
+            'brand_id.exists' => 'La marca seleccionada no es válida.',
 
-            'name.required' =>
-            'El nombre del producto es obligatorio.',
+            'name.required' => 'El nombre del producto es obligatorio.',
 
-            'name.max' =>
-            'El nombre del producto no puede superar los 255 caracteres.',
+            'name.max' => 'El nombre del producto no puede superar los 255 caracteres.',
 
-            'slug.required' =>
-            'El slug es obligatorio.',
+            'slug.required' => 'El slug es obligatorio.',
 
-            'slug.unique' =>
-            'El slug ya existe.',
+            'slug.unique' => 'El slug ya existe.',
 
-            'slug.max' =>
-            'El slug no puede superar los 255 caracteres.',
+            'slug.max' => 'El slug no puede superar los 255 caracteres.',
 
-            'short_description.max' =>
-            'La descripción corta no puede superar los 500 caracteres.',
+            'short_description.max' => 'La descripción corta no puede superar los 500 caracteres.',
         ];
     }
 
@@ -241,6 +233,6 @@ class ProductForm extends Form
 
         $this->is_featured = false;
 
-        $this->is_visible = true;
+        $this->is_visible = false;
     }
 }

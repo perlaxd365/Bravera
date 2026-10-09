@@ -50,7 +50,7 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div>
+<div x-data="{ legalModal: null }">
     <x-brevare.auth-card
         title="Crea tu cuenta"
         subtitle="Únete a Brevare y compra con los mejores precios del mercado."
@@ -107,9 +107,9 @@ new #[Layout('layouts.guest')] class extends Component
                 >
                 <span>
                     Acepto los
-                    <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Términos y condiciones</a>
+                    <button type="button" @click="legalModal = 'terms'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Términos y Condiciones</button>
                     y la
-                    <a href="#" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Política de privacidad</a>
+                    <button type="button" @click="legalModal = 'privacy'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Política de Privacidad</button>
                     de Brevare.
                 </span>
             </label>
@@ -128,4 +128,43 @@ new #[Layout('layouts.guest')] class extends Component
             </p>
         </x-slot:footer>
     </x-brevare.auth-card>
+
+    {{-- Modal legal: Términos y Privacidad --}}
+    <div
+        x-show="legalModal"
+        x-cloak
+        x-transition.opacity
+        @keydown.escape.window="legalModal = null"
+        class="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/50 p-0 sm:items-center sm:p-6"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div
+            @click.outside="legalModal = null"
+            x-transition
+            class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+        >
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                <h2 class="text-base font-semibold text-gray-900" x-text="legalModal === 'terms' ? 'Términos y Condiciones' : 'Política de Privacidad'"></h2>
+                <button type="button" @click="legalModal = null" class="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Cerrar">
+                    <flux:icon name="x-mark" class="size-5" />
+                </button>
+            </div>
+
+            <div class="overflow-y-auto px-6 py-6">
+                <div x-show="legalModal === 'terms'">
+                    @include('partials.legal.terms')
+                </div>
+                <div x-show="legalModal === 'privacy'">
+                    @include('partials.legal.privacy')
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 px-6 py-4">
+                <x-brevare.button type="button" @click="legalModal = null" class="w-full">
+                    Entendido
+                </x-brevare.button>
+            </div>
+        </div>
+    </div>
 </div>

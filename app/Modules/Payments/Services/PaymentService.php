@@ -58,7 +58,7 @@ class PaymentService
         [$gateway, $gatewayName] = $this->resolveGateway($gatewayName);
 
         // 1. Constancia del intento, confirmada de inmediato.
-        $payment = DB::transaction(fn(): Payment => Payment::create([
+        $payment = DB::transaction(fn (): Payment => Payment::create([
             'order_id' => $order->id,
             'user_id' => $order->user_id,
             'gateway' => $gatewayName,
@@ -73,7 +73,7 @@ class PaymentService
         $result = $this->captureCharge($gateway, $payment);
 
         // 3. Resultado y confirmación.
-        return DB::transaction(function () use ($payment, $result, $order) {
+        return DB::transaction(function () use ($payment, $result, $order, $gatewayName) {
             $payment->update([
                 'status' => $result['status'],
                 'raw_response' => $result['raw'],
@@ -89,14 +89,26 @@ class PaymentService
             // Un pago asíncrono (Yape/QR) sigue pendiente hasta que la
             // pasarela notifique por webhook: no es un fallo.
             $pending = $result['status'] === PaymentStatus::PENDING->value;
+            $retryableModal = ! $pending
+                && $order->gateway_order_id !== null
+                && in_array(
+                    $gatewayName,
+                    (array) config('payments.modal_gateways', []),
+                    true,
+                );
 
             $order->update([
                 'status' => OrderStatus::PENDING,
-                'payment_status' => $pending ? PaymentStatus::PENDING : PaymentStatus::FAILED,
+                // Un rechazo de tarjeta/Yape dentro del checkout modal no
+                // cancela la orden. El comprador puede corregir los datos y
+                // volver a intentar con la misma orden y la reserva vigente.
+                'payment_status' => ($pending || $retryableModal)
+                    ? PaymentStatus::PENDING
+                    : PaymentStatus::FAILED,
             ]);
 
-            // Fallo definitivo: la reserva de stock ya no tiene sentido.
-            if (! $pending) {
+            // Fuera del checkout modal, un fallo sí es definitivo y libera stock.
+            if (! $pending && ! $retryableModal) {
                 app(OrderService::class)->releaseStock($order);
             }
 
@@ -145,7 +157,7 @@ class PaymentService
             return $existing;
         }
 
-        return DB::transaction(fn(): Payment => Payment::create([
+        return DB::transaction(fn (): Payment => Payment::create([
             'order_id' => $order->id,
             'user_id' => $order->user_id,
             'gateway' => $name,
@@ -229,16 +241,22 @@ class PaymentService
                 'status' => PaymentStatus::PAID,
                 'paid_at' => now(),
                 'raw_response' => $raw,
-            ], fn($value) => $value !== null));
+            ], fn ($value) => $value !== null));
 
             $order->update([
                 'status' => OrderStatus::CONFIRMED,
                 'payment_status' => PaymentStatus::PAID,
                 'paid_at' => now(),
             ]);
-            $order->cart?->update([
-                'status' => 'converted',
-            ]);
+            $cart = $order->cart;
+            if ($cart !== null) {
+                $cart->update(['status' => 'converted']);
+                // El pedido ya conserva sus propias líneas y precios. Vaciar
+                // el carrito evita que siga apareciendo con los productos
+                // comprados al volver a la tienda.
+                $cart->items()->delete();
+            }
+
             // Generar órdenes de compra a proveedores (dropshipping).
             $this->supplierOrderService->createForPaidOrder($order);
 
@@ -267,7 +285,7 @@ class PaymentService
             );
         }
 
-        $class = config('payments.gateways.' . $name);
+        $class = config('payments.gateways.'.$name);
 
         if (! is_string($class) || ! class_exists($class)) {
             throw new PaymentGatewayNotConfiguredException(
@@ -281,7 +299,7 @@ class PaymentService
         ) {
             throw new PaymentGatewayNotConfiguredException(
                 "La pasarela [{$name}] es de demostración y está deshabilitada. "
-                    . 'Registra una pasarela real en config/payments.php antes de operar.'
+                    .'Registra una pasarela real en config/payments.php antes de operar.'
             );
         }
 

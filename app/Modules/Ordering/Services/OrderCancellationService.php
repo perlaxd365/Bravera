@@ -161,6 +161,8 @@ class OrderCancellationService
                     'cancellation_reason' => null,
                 ]);
 
+                $order->markStatusTimestamp(OrderStatus::CONFIRMED);
+
                 OrderStatusChanged::dispatch($order->fresh(), $from, OrderStatus::CONFIRMED);
             }
 
@@ -207,6 +209,8 @@ class OrderCancellationService
                 'cancelled_by' => $userId,
                 'cancellation_reason' => $reason ?: null,
             ]);
+
+            $order->markStatusTimestamp(OrderStatus::CANCELLED);
 
             OrderStatusChanged::dispatch($order->fresh(), $from, OrderStatus::CANCELLED);
         }

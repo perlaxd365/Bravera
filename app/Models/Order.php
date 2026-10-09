@@ -49,6 +49,10 @@ class Order extends Model
             'customer_snapshot' => 'array',
             'address_snapshot' => 'array',
             'paid_at' => 'datetime',
+            'confirmed_at' => 'datetime',
+            'processing_at' => 'datetime',
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
     }
@@ -149,8 +153,43 @@ class Order extends Model
 
         return $this->created_at->gte(now()->subHours(max(1, $hours)));
     }
+
     public function cart(): BelongsTo
     {
         return $this->belongsTo(Cart::class);
+    }
+
+    /**
+     * Obtiene el historial de estados para la línea de tiempo.
+     *
+     * @return array<string, string|null>
+     */
+    public function getStatusHistory(): array
+    {
+        return [
+            'confirmed' => $this->confirmed_at ?? $this->paid_at,
+            'processing' => $this->processing_at,
+            'shipped' => $this->shipped_at,
+            'delivered' => $this->delivered_at,
+        ];
+    }
+
+    /**
+     * Marca el timestamp correspondiente al nuevo estado.
+     */
+    public function markStatusTimestamp(OrderStatus $newStatus): void
+    {
+        $column = match ($newStatus) {
+            OrderStatus::CONFIRMED => 'confirmed_at',
+            OrderStatus::PROCESSING => 'processing_at',
+            OrderStatus::SHIPPED => 'shipped_at',
+            OrderStatus::DELIVERED => 'delivered_at',
+            default => null,
+        };
+
+        if ($column && ! $this->{$column}) {
+            $this->{$column} = now();
+            $this->saveQuietly();
+        }
     }
 }

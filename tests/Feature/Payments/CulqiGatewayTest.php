@@ -275,24 +275,22 @@ class CulqiGatewayTest extends TestCase
     }
 
     /* ---------------------------------------------------------------------
-    | Yape (asíncrono)
+    | Yape tokenizado
     | ------------------------------------------------------------------ */
 
-    public function test_yape_crea_una_orden_y_queda_pendiente(): void
+    public function test_yape_cobra_el_token_recibido_del_checkout(): void
     {
         Http::fake([
-            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_test_1'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_yape_test_1'), 201),
         ]);
 
-        $result = app(CulqiGateway::class)->charge($this->payment($this->order(), 'yape', null));
+        $result = app(CulqiGateway::class)->charge($this->payment($this->order(), 'yape', 'ype_test_123'));
 
-        $this->assertFalse($result['success']);
-        $this->assertSame(PaymentStatus::PENDING->value, $result['status']);
-        $this->assertSame('ord_test_1', $result['source_id']);
-        $this->assertSame(
-            'https://pre1a.payment.pagoefectivo.pe/SG3R938W-0DNKYQ57-8OODJL5J-95CDTSPK-PVGK.html',
-            $result['checkout_url'],
-        );
+        $this->assertTrue($result['success']);
+        $this->assertSame(PaymentStatus::PAID->value, $result['status']);
+        $this->assertSame('chr_yape_test_1', $result['transaction_id']);
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://api.culqi.com/v2/charges'
+            && $request['source_id'] === 'ype_test_123');
     }
 
     /* ---------------------------------------------------------------------
@@ -378,7 +376,7 @@ class CulqiGatewayTest extends TestCase
             'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_test_1'), 201),
         ]);
 
-        $result = app(CulqiGateway::class)->charge($this->payment($this->order(), 'yape', null));
+        $result = app(CulqiGateway::class)->createPaymentOrder($this->order(), ['yape', 'billetera']);
 
         // Verificado contra la API real: `customer` en vez de `client_details`,
         // y `expiration_date` en epoch SEGUNDOS, devuelven 400 parameter_error.
@@ -389,7 +387,12 @@ class CulqiGatewayTest extends TestCase
                 && ! array_key_exists('customer', $body)
                 && isset($body['client_details']['phone_number'])
                 && is_int($body['expiration_date'] ?? null)
-                && $body['expiration_date'] > time();
+                && $body['expiration_date'] > time()
+                && ($body['confirm'] ?? null) === false
+                && ($body['payment_methods'] ?? []) === [
+                    ['type' => 'yape'],
+                    ['type' => 'billetera'],
+                ];
         });
     }
 
@@ -400,10 +403,13 @@ class CulqiGatewayTest extends TestCase
         $order = $this->order();
         $order->update(['address_snapshot' => ['full_name' => 'Cliente', 'phone' => '123']]);
 
-        $result = app(CulqiGateway::class)->charge($this->payment($order, 'yape', null));
+        try {
+            app(CulqiGateway::class)->createPaymentOrder($order, ['yape']);
+            $this->fail('La orden debe exigir un celular válido.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('celular válido', $exception->getMessage());
+        }
 
-        $this->assertFalse($result['success']);
-        $this->assertSame('invalid_client_details', $result['raw']['code']);
         Http::assertNothingSent();
     }
 

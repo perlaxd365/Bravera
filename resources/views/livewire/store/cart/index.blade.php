@@ -43,24 +43,21 @@
                                 <div class="flex flex-wrap items-center gap-3">
                                     <div class="flex items-center rounded-full border border-gray-300 bg-white">
                                         <button type="button"
-                                            wire:click="$set('quantities.{{ $item->id }}', {{ max(1, (int) ($quantities[$item->id] ?? 1) - 1) }})"
+                                            wire:click="adjustQuantity({{ $item->id }}, -1)"
                                             class="flex size-8 items-center justify-center rounded-l-full text-gray-600 transition hover:bg-gray-100">
                                             <flux:icon name="minus" class="size-3.5" />
                                         </button>
                                         <input type="number"
-                                            wire:model.live.debounce.500ms="quantities.{{ $item->id }}"
+                                            min="1"
+                                            wire:model="quantities.{{ $item->id }}"
+                                            wire:change="updateQuantity({{ $item->id }})"
                                             class="w-12 border-0 text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-0">
                                         <button type="button"
-                                            wire:click="$set('quantities.{{ $item->id }}', {{ (int) ($quantities[$item->id] ?? 1) + 1 }})"
+                                            wire:click="adjustQuantity({{ $item->id }}, 1)"
                                             class="flex size-8 items-center justify-center rounded-r-full text-gray-600 transition hover:bg-gray-100">
                                             <flux:icon name="plus" class="size-3.5" />
                                         </button>
                                     </div>
-
-                                    <button class="rounded-full px-4 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
-                                        wire:click="updateQuantity({{ $item->id }})">
-                                        Actualizar
-                                    </button>
 
                                     <button wire:click="removeItem({{ $item->id }})"
                                         wire:confirm="¿Quitar este producto del carrito?"
@@ -72,7 +69,17 @@
                             </div>
 
                             <div class="text-right">
-                                <span class="text-base font-bold text-gray-900">S/ {{ number_format($item->lineSubtotal(), 2) }}</span>
+                                @php
+                                    $regularUnitPrice = max((float) ($item->variant?->compare_price ?? $item->unit_price), (float) $item->unit_price);
+                                    $lineRegularPrice = $regularUnitPrice * (int) $item->quantity;
+                                @endphp
+                                @if ($regularUnitPrice > (float) $item->unit_price)
+                                    <span class="block text-xs text-gray-400 line-through">S/ {{ number_format($lineRegularPrice, 2) }}</span>
+                                    <span class="mb-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                                        -{{ number_format((float) ($item->variant?->discount_percent ?: (1 - ((float) $item->unit_price / max(0.01, $regularUnitPrice))) * 100), 0) }}%
+                                    </span>
+                                @endif
+                                <span class="block text-base font-bold text-gray-900">S/ {{ number_format($item->lineSubtotal(), 2) }}</span>
                             </div>
                         </div>
                     @endforeach
@@ -84,9 +91,15 @@
 
                     <dl class="mt-4 space-y-3 border-t border-gray-100 pt-4 text-sm">
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Subtotal</dt>
+                            <dt class="text-gray-500">Subtotal con descuentos</dt>
                             <dd class="font-semibold text-gray-900">S/ {{ number_format($subtotal, 2) }}</dd>
                         </div>
+                        @if ($productDiscount > 0)
+                            <div class="flex justify-between text-emerald-700">
+                                <dt>Descuentos de productos</dt>
+                                <dd class="font-semibold">- S/ {{ number_format($productDiscount, 2) }}</dd>
+                            </div>
+                        @endif
                         <div class="flex justify-between text-gray-500">
                             <dt>Envío y cupones</dt>
                             <dd>Se calculan al pagar</dd>

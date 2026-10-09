@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Webhooks\CulqiWebhookController;
+use App\Http\Controllers\Seo\SitemapController;
+use App\Http\Controllers\Seo\GoogleMerchantFeedController;
 use App\Livewire\Account\Addresses;
 use App\Livewire\Account\OrderDetail;
 use App\Livewire\Account\Orders;
@@ -27,6 +29,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/culqi', CulqiWebhookController::class)
     ->name('webhooks.culqi');
+
+Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('feeds/google-shopping.xml', GoogleMerchantFeedController::class)->name('google.merchant-feed');
 
 /*
 |--------------------------------------------------------------------------
@@ -88,3 +93,11 @@ Route::redirect('profile', '/mi-cuenta/perfil')
     ->name('profile');
 
 require __DIR__.'/auth.php';
+
+
+
+Route::get('terminos-y-condiciones', App\Livewire\Pages\Legal\Terms::class)->name('terms');
+
+Route::get('politica-de-cambios-y-devoluciones', App\Livewire\Pages\Legal\Returns::class)->name('returns');
+Route::get('politica-de-privacidad', App\Livewire\Pages\Legal\Privacy::class)->name('privacy');
+Route::get('libro-de-reclamaciones', App\Livewire\Pages\Legal\Claims::class)->name('claims');

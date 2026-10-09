@@ -19,10 +19,10 @@ class ShippingZoneDTO
     public function toArray(): array
     {
         return [
-            'name'        => $this->name,
-            'type'        => $this->type,
+            'name' => $this->name,
+            'type' => $this->type,
             'location_id' => $this->location_id,
-            'status'      => $this->status,
+            'status' => $this->status,
         ];
     }
 }

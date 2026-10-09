@@ -68,16 +68,57 @@ class CloudinaryImageService
     }
 
     /**
+     * Sube un video de producto a Cloudinary.
+     *
+     * @return array{public_id: string, url: string, secure_url: string, file_name: string, format: ?string, size: ?int, width: ?int, height: ?int, duration: ?float}
+     */
+    public function uploadVideo(UploadedFile|TemporaryUploadedFile $file, string $folder): array
+    {
+        $response = $this->client->uploadApi()->upload(
+            $file->getRealPath(),
+            [
+                'folder' => $folder,
+                'resource_type' => 'video',
+                'unique_filename' => true,
+                'use_filename' => true,
+                // En esta versión del SDK las transformaciones de subida se indican
+                // como parámetros de transformación en el nivel superior. Enviar
+                // `transformation` como string hace que el SDK lo trate como una
+                // acción genérica y Cloudinary rechaza `w_320` como transformación.
+                'width' => 320,
+                'height' => 180,
+                'crop' => 'limit',
+                'quality' => 'auto:low',
+                'bit_rate' => '100k',
+                'video_codec' => 'h264',
+                'format' => 'mp4',
+            ]
+        );
+
+        return [
+            'public_id' => (string) $response['public_id'],
+            'url' => (string) $response['url'],
+            'secure_url' => (string) $response['secure_url'],
+            'file_name' => $file->getClientOriginalName(),
+            'format' => $response['format'] ?? null,
+            'size' => isset($response['bytes']) ? (int) $response['bytes'] : null,
+            'width' => isset($response['width']) ? (int) $response['width'] : null,
+            'height' => isset($response['height']) ? (int) $response['height'] : null,
+            'duration' => isset($response['duration']) ? (float) $response['duration'] : null,
+        ];
+    }
+
+    /**
      * Elimina un recurso de Cloudinary por su public_id.
      */
-    public function delete(?string $publicId): void
+    public function delete(?string $publicId, string $resourceType = 'image'): void
     {
         if (! $publicId) {
             return;
         }
 
         try {
-            $this->client->adminApi()->deleteAssets($publicId);
+            $this->client->adminApi()->deleteAssets($publicId, ['resource_type' => $resourceType]);
         } catch (\Throwable $e) {
             report($e);
         }

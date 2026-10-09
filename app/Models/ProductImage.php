@@ -62,16 +62,16 @@ class ProductImage extends Model
     }
 
     /**
-     * URL de la foto recortada al cuadrado del tamaño indicado.
+     * URL de la foto reducida al ancho indicado, conservando su proporción.
      *
      * Las fotos de productos se guardan en Cloudinary, así que en el sitio y
      * en los correos se sirven recortadas y comprimidas en lugar de cargar el
      * original. Si la URL no es de Cloudinary se devuelve tal cual.
      *
      * https://res.cloudinary.com/<cloud>/image/upload/v1234/productos/a.jpg
-     *     -> https://res.cloudinary.com/<cloud>/image/upload/w_120,h_120,c_fill,g_auto,f_auto,q_auto/productos/a.jpg
+     *     -> https://res.cloudinary.com/<cloud>/image/upload/w_120,c_limit,f_jpg,q_auto/productos/a.jpg
      */
-    public function sizedUrl(int $size, ?int $height = null): ?string
+    public function sizedUrl(int $size): ?string
     {
         $url = $this->imageUrl();
         $marker = '/image/upload/';
@@ -84,11 +84,16 @@ class ProductImage extends Model
         $prefix = substr($url, 0, $position + strlen($marker));
         $asset = substr($url, $position + strlen($marker));
 
+        // Email clients often do not send a browser user agent that Cloudinary
+        // can use for f_auto, and several still cannot display WebP/AVIF.
+        // Use a predictable JPEG format for order email thumbnails.
+        $prefix = preg_replace('#^http://#i', 'https://', $prefix) ?? $prefix;
+
         // La versión de Cloudinary (v1234) no es una transformación: se descarta
         // para que la miniatura no dependa de una URL firmada por fecha.
         $asset = preg_replace('/^v\d+\//', '', $asset) ?? $asset;
 
-        $transformation = sprintf('w_%d,h_%d,c_fill,g_auto,f_auto,q_auto/', $size, $height ?? $size);
+        $transformation = sprintf('w_%d,c_limit,f_jpg,q_auto/', $size);
 
         return $prefix.$transformation.$asset;
     }

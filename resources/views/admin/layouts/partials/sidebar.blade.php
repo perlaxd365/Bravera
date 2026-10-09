@@ -61,6 +61,11 @@
                 <flux:icon name="building-storefront" class="size-4.5 shrink-0" />
                 Proveedores
             </a>
+            <a href="{{ route('admin.catalog.reviews.index') }}"
+                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.catalog.reviews.*') ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                <flux:icon name="star" class="size-4.5 shrink-0" />
+                Reseñas
+            </a>
         </div>
 
         <div>
@@ -103,16 +108,17 @@
 
         <div>
             <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Clientes</p>
-            <a href="#" class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-gray-400">
+            <a href="{{ route('admin.customers.index') }}"
+                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.customers.*') ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <flux:icon name="users" class="size-4.5 shrink-0" />
                 Clientes
-                <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">Pronto</span>
             </a>
         </div>
     </nav>
 
     <div class="space-y-1 border-t border-gray-100 p-3">
-        <a href="#" class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900">
+        <a href="{{ route('admin.settings.homepage') }}"
+            class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.settings.*') ? 'bg-amber-50 text-amber-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
             <flux:icon name="cog-6-tooth" class="size-4.5 shrink-0" />
             Configuración
         </a>

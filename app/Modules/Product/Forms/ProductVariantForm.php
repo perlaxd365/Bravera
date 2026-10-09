@@ -22,6 +22,8 @@ class ProductVariantForm extends Form
 
     public ?float $compare_price = null;
 
+    public float $discount_percent = 0;
+
     public ?float $weight = null;
 
     public ?float $length = null;
@@ -62,7 +64,7 @@ class ProductVariantForm extends Form
                 'required',
                 'string',
                 'max:100',
-                'unique:product_variants,sku,' . $this->id,
+                'unique:product_variants,sku,'.$this->id,
             ],
 
             'barcode' => [
@@ -87,6 +89,13 @@ class ProductVariantForm extends Form
                 'nullable',
                 'numeric',
                 'min:0',
+            ],
+
+            'discount_percent' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:90',
             ],
 
             'weight' => [
@@ -163,6 +172,11 @@ class ProductVariantForm extends Form
             'compare_price.numeric' => 'El precio referencial debe ser numérico.',
             'compare_price.min' => 'El precio referencial no puede ser negativo.',
 
+            'discount_percent.required' => 'El descuento es obligatorio; usa 0 si no aplica.',
+            'discount_percent.numeric' => 'El descuento debe ser numérico.',
+            'discount_percent.min' => 'El descuento no puede ser negativo.',
+            'discount_percent.max' => 'El descuento no puede superar el 90%.',
+
             'weight.numeric' => 'El peso debe ser numérico.',
             'weight.min' => 'El peso no puede ser negativo.',
 
@@ -195,6 +209,7 @@ class ProductVariantForm extends Form
             'cost_price' => 'costo de adquisición',
             'sale_price' => 'precio de venta',
             'compare_price' => 'precio referencial',
+            'discount_percent' => 'descuento',
             'weight' => 'peso',
             'length' => 'largo',
             'width' => 'ancho',
@@ -222,7 +237,13 @@ class ProductVariantForm extends Form
 
         $this->cost_price = (float) $variant->cost_price;
 
-        $this->sale_price = (float) $variant->sale_price;
+        $this->discount_percent = (float) $variant->discount_percent;
+
+        // El precio base se muestra al editar para que cambiar el porcentaje
+        // vuelva a calcular el precio final sin aplicar el descuento dos veces.
+        $this->sale_price = $this->discount_percent > 0 && $variant->compare_price !== null
+            ? (float) $variant->compare_price
+            : (float) $variant->sale_price;
 
         $this->compare_price = $variant->compare_price !== null
             ? (float) $variant->compare_price
@@ -279,6 +300,7 @@ class ProductVariantForm extends Form
             'cost_price' => $this->cost_price,
             'sale_price' => $this->sale_price,
             'compare_price' => $this->compare_price,
+            'discount_percent' => $this->discount_percent,
             'weight' => $this->weight,
             'length' => $this->length,
             'width' => $this->width,

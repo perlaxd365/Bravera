@@ -20,6 +20,8 @@ class Product extends Model
         'slug',
         'short_description',
         'description',
+        'video_url',
+        'video_public_id',
         'status',
         'is_featured',
         'is_visible',
@@ -52,6 +54,11 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
     }
 
     public function scopeActive($query)

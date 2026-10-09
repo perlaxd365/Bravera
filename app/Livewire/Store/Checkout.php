@@ -96,15 +96,18 @@ class Checkout extends Component
     #[Locked]
     public ?int $culqiOrderId = null;
 
-
     #[Locked]
     public ?string $pendingOrderNumber = null;
+
     /**
      * Datos que el modal necesita para abrirse: orden de Culqi, importe y los
      * métodos que se habilitan. Misma razón de solo lectura que arriba.
      */
     #[Locked]
     public array $culqiSession = [];
+
+    #[Locked]
+    public bool $culqiFormOpened = false;
 
     public string $notes = '';
 
@@ -145,7 +148,6 @@ class Checkout extends Component
         // así que sin esto el cliente se quedaría en la página de carrito sin
         // forma de pagar lo que ya dejó pedido.
 
-
         $pagar = is_string($pagar) ? trim($pagar) : '';
 
         /*
@@ -153,6 +155,16 @@ class Checkout extends Component
  * intentamos recuperar exactamente ese pedido pendiente.
  */
         if ($pagar !== '' && $this->resumeModalOrder($pagar)) {
+            $this->addresses = app(CustomerAddressService::class)
+                ->addressesFor(auth()->user());
+
+            return;
+        }
+
+        // Si el cliente vuelve al checkout después de cerrar Culqi, el carrito
+        // ya está convertido en el pedido pendiente. Recuperamos ese pedido y
+        // reabrimos la misma orden en vez de mandarlo al carrito vacío.
+        if ($cart->isEmpty() && $this->resumeLatestPendingModalOrder()) {
             $this->addresses = app(CustomerAddressService::class)
                 ->addressesFor(auth()->user());
 
@@ -181,9 +193,6 @@ class Checkout extends Component
 
         $this->addresses = new Collection;
     }
-
-
-
 
     private function resumeLatestPendingModalOrder(): bool
     {
@@ -216,7 +225,6 @@ class Checkout extends Component
 
         return $this->culqiSession !== [];
     }
-
 
     /**
      * Deja el checkout listo para cobrar un pedido pendiente del cliente.
@@ -351,7 +359,7 @@ class Checkout extends Component
 
     private function subtotal($items): float
     {
-        return round($items->sum(fn($item) => (float) $item->unit_price * $item->quantity), 2);
+        return round($items->sum(fn ($item) => (float) $item->unit_price * $item->quantity), 2);
     }
 
     /**
@@ -492,7 +500,7 @@ class Checkout extends Component
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => config('app.debug')
-                    ? 'No se pudo procesar el pedido: ' . $e->getMessage()
+                    ? 'No se pudo procesar el pedido: '.$e->getMessage()
                     : 'No se pudo procesar tu pedido. Inténtalo otra vez o contáctanos.',
             ]);
         }
@@ -522,6 +530,7 @@ class Checkout extends Component
         $existing = $this->payableModalOrder(announce: false);
 
         if ($existing !== null && $this->culqiSession !== []) {
+            $this->culqiFormOpened = true;
             $this->dispatch('culqi:open', session: $this->culqiSession);
 
             return;
@@ -541,22 +550,78 @@ class Checkout extends Component
 
         $this->culqiOrderId = $order->id;
         $this->culqiSession = $session;
+        $this->culqiFormOpened = true;
+
+        // A partir de aquí el pedido pendiente es el propietario del carrito.
+        // Si el navegador se actualiza, la pantalla puede recuperar este pedido
+        // y seguir el pago sin crear una segunda compra.
+        $order->cart?->update(['status' => 'converted']);
 
         $this->dispatch('culqi:open', session: $session);
+    }
+
+    public function returnToCart(CartService $cart, OrderService $orders): void
+    {
+        $cart->restorePendingCartForEditing($orders);
+
+        $this->redirect(route('store.cart'));
+    }
+
+    public function cancelCulqiCheckout(OrderService $orders): void
+    {
+        if (in_array($this->paymentStage, ['processing', 'pending', 'paid'], true)) {
+            return;
+        }
+
+        $order = $this->sessionOrder();
+
+        if ($order && $order->status === OrderStatus::PENDING && $order->payment_status === PaymentStatus::PENDING) {
+            $orders->abandonPendingOrder(
+                $order,
+                'El comprador canceló el intento de pago en Culqi.'
+            );
+
+            $order->refresh();
+
+            if ($order->payment_status === PaymentStatus::PAID) {
+                $this->settlePayment('paid', $order);
+
+                return;
+            }
+        }
+
+        if ($order?->payment_status !== PaymentStatus::PAID) {
+            $order?->cart?->update(['status' => 'active']);
+        }
+
+        $this->culqiOrderId = null;
+        $this->pendingOrderNumber = null;
+        $this->culqiSession = [];
+        $this->culqiFormOpened = false;
+        $this->paymentStage = 'idle';
+
+        $this->dispatch('culqi:cancelled');
+
+        $this->dispatch('notify', [
+            'type' => 'info',
+            'message' => 'Pago cancelado. Tus productos siguen en el carrito.',
+        ]);
+    }
+
+    public function culqiFormFailed(): void
+    {
+        if ($this->paymentStage === 'idle') {
+            $this->culqiFormOpened = false;
+        }
     }
 
     #[On('culqi:complete-card')]
     public function completeCulqiCard($payload): void
     {
-        Log::info('[Culqi] >>> EVENTO COMPLETE CARD RECIBIDO EN LARAVEL <<<', [
-            'payload' => $payload,
-        ]);
-        \Log::info('[Culqi] completeCulqiCard LLAMADO DESDE BACKEND', ['payload' => $payload, 'type' => gettype($payload)]);
         $token = is_string($payload) ? $payload : ($payload['token'] ?? '');
-        \Log::info('[Culqi] completeCulqiCard llamado', ['payload' => $payload, 'token' => $token, 'type' => gettype($token)]);
 
         if (! str_starts_with($token, 'tkn_')) {
-            \Log::warning('[Culqi] Token inválido, no empieza con tkn_');
+            \Log::warning('[Culqi] Token de tarjeta inválido.');
             $this->settlePayment('idle', null, 'No recibimos los datos de tu tarjeta. Inténtalo de nuevo.');
 
             return;
@@ -580,14 +645,14 @@ class Checkout extends Component
             \Log::info('[Culqi] PaymentService::charge completado', [
                 'payment_id' => $payment->id,
                 'payment_status' => $payment->status->value,
-                'payment_success' => $payment->status === \App\Enums\PaymentStatus::PAID,
+                'payment_success' => $payment->status === PaymentStatus::PAID,
             ]);
         } catch (Throwable $e) {
             \Log::error('[Culqi] Excepción en charge', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             report($e);
 
             $this->settlePayment('idle', null, config('app.debug')
-                ? 'No se pudo procesar el pago: ' . $e->getMessage()
+                ? 'No se pudo procesar el pago: '.$e->getMessage()
                 : 'No se pudo procesar tu pago. Inténtalo otra vez.');
 
             return;
@@ -613,7 +678,7 @@ class Checkout extends Component
 
         $this->paymentStage = 'processing';
 
-        $method = (string) config('payments.culqi.method_map.' . $culqiMethod, '');
+        $method = (string) config('payments.culqi.method_map.'.$culqiMethod, '');
 
         if ($method === '') {
             // methodValue "confirm_order": Culqi está confirmando una orden ya
@@ -647,7 +712,7 @@ class Checkout extends Component
             report($e);
 
             $this->settlePayment('idle', null, config('app.debug')
-                ? 'No se pudo registrar el pago: ' . $e->getMessage()
+                ? 'No se pudo registrar el pago: '.$e->getMessage()
                 : 'No pudimos registrar tu pago. Inténtalo otra vez.');
 
             return;
@@ -672,6 +737,10 @@ class Checkout extends Component
     {
         \Log::info('[Culqi] settlePayment llamado', ['kind' => $kind, 'order' => $order?->order_number, 'message' => $message]);
         $this->paymentStage = $kind;
+
+        if ($kind === 'idle') {
+            $this->culqiFormOpened = false;
+        }
 
         // Limpiar la sesión de Culqi si el pago fue exitoso para evitar re-abrir el modal
         // Pero mantener culqiOrderId para que payableModalOrder pueda encontrar el pedido
@@ -726,7 +795,7 @@ class Checkout extends Component
             $this->abandonModalOrder($order, 'No pudimos conectar con la pasarela de pago. Inténtalo otra vez.');
 
             return null;
-        } catch (CulqiApiException | RuntimeException $e) {
+        } catch (CulqiApiException|RuntimeException $e) {
             report($e);
 
             $this->abandonModalOrder($order, $this->clientMessage($e));
@@ -862,7 +931,7 @@ class Checkout extends Component
 
         // 1. Pedido y reserva de stock en su propia transacción: es rápido
         //    y solo toca la base de datos local.
-        return DB::transaction(fn() => app(OrderService::class)->createFromCheckout($data));
+        return DB::transaction(fn () => app(OrderService::class)->createFromCheckout($data));
     }
 
     /**
@@ -955,12 +1024,7 @@ class Checkout extends Component
             'order_number' => $order->order_number,
         ]);
 
-
-        $this->redirect(
-            route('store.order.placed', [
-                'order' => $order->order_number,
-            ])
-        );
+        $this->settlePayment('paid', $order);
     }
 
     /**
@@ -1031,7 +1095,7 @@ class Checkout extends Component
 
     private function culqiGateway(): ?CulqiGateway
     {
-        $class = config('payments.gateways.' . config('payments.default_gateway'));
+        $class = config('payments.gateways.'.config('payments.default_gateway'));
 
         return is_string($class) && is_a($class, CulqiGateway::class, true)
             ? app($class)
@@ -1068,7 +1132,7 @@ class Checkout extends Component
             return $catalog;
         }
 
-        $supported = (array) config('payments.gateway_methods.' . $gateway, []);
+        $supported = (array) config('payments.gateway_methods.'.$gateway, []);
 
         // Una pasarela sin métodos declarados no restringe el catálogo: se
         // comporta como antes en vez de dejar la tienda sin formas de cobrar.
@@ -1153,8 +1217,7 @@ class Checkout extends Component
             );
         }
 
-        return view('livewire.store.checkout', [
-            'summaryItems' => $totals['items']->map(fn($item) => [
+        $summaryItems = $totals['items']->map(fn ($item) => [
                 'quantity' => (int) $item->quantity,
                 'name' => $item->variant?->product?->name
                     ?? $item->product_name
@@ -1163,7 +1226,18 @@ class Checkout extends Component
                     (float) $item->unit_price * (int) $item->quantity,
                     2
                 ),
-            ]),
+                'regularSubtotal' => round(max(
+                    (float) ($item->variant?->compare_price ?? $item->unit_price),
+                    (float) $item->unit_price
+                ) * (int) $item->quantity, 2),
+                'discountPercent' => (float) ($item->variant?->discount_percent ?: (1 - ((float) $item->unit_price / max(0.01, (float) ($item->variant?->compare_price ?? $item->unit_price)))) * 100),
+            ]);
+        $productDiscount = round($summaryItems->sum(fn ($item) => max(0, $item['regularSubtotal'] - $item['subtotal'])), 2);
+
+        return view('livewire.store.checkout', [
+            'summaryItems' => $summaryItems,
+            'productDiscount' => $productDiscount,
+            'regularSubtotal' => round($totals['subtotal'] + $productDiscount, 2),
 
             'subtotal' => $totals['subtotal'],
             'discount' => $totals['discount'],
@@ -1218,6 +1292,7 @@ class Checkout extends Component
 
         return $order;
     }
+
     /**
      * Importes del pedido ya creado, leídos de lo que quedó congelado al
      * crearlo. El carrito está convertido, así que no sirven para reconstruirlos.
@@ -1252,17 +1327,10 @@ class Checkout extends Component
         return is_string($key) && trim($key) !== '' ? $key : null;
     }
 
-
     public function completeCulqiYape(string $token): void
     {
-        Log::info('[Culqi] completeCulqiYape llamado', [
-            'token' => $token,
-        ]);
-
         if (! str_starts_with($token, 'ype_')) {
-            Log::warning('[Culqi] Token Yape inválido.', [
-                'token' => $token,
-            ]);
+            Log::warning('[Culqi] Token Yape inválido.');
 
             $this->settlePayment(
                 'idle',
@@ -1333,7 +1401,7 @@ class Checkout extends Component
                 'idle',
                 null,
                 config('app.debug')
-                    ? 'No se pudo procesar Yape: ' . $e->getMessage()
+                    ? 'No se pudo procesar Yape: '.$e->getMessage()
                     : 'No se pudo procesar tu pago con Yape. Inténtalo nuevamente.'
             );
         }

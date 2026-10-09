@@ -134,6 +134,9 @@ export const openModal = async (rawSession, publicKey, state) => {
     } catch (e) {
         console.error('[Culqi] Error cargando Culqi:', e);
         notify('No pudimos cargar el formulario seguro de Culqi. Revisa tu conexión e inténtalo de nuevo.');
+        const root = document.querySelector('[data-culqi-public-key]');
+        const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
+        component?.call('culqiFormFailed');
         return;
     }
 
@@ -149,24 +152,34 @@ export const openModal = async (rawSession, publicKey, state) => {
         client: { email: session.email },
         options: {
             lang: 'es',
-            modal: true,
+            modal: false,
+            container: '#culqi-container',
             installments: false,
             paymentMethods: methods,
+            paymentMethodsSort: Object.keys(methods),
         },
         appearance: {
             theme: 'default',
+            menuType: 'sidebar',
+            defaultStyle: {
+                bannerColor: '#111827',
+                buttonBackground: '#111827',
+                menuColor: '#111827',
+                linksColor: '#047857',
+                buttonTextColor: '#ffffff',
+                priceColor: '#111827',
+            },
         },
     });
 
     checkout.culqi = async () => {
-        console.log('========== CULQI DEBUG YAPE ==========');
-        console.log('TOKEN:', checkout.token);
-        console.log('ORDER:', checkout.order);
-        console.log('METHOD:', checkout.methodValue);
-        console.log('ERROR:', checkout.error);
-        console.log('TOKEN ID:', checkout.token?.id);
-        console.log('CHECKOUT COMPLETO:', checkout);
-        console.log('======================================');
+        // Culqi puede conservar información de la orden asociada al checkout.
+        // Un error (por ejemplo, un código Yape incorrecto) debe prevalecer:
+        // nunca lo tratemos como si la orden se hubiera completado.
+        if (checkout.error) {
+            notify(safeErrorMessage(checkout.error));
+            return;
+        }
 
         const root = document.querySelector('[data-culqi-public-key]');
         const currentWireId = root?.getAttribute('wire:id') ?? state.wireId;
@@ -183,7 +196,7 @@ export const openModal = async (rawSession, publicKey, state) => {
 
             if (tokenId.startsWith('tkn_')) {
 
-                console.log('[Culqi] Token de tarjeta recibido:', tokenId);
+                console.debug('[Culqi] Token de tarjeta recibido.');
 
                 const component = window.Livewire?.find?.(currentWireId);
 
@@ -205,6 +218,8 @@ export const openModal = async (rawSession, publicKey, state) => {
                 if (typeof checkout.close === 'function') {
                     checkout.close();
                 }
+
+                if (state.checkout === checkout) state.checkout = null;
 
                 try {
 
@@ -237,7 +252,7 @@ export const openModal = async (rawSession, publicKey, state) => {
             // =====================================================
             if (tokenId.startsWith('ype_')) {
 
-                console.log('[Culqi] Token de Yape recibido:', tokenId);
+                console.debug('[Culqi] Token de Yape recibido.');
 
                 const component = window.Livewire?.find?.(currentWireId);
 
@@ -259,6 +274,8 @@ export const openModal = async (rawSession, publicKey, state) => {
                 if (typeof checkout.close === 'function') {
                     checkout.close();
                 }
+
+                if (state.checkout === checkout) state.checkout = null;
 
                 try {
 
@@ -295,13 +312,8 @@ export const openModal = async (rawSession, publicKey, state) => {
             if (checkout.order) {
 
                 console.debug(
-                    '[Culqi] Orden recibida:',
-                    checkout.order
-                );
-
-                console.debug(
-                    '[Culqi] Método recibido:',
-                    checkout.methodValue
+                    '[Culqi] Orden de pago recibida.',
+                    { method: checkout.methodValue ?? null }
                 );
 
                 const component = window.Livewire?.find?.(currentWireId);
@@ -351,28 +363,11 @@ export const openModal = async (rawSession, publicKey, state) => {
 
 
             // =====================================================
-            // ERROR DE CULQI
-            // =====================================================
-            if (checkout.error) {
-                notify(safeErrorMessage(checkout.error));
-                return;
-            }
-
-
-            // =====================================================
             // CIERRE / CANCELACIÓN
             // =====================================================
             console.debug(
                 '[Culqi] Checkout cerrado/cancelado sin token.'
             );
-        }
-
-        // =====================================================
-        // ERROR DE CULQI
-        // =====================================================
-        if (checkout.error) {
-            notify(safeErrorMessage(checkout.error));
-            return;
         }
 
         // =====================================================
@@ -400,41 +395,70 @@ export const openModal = async (rawSession, publicKey, state) => {
 
     state.checkout = checkout;
 
-    // El SDK maneja su propio modal, solo llamamos open()
-    console.debug('[Culqi] Abriendo modal de Culqi...');
+    // Culqi renderiza el formulario dentro del contenedor de Brevare.
+    console.debug('[Culqi] Montando checkout integrado...');
     checkout.open();
 
-    // Verificar si se abrió correctamente
+    // El SDK monta su iframe con una altura interna corta en algunos tamaños
+    // de ventana. Aunque el contenedor tenga más espacio, eso recorta los
+    // campos (por ejemplo, vencimiento y CVV). Ajustamos el iframe anfitrión;
+    // su contenido sigue aislado y seguro dentro de Culqi.
+    const fitEmbeddedCheckout = () => {
+        const container = document.querySelector('#culqi-container');
+        if (!container) return;
+
+        const availableHeight = Math.max(280, Math.min(720, window.innerHeight - 300));
+        container.style.setProperty('height', `${availableHeight}px`);
+        container.style.setProperty('min-height', '0');
+        container.style.setProperty('overflow', 'hidden');
+        container.querySelectorAll('iframe').forEach((frame) => {
+            frame.style.setProperty('height', `${availableHeight}px`, 'important');
+            frame.style.setProperty('min-height', `${availableHeight}px`, 'important');
+            frame.style.setProperty('width', '100%', 'important');
+            frame.style.setProperty('max-height', 'none', 'important');
+        });
+    };
+
+    fitEmbeddedCheckout();
+    state.checkoutFrameObserver?.disconnect();
+    const embeddedContainer = document.querySelector('#culqi-container');
+    if (embeddedContainer) {
+        state.checkoutFrameObserver = new MutationObserver(fitEmbeddedCheckout);
+        state.checkoutFrameObserver.observe(embeddedContainer, { childList: true, subtree: true });
+    }
+    state.checkoutFrameResizeHandler = fitEmbeddedCheckout;
+    window.addEventListener('resize', state.checkoutFrameResizeHandler);
+
+    // En modo integrado no existe un modal que consultar: validamos que el
+    // contenedor permanezca en la página y dejamos listo el control de reintento.
     setTimeout(() => {
-        if (checkout.isOpen === false) {
-            console.error('[Culqi] el modal no llegó a montarse', { publicKey, session });
+        if (!document.querySelector('#culqi-container')) {
+            console.error('[Culqi] no se encontró el contenedor del checkout integrado.');
             notify('No pudimos abrir el formulario de Culqi. Revisa tu conexión e inténtalo de nuevo.');
+            const root = document.querySelector('[data-culqi-public-key]');
+            window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
             return;
         }
-        console.debug('[Culqi] Checkout abierto correctamente');
+        console.debug('[Culqi] Checkout integrado iniciado.');
     }, 1000);
 };
 
 export const handleCulqiSettled = (payload) => {
-    console.debug('[Culqi] >>> handleCulqiSettled LLAMADO <<<', payload);
-    console.debug('[Culqi] Payload type:', typeof payload, 'keys:', Object.keys(payload));
     const kind = payload.kind ?? 'idle';
 
     if (kind === 'idle') {
-        console.debug('[Culqi] kind=idle, saliendo');
+        hidePaymentProcessing();
         return;
     }
 
     if (kind === 'paid') {
-        console.debug('[Culqi] kind=paid, URL:', payload.url);
+        hidePaymentProcessing();
         alert('¡Pago confirmado!');
         if (payload.url) {
-            console.debug('[Culqi] Redirigiendo a:', payload.url);
             window.location.href = payload.url;
-        } else {
-            console.error('[Culqi] kind=paid pero no hay URL en el payload');
         }
     } else if (kind === 'pending') {
+        hidePaymentProcessing();
         alert('Estamos verificando tu pago. Te avisamos en cuanto Culqi confirme la operación.');
     }
 };
@@ -458,14 +482,6 @@ if (typeof Livewire !== 'undefined') {
     });
 }
 
-// Fallback: también escuchar en window por si Livewire.on no funciona
-window.addEventListener('culqi:settled', (event) => {
-    console.debug('[Culqi] >>> EVENTO culqi:settled EN WINDOW <<<', event);
-    console.debug('[Culqi] Window event detail:', event?.detail);
-    const payload = event?.detail ?? event ?? {};
-    handleCulqiSettled(payload);
-});
-
 export const initCheckout = (publicKey, wireId) => {
     const state = (window.__brevareCulqi ??= {});
     state.wireId = wireId;
@@ -483,7 +499,37 @@ export const initCheckout = (publicKey, wireId) => {
         }
 
         console.debug('[Culqi] Abriendo modal con sesión:', session);
+        const paymentModal = document.querySelector('#culqi-payment-modal');
+        paymentModal?.classList.remove('hidden');
+        paymentModal?.classList.add('flex');
+        document.body.style.overflow = 'hidden';
         openModal(session, publicKey, state);
+    });
+
+    Livewire.on('culqi:cancelled', () => {
+        state.checkoutFrameObserver?.disconnect();
+        state.checkoutFrameObserver = null;
+        if (state.checkoutFrameResizeHandler) {
+            window.removeEventListener('resize', state.checkoutFrameResizeHandler);
+            state.checkoutFrameResizeHandler = null;
+        }
+
+        if (state.checkout && typeof state.checkout.close === 'function') {
+            state.checkout.close();
+        }
+
+        state.checkout = null;
+        document.querySelector('#culqi-container')?.replaceChildren();
+        const paymentModal = document.querySelector('#culqi-payment-modal');
+        paymentModal?.classList.add('hidden');
+        paymentModal?.classList.remove('flex');
+        document.body.style.overflow = '';
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.querySelector('#culqi-payment-modal:not(.hidden)')) {
+            window.Livewire?.find?.(wireId)?.call('cancelCulqiCheckout');
+        }
     });
 
     Livewire.hook('request', ({ fail }) => {
@@ -567,8 +613,6 @@ const hidePaymentProcessing = () => {
     }
 
     document.body.style.overflow = '';
-
-    console.debug('[Culqi] Overlay de procesamiento ocultado.');
 };
 
 

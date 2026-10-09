@@ -7,10 +7,10 @@
     'src' => null,
     'alt' => '',
     'size' => 56,
-    'radius' => 12,
+    'radius' => 8,
 ])
 
 @if ($src)
-    <img src="{{ $src }}" alt="{{ $alt }}" width="{{ $size }}" height="{{ $size }}"
-        style="display:block;width:{{ $size }}px;height:{{ $size }}px;border:1px solid #e5e7eb;border-radius:{{ $radius }}px;object-fit:cover;-ms-interpolation-mode:bicubic;">
+    <img src="{{ $src }}" alt="{{ $alt }}" width="{{ $size }}" border="0"
+        style="display:block;width:{{ $size }}px;height:auto;max-width:100%;border:1px solid #e5e7eb;border-radius:{{ $radius }}px;-ms-interpolation-mode:bicubic;">
 @endif

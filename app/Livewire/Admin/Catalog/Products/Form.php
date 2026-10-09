@@ -6,6 +6,7 @@ use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductImage;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
 use App\Modules\Product\Forms\ProductForm;
@@ -55,6 +56,12 @@ class Form extends Component
      * @var array
      */
     public $galleryImages = [];
+
+    public $productVideo;
+
+    public ?string $productVideoUrl = null;
+
+    public ?string $productVideoPublicId = null;
 
     /**
      * Mostrar modal.
@@ -111,6 +118,8 @@ class Form extends Component
 
         $this->supplierVariantForm->resetForm();
 
+        $this->reset(['productVideo', 'productVideoUrl', 'productVideoPublicId']);
+
         $this->resetValidation();
 
         $this->show = true;
@@ -130,6 +139,10 @@ class Form extends Component
 
         $this->form->fromModel($product);
 
+        $this->productVideoUrl = $product->video_url;
+        $this->productVideoPublicId = $product->video_public_id;
+        $this->productVideo = null;
+
         $this->variantForm->resetForm();
 
         $this->supplierVariantForm->resetForm();
@@ -145,6 +158,27 @@ class Form extends Component
     public function save(): void
     {
         $this->form->validate();
+
+        if ($this->form->is_visible) {
+            if (! $this->form->id) {
+                $this->addError('form.is_visible', 'Guarda primero el producto oculto, agrega una variante con foto y luego publícalo.');
+
+                return;
+            }
+
+            $hasPublicImage = ProductImage::query()
+                ->where('is_active', true)
+                ->whereHas('variant', fn ($query) => $query
+                    ->where('product_id', $this->form->id)
+                    ->where('is_active', true))
+                ->exists();
+
+            if (! $hasPublicImage) {
+                $this->addError('form.is_visible', 'Agrega al menos una foto activa antes de publicar el producto.');
+
+                return;
+            }
+        }
 
         if ($this->form->id) {
             $product = $this->repository->find($this->form->id);
@@ -183,6 +217,88 @@ class Form extends Component
         $this->dispatch('product-saved');
 
         $this->resetValidation();
+    }
+
+    public function updatedProductVideo(): void
+    {
+        $this->validate([
+            'productVideo' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/webm', 'max:12288'],
+        ], [
+            'productVideo.mimetypes' => 'El video debe estar en formato MP4, MOV o WebM.',
+            'productVideo.max' => 'El video no puede superar los 12 MB.',
+        ]);
+    }
+
+    public function saveProductVideo(CloudinaryImageService $cloudinary): void
+    {
+        if (! $this->form->id) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Guarda el producto antes de subir su video.',
+            ]);
+
+            return;
+        }
+
+        $this->validate([
+            'productVideo' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/webm', 'max:12288'],
+        ], [
+            'productVideo.mimetypes' => 'El video debe estar en formato MP4, MOV o WebM.',
+            'productVideo.max' => 'El video no puede superar los 12 MB.',
+        ]);
+
+        $product = Product::findOrFail($this->form->id);
+        $data = $cloudinary->uploadVideo($this->productVideo, CloudinaryImageService::FOLDER_PRODUCTS);
+        $previousPublicId = $product->video_public_id;
+
+        try {
+            $product->update([
+                'video_url' => $data['secure_url'],
+                'video_public_id' => $data['public_id'],
+            ]);
+        } catch (\Throwable $exception) {
+            $cloudinary->delete($data['public_id'], 'video');
+            throw $exception;
+        }
+
+        if ($previousPublicId) {
+            $cloudinary->delete($previousPublicId, 'video');
+        }
+
+        $this->productVideoUrl = $data['secure_url'];
+        $this->productVideoPublicId = $data['public_id'];
+        $this->productVideo = null;
+        $this->resetValidation('productVideo');
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => $data['size']
+                ? 'Video optimizado y guardado ('.number_format($data['size'] / 1024, 0).' KB).'
+                : 'Video optimizado y guardado correctamente.',
+        ]);
+    }
+
+    public function deleteProductVideo(CloudinaryImageService $cloudinary): void
+    {
+        if (! $this->form->id) {
+            return;
+        }
+
+        $product = Product::findOrFail($this->form->id);
+        $publicId = $product->video_public_id;
+        $product->update(['video_url' => null, 'video_public_id' => null]);
+
+        if ($publicId) {
+            $cloudinary->delete($publicId, 'video');
+        }
+
+        $this->productVideoUrl = null;
+        $this->productVideoPublicId = null;
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Video eliminado correctamente.',
+        ]);
     }
 
     /*

@@ -64,8 +64,8 @@ class SupplierService
         if (
             $dto->tax_id &&
             Supplier::where('tax_id', $dto->tax_id)
-            ->whereKeyNot($supplier->id)
-            ->exists()
+                ->whereKeyNot($supplier->id)
+                ->exists()
         ) {
             throw ValidationException::withMessages([
                 'tax_id' => 'El RUC ya se encuentra registrado.',
@@ -118,6 +118,6 @@ class SupplierService
     {
         $next = Supplier::withTrashed()->count() + 1;
 
-        return 'SUP' . str_pad($next, 6, '0', STR_PAD_LEFT);
+        return 'SUP'.str_pad($next, 6, '0', STR_PAD_LEFT);
     }
 }

@@ -280,18 +280,14 @@
                 </h2>
 
                 @if ($usesProviderModal)
-                    {{-- El selector es el de Culqi, dentro de su modal. Él
-                         muestra tarjeta, Yape y el resto de medios que la
-                         cuenta tenga habilitados, así que la tienda no
-                         necesita saber cuáles son ni mantenerlos al día. --}}
+                    {{-- Culqi muestra aquí sus medios habilitados, sin salir
+                         del checkout de Brevare. --}}
                     @if ($culqiPublicKey)
                         <div class="rounded-xl border border-gray-200 bg-gray-50/60 px-4 py-4">
                             <p class="flex items-start gap-3 text-sm text-gray-700">
                                 <flux:icon name="credit-card" class="mt-0.5 size-5 shrink-0" />
                                 <span>
-                                    Pulsa
-                                    <strong>{{ $awaitingPayment ? 'Reabrir el pago con Culqi' : 'Pagar con Culqi' }}</strong>
-                                    y se abrirá el checkout seguro de Culqi, donde eliges entre
+                                    El formulario seguro de Culqi aparecerá aquí. Podrás elegir entre
                                     tarjeta, Yape y los demás medios disponibles.
                                 </span>
                             </p>
@@ -300,6 +296,7 @@
                             <flux:icon name="lock-closed" class="size-4 shrink-0" />
                             Tu tarjeta se procesa dentro del formulario de Culqi. No almacenamos el número completo.
                         </p>
+
                     @else
                         {{-- Sin clave pública no hay checkout que abrir: decirlo aquí evita
                              prometer un botón de pago que no se puede usar. --}}
@@ -341,16 +338,31 @@
                 <div class="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm">
                     @foreach ($summaryItems as $item)
                         <div class="flex justify-between gap-3">
-                            <span class="min-w-0 truncate text-gray-700">
-                                {{ $item['quantity'] }} × {{ $item['name'] }}
-                            </span>
-                            <strong class="shrink-0 text-gray-900">S/
-                                {{ number_format($item['subtotal'], 2) }}</strong>
+                            <div class="min-w-0">
+                                <span class="block truncate text-gray-700">
+                                    {{ $item['quantity'] }} × {{ $item['name'] }}
+                                </span>
+                                @if ($item['regularSubtotal'] > $item['subtotal'])
+                                    <span class="text-xs text-gray-400 line-through">S/ {{ number_format($item['regularSubtotal'], 2) }}</span>
+                                    <span class="ml-1 text-xs font-semibold text-emerald-700">-{{ number_format($item['discountPercent'], 0) }}%</span>
+                                @endif
+                            </div>
+                            <strong class="shrink-0 text-gray-900">S/ {{ number_format($item['subtotal'], 2) }}</strong>
                         </div>
                     @endforeach
                 </div>
 
                 <dl class="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-sm">
+                    @if ($productDiscount > 0)
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">Subtotal antes de descuentos</dt>
+                            <dd class="text-gray-500 line-through">S/ {{ number_format($regularSubtotal, 2) }}</dd>
+                        </div>
+                        <div class="flex justify-between text-emerald-700">
+                            <dt>Descuentos de productos</dt>
+                            <dd>- S/ {{ number_format($productDiscount, 2) }}</dd>
+                        </div>
+                    @endif
                     <div class="flex justify-between">
                         <dt class="text-gray-500">Subtotal</dt>
                         <dd class="text-gray-900">S/ {{ number_format($subtotal, 2) }}</dd>
@@ -415,40 +427,26 @@
                     </div>
                 @endif
 
-                @if ($usesProviderModal && $awaitingPayment && $culqiPublicKey)
-                    <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
-                        wire:target="startCulqiCheckout" @if ($paymentStage !== 'idle') disabled @endif
-                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        @if ($paymentStage === 'paid')
-                            <flux:icon name="check-circle" class="size-4" />
-                            Pago confirmado
-                        @elseif ($paymentStage === 'pending')
-                            <flux:icon name="clock" class="size-4" />
-                            Verificando tu pago
-                        @else
+                @if ($usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
+                    @if ($culqiSession === [])
+                        <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
+                            wire:target="startCulqiCheckout" @if (!$selectedAddressId) disabled @endif
+                            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                             <span wire:loading.remove wire:target="startCulqiCheckout"
                                 class="inline-flex items-center gap-2">
                                 <flux:icon name="lock-closed" class="size-4" />
                                 Continuar al pago
                             </span>
-                            <span wire:loading wire:target="startCulqiCheckout">Abriendo el pago...</span>
-                        @endif
-                    </button>
-                @elseif ($usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
-                    {{-- Este botón solo abre el modal de Culqi: el pedido, su
-                         orden y la reserva de stock ya se crearon en el
-                         servidor, y la confirmación del pago ocurre dentro
-                         del propio checkout. --}}
-                    <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
-                        wire:target="startCulqiCheckout" @if (!$selectedAddressId) disabled @endif
-                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        <span wire:loading.remove wire:target="startCulqiCheckout"
-                            class="inline-flex items-center gap-2">
-                            <flux:icon name="lock-closed" class="size-4" />
-                            Continuar al pago
-                        </span>
-                        <span wire:loading wire:target="startCulqiCheckout">Abriendo el pago...</span>
-                    </button>
+                            <span wire:loading wire:target="startCulqiCheckout">Cargando Culqi...</span>
+                        </button>
+                    @elseif (!$culqiFormOpened && $paymentStage === 'idle')
+                        <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
+                            wire:target="startCulqiCheckout"
+                            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
+                            <span wire:loading.remove wire:target="startCulqiCheckout">Abrir formulario de pago</span>
+                            <span wire:loading wire:target="startCulqiCheckout">Cargando Culqi...</span>
+                        </button>
+                    @endif
                 @elseif (!$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
@@ -457,13 +455,44 @@
                         <span wire:loading>Procesando...</span>
                     </button>
                 @endif
-                <a href="{{ route('store.cart') }}"
+                <button type="button" wire:click="returnToCart" wire:loading.attr="disabled"
                     class="mt-2 block w-full rounded-full px-6 py-2.5 text-center text-sm font-medium text-gray-700 transition hover:bg-gray-100">
                     Volver al carrito
-                </a>
+                </button>
             </div>
         </aside>
     </div>
+
+    @if ($usesProviderModal && $culqiSession !== [])
+        <div id="culqi-payment-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-950/60 p-2 backdrop-blur-sm sm:p-4"
+            role="dialog" aria-modal="true" aria-labelledby="culqi-payment-title">
+            <div class="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 sm:max-h-[calc(100dvh-2rem)]">
+                <header class="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-7">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Pago seguro</p>
+                        <h2 id="culqi-payment-title" class="mt-1 text-xl font-bold tracking-tight text-gray-950">Completa tu pago</h2>
+                        <p class="mt-1 text-sm text-gray-500">Elige tarjeta, Yape u otro medio disponible.</p>
+                    </div>
+                    <button type="button" wire:click="cancelCulqiCheckout" aria-label="Cerrar y conservar el carrito"
+                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20">
+                        <flux:icon name="x-mark" class="size-5" />
+                    </button>
+                </header>
+                <div class="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:overflow-hidden sm:px-6 sm:py-5">
+                    <div id="culqi-container" wire:ignore class="w-full"></div>
+                </div>
+                <footer class="flex flex-col-reverse items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/80 px-5 py-3 sm:flex-row sm:px-7">
+                    <p class="flex items-center gap-2 text-xs text-gray-500"><flux:icon name="lock-closed" class="size-4" />Pago protegido por Culqi</p>
+                    @if ($paymentStage === 'idle')
+                        <button type="button" wire:click="cancelCulqiCheckout" wire:loading.attr="disabled"
+                            class="rounded-full px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200/70">
+                            Cancelar y conservar mi carrito
+                        </button>
+                    @endif
+                </footer>
+            </div>
+        </div>
+    @endif
 </div>
 </div>
 </div>

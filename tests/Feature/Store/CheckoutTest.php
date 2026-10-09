@@ -934,12 +934,13 @@ class CheckoutTest extends TestCase
         Http::assertSent(fn ($request) => $request['source_id'] === 'tkn_test_123');
     }
 
-    public function test_yape_no_exige_token_de_tarjeta(): void
+    public function test_yape_usa_token_yape_y_no_token_de_tarjeta(): void
     {
         $this->useCulqi();
-        Http::fake(['api.culqi.com/v2/orders' => Http::response(
-            CulqiResponses::pendingOrder('ord_yape_1'), 201
-        )]);
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_yape_1'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_yape_1', 11200), 201),
+        ]);
 
         $user = $this->customer();
         $variant = $this->productWithStock();
@@ -947,20 +948,20 @@ class CheckoutTest extends TestCase
         $address = $this->addressFor($user, $district);
         $this->cartWith($user, $variant);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->set('paymentMethod', 'yape')
-            ->call('placeOrder')
+            ->call('startCulqiCheckout')
+            ->call('completeCulqiYape', 'ype_yape_token_1')
             ->assertHasNoErrors();
 
         $payment = Payment::firstOrFail();
 
-        $this->assertSame('ord_yape_1', $payment->source_id);
-        $this->assertSame('ord_yape_1', $payment->gateway_transaction_id);
-        $this->assertSame(PaymentStatus::PENDING->value, $payment->status->value);
-        // El pedido no se confirma hasta que Yape notifique el pago.
-        $this->assertSame(OrderStatus::PENDING->value, Order::firstOrFail()->status->value);
+        $this->assertSame('ype_yape_token_1', $payment->source_id);
+        $this->assertSame('chr_yape_1', $payment->gateway_transaction_id);
+        $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
+        $this->assertSame(PaymentStatus::PAID->value, Order::firstOrFail()->payment_status->value);
+        $component->assertSet('paymentStage', 'paid');
     }
 
     /**
@@ -1466,6 +1467,45 @@ class CheckoutTest extends TestCase
         $this->assertSame('chr_modal_1', $payment->gateway_transaction_id);
         $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
         $this->assertSame(OrderStatus::CONFIRMED->value, $order->fresh()->status->value);
+    }
+
+    public function test_un_cargo_rechazado_en_el_modal_se_puede_reintentar_sobre_el_mismo_pedido(): void
+    {
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_retry_1'), 201),
+            'api.culqi.com/v2/charges' => Http::sequence()
+                ->push(CulqiResponses::declinedCharge('chr_retry_declined'), 201)
+                ->push(CulqiResponses::approvedCharge('chr_retry_approved', 11200), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+        $order = Order::firstOrFail();
+
+        $component->call('completeCulqiCard', 'tkn_declined')
+            ->assertSet('paymentStage', 'idle');
+
+        $this->assertSame(PaymentStatus::PENDING->value, $order->fresh()->payment_status->value);
+        $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
+
+        $component->call('startCulqiCheckout')
+            ->assertDispatched('culqi:open')
+            ->call('completeCulqiCard', 'tkn_approved')
+            ->assertSet('paymentStage', 'paid')
+            ->assertDispatched('culqi:settled', kind: 'paid');
+
+        $this->assertSame(1, Order::count());
+        $this->assertSame(2, Payment::count());
+        $this->assertSame(PaymentStatus::PAID->value, Order::firstOrFail()->payment_status->value);
     }
 
     public function test_un_metodo_asincrono_deja_el_pago_pendiente_para_el_webhook(): void

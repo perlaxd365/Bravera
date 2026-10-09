@@ -40,10 +40,21 @@ class SupplierOrderService
 
     private function createSupplyOrder(Order $order, int $supplierId, $items): SupplierOrder
     {
-        $totalCost = round(
-            $items->sum(fn ($item) => (float) $item->line_cost_total),
-            2
-        );
+        // El envío cubre el paquete del proveedor, no cada unidad del mismo.
+        // Se asigna a una sola línea para que el detalle y el total coincidan.
+        $shippingItem = $items->sortByDesc(fn ($item) => (float) $item->supplier_shipping_cost)->first();
+        $shippingTotal = round((float) ($shippingItem?->supplier_shipping_cost ?? 0), 2);
+        $lineCosts = [];
+
+        foreach ($items as $item) {
+            $shipping = $item->is($shippingItem) ? $shippingTotal : 0.0;
+            $lineCosts[$item->id] = round(
+                (float) $item->unit_cost * (int) $item->quantity + $shipping,
+                2
+            );
+        }
+
+        $totalCost = round(array_sum($lineCosts), 2);
 
         $supplierOrder = SupplierOrder::create([
             'order_id' => $order->id,
@@ -61,8 +72,8 @@ class SupplierOrderService
                 'supplier_variant_id' => $item->supplier_variant_id,
                 'quantity' => $item->quantity,
                 'unit_cost' => $item->unit_cost,
-                'supplier_shipping_cost' => $item->supplier_shipping_cost,
-                'line_cost_total' => $item->line_cost_total,
+                'supplier_shipping_cost' => $item->is($shippingItem) ? $shippingTotal : 0,
+                'line_cost_total' => $lineCosts[$item->id],
             ]);
         }
 

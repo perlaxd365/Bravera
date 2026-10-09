@@ -26,6 +26,16 @@
                 </div>
             </div>
 
+            <div class="mt-8 text-left">
+                <x-order-timeline
+                    :status="$order->status->value"
+                    :cancelled="$order->status->value === 'cancelled'"
+                    :cancelledAt="$order->cancelled_at"
+                    :cancelledReason="$order->cancellation_reason"
+                    :history="$order->getStatusHistory()"
+                />
+            </div>
+
             <div class="mt-6 border-t border-gray-100 pt-6 text-left">
                 <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500">Tu pedido</h2>
                 <ul class="mt-3 divide-y divide-gray-100">

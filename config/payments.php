@@ -79,71 +79,35 @@ return [
         'public_key' => env('CULQI_PUBLIC_KEY'),
         'secret_key' => env('CULQI_SECRET_KEY'),
 
-        // Habilita cifrado RSA del payload en requests de tarjeta.
         'rsa_id' => env('CULQI_RSA_ID'),
         'rsa_public_key' => env('CULQI_RSA_PUBLIC_KEY'),
 
         'secure_url' => env('CULQI_SECURE_URL', 'https://secure.culqi.com/v2'),
         'api_url' => env('CULQI_API_URL', 'https://api.culqi.com/v2'),
 
-        // URL pública que Culqi llamará para notificar eventos.
         'webhook_url' => env('CULQI_WEBHOOK_URL'),
 
-        // Captura inmediata del cobro. false = solo autorización (hold).
         'capture' => env('CULQI_CAPTURE', true),
-
-        // Timeout (segundos) para las llamadas a la API.
         'timeout' => env('CULQI_TIMEOUT', 20),
 
-        // Vigencia de la orden de Yape/QR. Culqi exige expiration_date futura.
         'yape_expiration_minutes' => env('CULQI_YAPE_EXPIRATION_MINUTES', 30),
 
-        /*
-        |----------------------------------------------------------------------
-        | Métodos del modal de Checkout Custom
-        |----------------------------------------------------------------------
-        |
-        | El modal de Culqi es el que elige el método de pago, así que la tienda
-        | no ofrece su propio selector. Esta lista se envía tal cual en
-        | options.paymentMethods y Culqi oculta los que la cuenta no tenga
-        | habilitados: no hace falta conocer la habilitación real para no
-        | romper el checkout, y todo lo que sí esté disponible aparece.
-        |
-        | 'tarjeta' no necesita orden previa (se cobra con un cargo). El resto sí:
-        | Culqi rechaza los métodos asíncronos si no se le pasa un settings.order
-        | creado antes de abrir el checkout, por eso el pedido y su ord_ se crean
-        | al pulsar "Pagar", antes de abrir el modal.
-        |
-        */
-
-        'modal_methods' => ['tarjeta', 'yape', 'billetera', 'bancaMovil', 'agente', 'cuotealo'],
-
-        // Métodos que se pagan contra la orden (ord_) en lugar de con un cargo.
-        'gateway_methods' => [
-            'culqi' => [
-                'card',
-                'yape',
-                'billetera',
-                'bancaMovil',
-                'agente',
-                'cuotealo',
-            ],
-            'demo' => ['card', 'yape', 'transferencia'],
-            'manual' => ['card', 'yape', 'transferencia'],
+        'modal_methods' => [
+            'tarjeta',
+            'yape',
+            'billetera',
+            'bancaMovil',
+            'agente',
+            'cuotealo',
         ],
 
-        // Tipos declarados en la orden para que esos métodos puedan pagarse.
-        // 'tarjeta' queda fuera a propósito: Culqi no la cobra contra una orden.
         'order_payment_methods' => [
-            'yape'
+            'yape',
+            'billetera',
+            'bancaMovil',
+            'agente',
+            'cuotealo',
         ],
-
-        /*
-        | Traducción del método de Culqi al método interno (payments.method).
-        | Solo difiere en la tarjeta, que Culqi llama "tarjeta" y aquí es "card".
-        | El resto se guarda con el nombre de Culqi para no perder de vista con
-        | qué medio pagó el cliente.
-        */
 
         'method_map' => [
             'tarjeta' => 'card',

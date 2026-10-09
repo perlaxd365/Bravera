@@ -62,6 +62,15 @@
 
                                 <x-textarea label="Descripción" rows="5" wire:model="form.description" />
 
+                                <details class="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                    <summary class="cursor-pointer text-sm font-semibold text-gray-800">Vista previa para Google (SEO)</summary>
+                                    <p class="mt-2 text-xs leading-5 text-gray-500">Si los dejas vacíos, usaremos el nombre y la descripción del producto. Google decide cuándo mostrar resultados enriquecidos.</p>
+                                    <div class="mt-3 space-y-3">
+                                        <x-input label="Título SEO" wire:model="form.seo_title" placeholder="Ej.: Cámara Canon EOS R100 | Brevare" maxlength="255" />
+                                        <x-textarea label="Descripción para Google" rows="2" wire:model="form.seo_description" placeholder="Resume qué incluye, para quién es y qué lo hace útil." />
+                                    </div>
+                                </details>
+
                                 <div class="mb-4 grid gap-3 sm:grid-cols-2">
                                     <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
                                         <input type="checkbox" wire:model="form.is_featured"
@@ -74,8 +83,61 @@
                                         Visible en tienda
                                     </label>
                                 </div>
+                                @error('form.is_visible') <p class="-mt-2 mb-4 text-sm text-red-600">{{ $message }}</p> @enderror
+                                @if (! $form->id)
+                                    <p class="-mt-2 mb-4 text-xs leading-5 text-gray-500">El producto se crea oculto. Agrega una variante y una foto, completa su información y luego publícalo para la tienda y Google.</p>
+                                @endif
                             </div>
                         </div>
+
+                        {{-- VIDEO DEL PRODUCTO --}}
+                        @if ($form->id)
+                            <section class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                                <div class="border-b border-gray-100 px-6 py-4">
+                                    <h4 class="font-bold text-gray-900">Video del producto</h4>
+                                    <p class="mt-1 text-sm text-gray-500">Se optimiza a 320 × 180 y baja tasa de bits al guardarlo. MP4, MOV o WebM, hasta 12 MB; el peso final también depende de la duración.</p>
+                                </div>
+                                <div class="grid gap-5 p-5 md:grid-cols-2">
+                                    <div>
+                                        @if ($productVideoUrl)
+                                            <video src="{{ $productVideoUrl }}" controls preload="metadata" class="aspect-video w-full rounded-xl bg-gray-950 object-contain" aria-label="Video actual del producto"></video>
+                                        @else
+                                            <div class="flex aspect-video items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-center text-sm text-gray-500">
+                                                <span><flux:icon name="video-camera" class="mx-auto mb-2 size-8 text-gray-400" />Todavía no hay un video para este producto.</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex flex-col justify-center">
+                                        <label for="product-video-upload" class="text-sm font-semibold text-gray-800">Subir o reemplazar video</label>
+                                        <input id="product-video-upload" type="file" wire:model="productVideo" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+                                            class="mt-2 block w-full cursor-pointer rounded-xl border border-gray-300 bg-white text-sm text-gray-700 file:mr-4 file:rounded-l-xl file:border-0 file:bg-amber-100 file:px-4 file:py-3 file:text-sm file:font-semibold file:text-amber-950 hover:file:bg-amber-200">
+                                        <div wire:loading wire:target="productVideo" class="mt-2 text-xs font-medium text-amber-800">Preparando el archivo…</div>
+                                        @error('productVideo') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+                                        @if ($productVideo)
+                                            <p class="mt-2 truncate text-xs text-gray-500">Seleccionado: {{ $productVideo->getClientOriginalName() }}</p>
+                                        @endif
+                                        <div class="mt-4 flex flex-wrap gap-2">
+                                            <button type="button" wire:click="saveProductVideo" wire:loading.attr="disabled" wire:target="productVideo,saveProductVideo"
+                                                @disabled(! $productVideo)
+                                                class="inline-flex min-h-10 items-center gap-2 rounded-full bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50">
+                                                <span wire:loading.remove wire:target="saveProductVideo">Guardar video</span>
+                                                <span wire:loading wire:target="saveProductVideo">Subiendo…</span>
+                                            </button>
+                                            @if ($productVideoUrl)
+                                                <button type="button" wire:click="deleteProductVideo" wire:confirm="¿Eliminar el video de este producto?"
+                                                    class="inline-flex min-h-10 items-center gap-2 rounded-full border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50">
+                                                    <flux:icon name="trash" class="size-4" /> Eliminar video
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        @else
+                            <div class="flex items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-800">
+                                <flux:icon name="video-camera" class="size-5 shrink-0" /> Guarda el producto primero para agregar su video.
+                            </div>
+                        @endif
 
                         {{-- ===================================================== --}}
                         {{-- VARIANTES --}}
@@ -114,7 +176,7 @@
                                                         <x-input label="Código de barras" wire:model.blur="variantForm.barcode" />
                                                     </div>
                                                     <div>
-                                                        <x-input label="Precio de venta" type="number" step="0.01" min="0" wire:model.blur="variantForm.sale_price" />
+                                                        <x-input label="Precio antes del descuento" type="number" step="0.01" min="0" wire:model.blur="variantForm.sale_price" />
                                                     </div>
                                                 </div>
 
@@ -123,7 +185,7 @@
                                                         <x-input label="Costo de adquisición" type="number" step="0.01" min="0" wire:model.blur="variantForm.cost_price" />
                                                     </div>
                                                     <div>
-                                                        <x-input label="Precio referencial" type="number" step="0.01" min="0" wire:model.blur="variantForm.compare_price" />
+                                                        <x-input label="Descuento (%)" type="number" step="0.01" min="0" max="90" wire:model.blur="variantForm.discount_percent" />
                                                     </div>
                                                 </div>
 

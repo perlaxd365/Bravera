@@ -7,8 +7,8 @@ use App\Modules\Product\DTO\ProductData;
 use App\Modules\Product\Repositories\ProductRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductService
 {
@@ -66,11 +66,14 @@ class ProductService
                 $payload['slug'] = Str::slug($payload['name']);
             }
 
+            $payload = $this->ensureSeoDefaults($payload);
+
             return $this->repository->create(
                 ProductData::fromArray($payload)
             );
         });
     }
+
     /**
      * Actualizar producto.
      */
@@ -85,11 +88,39 @@ class ProductService
                 $payload['slug'] = Str::slug($payload['name']);
             }
 
+            $payload = $this->ensureSeoDefaults($payload);
+
             return $this->repository->update(
                 $product,
                 ProductData::fromArray($payload)
             );
         });
+    }
+
+    /**
+     * Completa el título y la descripción SEO cuando el administrador los deja
+     * vacíos, de modo que todo producto quede listo para Google y el feed.
+     */
+    private function ensureSeoDefaults(array $payload): array
+    {
+        $name = trim((string) ($payload['name'] ?? ''));
+
+        if (blank($payload['seo_title'] ?? null) && $name !== '') {
+            $payload['seo_title'] = $name.' | Brevare';
+        }
+
+        if (blank($payload['seo_description'] ?? null)) {
+            $source = $payload['short_description'] ?? $payload['description'] ?? '';
+            $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $source)) ?? '');
+
+            if ($text !== '') {
+                $payload['seo_description'] = Str::limit($text, 160, '');
+            } elseif ($name !== '') {
+                $payload['seo_description'] = 'Compra '.$name.' en Brevare con envío a todo el Perú.';
+            }
+        }
+
+        return $payload;
     }
 
     /**

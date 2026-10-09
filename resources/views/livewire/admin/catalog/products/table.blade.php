@@ -3,6 +3,7 @@
         <thead class="bg-gray-50">
             <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th class="px-6 py-3">ID</th>
+                <th class="px-6 py-3">Imagen</th>
                 <th class="px-6 py-3">Producto</th>
                 <th class="px-6 py-3">Categoría</th>
                 <th class="px-6 py-3">Marca</th>
@@ -14,6 +15,16 @@
             @forelse($products as $product)
                 <tr wire:key="product-{{ $product->id }}" class="transition hover:bg-gray-50">
                     <td class="px-6 py-4 text-gray-500">{{ $product->id }}</td>
+                    <td class="px-6 py-4">
+                        @if ($product->coverImage())
+                            <img src="{{ $product->coverImage() }}" alt="{{ $product->name }}"
+                                loading="lazy" class="size-14 rounded-xl border border-gray-200 bg-gray-50 object-cover">
+                        @else
+                            <div class="flex size-14 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400" aria-label="Sin imagen">
+                                <flux:icon name="photo" class="size-5" />
+                            </div>
+                        @endif
+                    </td>
                     <td class="px-6 py-4">
                         <p class="font-semibold text-gray-900">{{ $product->name }}</p>
                         <code class="mt-0.5 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">{{ $product->slug }}</code>
@@ -45,7 +56,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-14 text-center">
+                    <td colspan="7" class="px-6 py-14 text-center">
                         <x-brevare.empty-state icon="cube" title="No existen productos registrados" description="Crea el primer producto para comenzar." />
                     </td>
                 </tr>

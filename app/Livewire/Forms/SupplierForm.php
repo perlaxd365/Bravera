@@ -11,7 +11,9 @@ class SupplierForm extends Form
 {
     public ?int $id = null;
 
-    #[Validate('required|integer|exists:locations,id')]
+    public ?string $code = null;
+
+    #[Validate('nullable|integer|exists:locations,id')]
     public ?int $location_id = null;
 
     #[Validate('required|string|max:200')]
@@ -41,10 +43,10 @@ class SupplierForm extends Form
     #[Validate('nullable|string|max:255')]
     public ?string $address = null;
 
-    #[Validate('required|integer|min:1|max:90')]
+    #[Validate('required|integer|min:0|max:255')]
     public ?int $estimated_dispatch_days = 1;
 
-    #[Validate('string')]
+    #[Validate('required|in:active,inactive')]
     public string $status = 'active';
 
     #[Validate('nullable|string')]
@@ -67,6 +69,7 @@ class SupplierForm extends Form
     public function fromModel(Supplier $supplier): void
     {
         $this->id = $supplier->id;
+        $this->code = $supplier->code;
 
         $this->business_name = $supplier->business_name;
         $this->trade_name = $supplier->trade_name;

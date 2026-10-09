@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Attribute extends Model
@@ -22,10 +22,10 @@ class Attribute extends Model
     ];
 
     protected $casts = [
-        'is_filter'   => 'boolean',
+        'is_filter' => 'boolean',
         'is_required' => 'boolean',
-        'is_active'   => 'boolean',
-        'sort_order'  => 'integer',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     /*
@@ -56,6 +56,7 @@ class Attribute extends Model
     {
         return $query->where('is_filter', true);
     }
+
     public function variantValues()
     {
         return $this->hasMany(ProductVariantAttributeValue::class);

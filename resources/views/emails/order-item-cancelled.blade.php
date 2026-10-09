@@ -19,6 +19,17 @@
             fue cancelado en su totalidad. Si realizaste un pago, el reembolso se procesa en un plazo
             máximo de 5 días hábiles.
         </p>
+
+        {{-- Línea de tiempo de cancelación --}}
+        <div style="margin:0 0 24px;padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:14px;">
+            <p style="margin:0;font-size:15px;line-height:1.6;color:#991b1b;">
+                <strong style="color:#7f1d1d;">Pedido cancelado</strong><br>
+                {{ $order->cancellation_reason ?? 'El pedido fue cancelado' }}<br>
+                @if ($order->cancelled_at)
+                    <span style="font-size:13px;color:#b91c1c;">Cancelado el {{ \Carbon\Carbon::parse($order->cancelled_at)->locale('es')->isoFormat('D [de] MMMM [de] YYYY [a las] HH:mm') }}</span>
+                @endif
+            </p>
+        </div>
     @else
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
             <tr>

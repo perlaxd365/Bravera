@@ -1,7 +1,14 @@
 <div>
     @php
-        $currentVariant = $variants->first(fn ($v) => (int) $v->id === (int) $selectedVariantId);
-        $currentSuppliers = $currentVariant?->available_providers ?? collect();
+        $selectedVariant = $variants->first(fn ($v) => (int) $v->id === (int) $selectedVariantId);
+
+        // La variante real (la que eligió el cliente) manda; si todavía no
+        // eligió, se muestra una de vista previa solo para galería y precio.
+        $currentVariant = $selectedVariant ?? $previewVariant;
+
+        $currentSuppliers = $selectedVariant?->available_providers ?? collect();
+
+        $missingSelection = $requiresVariantSelection && ! $selectedVariant;
 
         $galleryUrls = $currentVariant?->images
             ->map(fn ($image) => $image->secure_url ?? $image->url)
@@ -237,7 +244,7 @@
                     @endforeach
 
                     {{-- Variantes disponibles (si no hay atributos) --}}
-                    @if ($attributes && $variants->count() > 1)
+                    @if (empty($attributes) && $variants->count() > 1)
                         <div>
                             <label class="mb-2 block text-sm font-semibold text-gray-900">Variante</label>
                             <div class="relative">
@@ -255,8 +262,8 @@
                         </div>
                     @endif
 
-                    {{-- Proveedores disponibles para la variante --}}
-                    @if ($currentVariant && $currentSuppliers->isNotEmpty())
+                    {{-- Proveedores disponibles para la variante elegida --}}
+                    @if ($selectedVariant && $currentSuppliers->isNotEmpty())
                         <div>
                             <p class="mb-2 text-sm font-semibold text-gray-900">Proveedor</p>
                             @foreach ($currentSuppliers as $supplierVariant)
@@ -264,7 +271,6 @@
                                     <input type="radio" name="supplier"
                                         wire:model="selectedSupplierVariantId" value="{{ $supplierVariant->id }}"
                                         id="supplier-{{ $supplierVariant->id }}"
-                                        @if ($loop->first && !$selectedSupplierVariantId) checked @endif
                                         class="mt-1 size-4 shrink-0 border-gray-300 text-gray-900 focus:ring-gray-900/30">
                                     <label class="ml-3 w-full cursor-pointer" for="supplier-{{ $supplierVariant->id }}">
                                         <span class="block text-sm font-semibold text-gray-900">{{ $supplierVariant->supplier?->business_name }}</span>
@@ -295,6 +301,14 @@
                         </div>
                     </div>
 
+                    @if ($missingAttributes->isNotEmpty())
+                        <p class="text-sm text-amber-600">Falta seleccionar: {{ $missingAttributes->join(', ') }}</p>
+                    @endif
+
+                    @error('selectedVariantId')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+
                     @error('selectedSupplierVariantId') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
 
                     @if ($currentInCart)
@@ -306,16 +320,19 @@
 
                     <button type="submit"
                         data-add-to-cart
-                        @if (!$currentVariant || $currentSuppliers->isEmpty()) disabled @endif
+                        @disabled(!$selectionComplete || !$selectedVariant || $currentSuppliers->isEmpty())
                         class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                         <flux:icon name="shopping-cart" class="size-4" />
                         {{ $currentInCart ? 'Agregar más al carrito' : 'Agregar al carrito' }}
                     </button>
 
-                    @if ($currentVariant && $currentSuppliers->isEmpty())
-                        <p class="text-center text-sm text-gray-500">Este producto no tiene stock disponible en este momento.</p>
+                    @if ($selectionComplete && $selectedVariant && $currentSuppliers->isEmpty())
+                        <p class="text-center text-sm text-gray-500">Esa combinación no está disponible.</p>
                     @endif
                 </form>
+
+                {{-- Métodos de pago --}}
+                <x-brevare.payment-methods class="mt-6" />
 
                 {{-- Mini carrito --}}
                 @if ($cartItems->isNotEmpty())
@@ -382,13 +399,94 @@
 
         {{-- Descripción --}}
         @if ($product->description)
-            <div class="mt-12">
-                <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-                    <h2 class="mb-3 text-lg font-bold tracking-tight text-gray-900">Descripción</h2>
-                    <div class="leading-relaxed text-gray-600">{!! nl2br(e($product->description)) !!}</div>
-                </div>
-            </div>
+            <section class="mt-10 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+                <h2 class="mb-3 text-xl font-bold tracking-tight text-gray-900">Descripción</h2>
+                <div class="leading-relaxed text-gray-600">{!! nl2br(e($product->description)) !!}</div>
+            </section>
         @endif
+
+        {{-- Video del producto --}}
+        @if ($product->video_url)
+            <section class="mt-6 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 class="mb-3 text-lg font-bold tracking-tight text-gray-900">Video del producto</h2>
+                <video src="{{ $product->video_url }}" controls controlsList="nodownload noremoteplayback" disablepictureinpicture autoplay muted preload="auto" playsinline oncontextmenu="return false" class="aspect-video w-full rounded-xl bg-gray-950 object-contain" aria-label="Video de {{ $product->name }}">
+                    Tu navegador no puede reproducir este video.
+                </video>
+            </section>
+        @endif
+
+        {{-- Opiniones y calificaciones --}}
+        <section id="opiniones" class="mt-10 scroll-mt-28 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+            <div class="flex flex-wrap items-end justify-between gap-3 border-b border-gray-100 pb-5">
+                <div>
+                    <h2 class="text-xl font-bold tracking-tight text-gray-900">Opiniones de clientes</h2>
+                    <p class="mt-1 text-sm text-gray-500">Tu experiencia ayuda a otras personas a elegir.</p>
+                </div>
+                @if ($reviewCount > 0)
+                    <div class="flex items-center gap-2" aria-label="Promedio de {{ number_format((float) $reviewAverage, 1) }} sobre 5, basado en {{ $reviewCount }} opiniones">
+                        @php($filledReviewStars = min(5, max(0, (int) round((float) $reviewAverage))))
+                        <span class="text-xl tracking-wide text-amber-500" aria-hidden="true">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
+                        <span class="text-lg font-bold text-gray-900">{{ number_format((float) $reviewAverage, 1) }}</span>
+                        <span class="text-sm text-gray-500">({{ $reviewCount }})</span>
+                    </div>
+                @endif
+            </div>
+
+            @auth
+                @if ($hasReviewed)
+                    <p class="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">Gracias por compartir tu opinión sobre este producto.</p>
+                @else
+                    <form wire:submit="submitReview" class="mt-5 rounded-xl bg-amber-50/70 p-4 sm:p-5">
+                        <label class="block text-sm font-semibold text-gray-900">Tu calificación</label>
+                        <div class="mt-2 flex gap-1" role="group" aria-label="Elige de una a cinco estrellas">
+                            @foreach (range(1, 5) as $star)
+                                <button type="button" wire:click="$set('reviewRating', {{ $star }})"
+                                    aria-label="{{ $star }} {{ $star === 1 ? 'estrella' : 'estrellas' }}"
+                                    aria-pressed="{{ $reviewRating === $star ? 'true' : 'false' }}"
+                                    class="rounded-md px-1 text-3xl leading-none transition hover:scale-110 focus-visible:outline-2 focus-visible:outline-amber-700 {{ $reviewRating >= $star ? 'text-amber-500' : 'text-gray-300' }}">★</button>
+                            @endforeach
+                        </div>
+                        @error('reviewRating') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+
+                        <label for="review-comment" class="mt-4 block text-sm font-semibold text-gray-900">Tu comentario</label>
+                        <textarea id="review-comment" wire:model="reviewComment" rows="4" maxlength="1500" required
+                            placeholder="Cuéntanos qué te pareció este producto…"
+                            class="mt-2 w-full rounded-xl border-gray-300 bg-white text-sm shadow-sm placeholder:text-gray-400 focus:border-amber-500 focus:ring-amber-500"></textarea>
+                        @error('reviewComment') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-xs text-gray-500">Publicarás con el nombre de tu cuenta.</p>
+                            <button type="submit" wire:loading.attr="disabled" wire:target="submitReview"
+                                class="inline-flex min-h-11 items-center justify-center rounded-full bg-gray-950 px-5 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-wait disabled:opacity-60">
+                                <span wire:loading.remove wire:target="submitReview">Publicar opinión</span>
+                                <span wire:loading wire:target="submitReview">Publicando…</span>
+                            </button>
+                        </div>
+                    </form>
+                @endif
+            @else
+                <div class="mt-5 rounded-xl bg-amber-50/70 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                    <p class="text-sm text-gray-700">Inicia sesión para calificar y comentar este producto.</p>
+                    <a href="{{ route('login') }}" class="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-gray-950 px-4 text-sm font-semibold text-white transition hover:bg-amber-800 sm:mt-0">Iniciar sesión</a>
+                </div>
+            @endauth
+
+            <div class="mt-5 divide-y divide-gray-100">
+                @forelse ($reviews as $review)
+                    <article class="py-5 first:pt-0 last:pb-0">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">{{ $review->user->name }}</h3>
+                                <p class="mt-0.5 text-xs text-gray-400">{{ $review->created_at->format('d/m/Y') }}</p>
+                            </div>
+                            <span class="text-base tracking-wide text-amber-500" aria-label="{{ $review->rating }} de 5 estrellas">{{ str_repeat('★', $review->rating).str_repeat('☆', 5 - $review->rating) }}</span>
+                        </div>
+                        <p class="mt-3 whitespace-pre-line text-sm leading-6 text-gray-700">{{ $review->comment }}</p>
+                    </article>
+                @empty
+                    <p class="py-5 text-sm text-gray-500">Aún no hay opiniones. Sé la primera persona en compartir su experiencia.</p>
+                @endforelse
+            </div>
+        </section>
 
         {{-- Productos relacionados --}}
         @if ($relatedProducts->isNotEmpty())

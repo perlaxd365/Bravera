@@ -73,12 +73,7 @@ class ProductVariantService
             |--------------------------------------------------------------------------
             */
 
-            $variant = $this->repository->create(
-                ProductVariantData::fromArray([
-                    ...$payload,
-                    'attribute_values' => $data->attribute_values,
-                ])
-            );
+            $variant = $this->repository->create($data);
 
             /*
             |--------------------------------------------------------------------------
@@ -139,13 +134,7 @@ class ProductVariantService
             |--------------------------------------------------------------------------
             */
 
-            $variant = $this->repository->update(
-                $variant,
-                ProductVariantData::fromArray([
-                    ...$payload,
-                    'attribute_values' => $data->attribute_values,
-                ])
-            );
+            $variant = $this->repository->update($variant, $data);
 
             /*
             |--------------------------------------------------------------------------

@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AttributeValue extends Model
 {
@@ -22,8 +22,8 @@ class AttributeValue extends Model
 
     protected $casts = [
         'attribute_id' => 'integer',
-        'sort_order'   => 'integer',
-        'is_active'    => 'boolean',
+        'sort_order' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -50,6 +50,7 @@ class AttributeValue extends Model
         return $query->orderBy('sort_order')
             ->orderBy('value');
     }
+
     public function variantValues()
     {
         return $this->hasMany(ProductVariantAttributeValue::class);

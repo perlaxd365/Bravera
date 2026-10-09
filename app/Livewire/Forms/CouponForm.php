@@ -24,7 +24,7 @@ class CouponForm extends Form
     public string $value = '';
 
     #[Validate('nullable|numeric|min:0')]
-    public ?string $min_subtotal = null;
+    public ?string $min_subtotal = '0';
 
     #[Validate('nullable|numeric|min:0')]
     public ?string $max_discount = null;
@@ -39,7 +39,7 @@ class CouponForm extends Form
     public ?string $usage_limit = null;
 
     #[Validate('nullable|integer|min:1')]
-    public ?string $per_user_limit = null;
+    public ?string $per_user_limit = '1';
 
     #[Validate('required|in:all,supplier,product,category')]
     public string $applies_to = 'all';
@@ -54,6 +54,8 @@ class CouponForm extends Form
     {
         $this->reset();
         $this->type = 'percentage';
+        $this->min_subtotal = '0';
+        $this->per_user_limit = '1';
         $this->applies_to = 'all';
         $this->is_active = true;
     }
@@ -83,12 +85,14 @@ class CouponForm extends Form
             'name' => $this->name,
             'type' => $this->type,
             'value' => $this->value,
-            'min_subtotal' => $this->min_subtotal !== '' && $this->min_subtotal !== null ? $this->min_subtotal : null,
+            // min_subtotal y per_user_limit son NOT NULL en la BD:
+            // vacío significa "sin mínimo" (0) y "un uso" (1).
+            'min_subtotal' => $this->min_subtotal !== '' && $this->min_subtotal !== null ? $this->min_subtotal : 0,
             'max_discount' => $this->max_discount !== '' && $this->max_discount !== null ? $this->max_discount : null,
             'starts_at' => $this->starts_at,
             'ends_at' => $this->ends_at,
             'usage_limit' => $this->usage_limit !== '' && $this->usage_limit !== null ? (int) $this->usage_limit : null,
-            'per_user_limit' => $this->per_user_limit !== '' && $this->per_user_limit !== null ? (int) $this->per_user_limit : null,
+            'per_user_limit' => $this->per_user_limit !== '' && $this->per_user_limit !== null ? (int) $this->per_user_limit : 1,
             'applies_to' => $this->applies_to,
             'applies_to_id' => $this->applies_to !== 'all' && $this->applies_to_id !== '' && $this->applies_to_id !== null ? (int) $this->applies_to_id : null,
             'is_active' => $this->is_active,

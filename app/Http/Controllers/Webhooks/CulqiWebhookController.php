@@ -45,6 +45,7 @@ class CulqiWebhookController extends Controller
 
             return $this->ack();
         }
+
         return match ($type) {
             'charge.paid',
             'order.paid',

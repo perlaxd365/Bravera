@@ -18,7 +18,7 @@
             <div class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
                 <span class="text-sm font-semibold text-gray-900">Cambiar estado:</span>
                 <div class="relative">
-                    <select wire:model="currentStatus"
+                    <select wire:model="currentStatus" wire:loading.attr="disabled" wire:target="updateStatus"
                         class="appearance-none rounded-full border border-gray-300 bg-white py-2 pl-4 pr-9 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         @foreach (\App\Enums\OrderStatus::cases() as $s)
                             <option value="{{ $s->value }}">{{ $s->label() }}</option>
@@ -26,9 +26,14 @@
                     </select>
                     <flux:icon name="chevron-down" variant="mini" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
                 </div>
-                <button wire:click="updateStatus"
-                    class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
-                    <flux:icon name="check" class="size-4" /> Actualizar
+                <button wire:click="updateStatus" wire:loading.attr="disabled" wire:target="updateStatus"
+                    class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-wait disabled:opacity-60">
+                    <span wire:loading.remove wire:target="updateStatus" class="inline-flex items-center gap-1.5">
+                        <flux:icon name="check" class="size-4" /> Actualizar
+                    </span>
+                    <span wire:loading wire:target="updateStatus" class="inline-flex items-center gap-1.5">
+                        <flux:icon name="arrow-path" class="size-4 animate-spin" /> Actualizando…
+                    </span>
                 </button>
                 <span class="text-xs text-gray-500">Se enviará un correo al cliente con el nuevo estado.</span>
             </div>
@@ -48,7 +53,7 @@
                                 <x-brevare.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-brevare.badge>
                             @endif
                             @if ($order->activeItems()->exists())
-                                <button wire:click="$toggle('cancelWholeOrder')"
+                                <button wire:click="$set('showCancelWholeOrder', true)"
                                     class="inline-flex items-center gap-1.5 rounded-full border border-red-200 px-4 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50">
                                     <flux:icon name="x-circle" class="size-4" /> Cancelar pedido completo
                                 </button>
@@ -56,7 +61,7 @@
                         </div>
                     </header>
 
-                    @if ($cancelWholeOrder)
+                    @if ($showCancelWholeOrder)
                         <div class="border-b border-red-100 bg-red-50/50 px-6 py-5">
                             <h3 class="text-sm font-semibold text-red-700">Cancelar el pedido {{ $order->order_number }} completo</h3>
                             <p class="mt-1 text-sm text-gray-600">
@@ -68,11 +73,12 @@
                                 <input type="text" wire:model="cancelWholeOrderReason"
                                     placeholder="Motivo (opcional)"
                                     class="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/10">
-                                <button wire:click="cancelWholeOrder"
-                                    class="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
-                                    Sí, cancelar el pedido
+                                <button wire:click="cancelWholeOrder" wire:loading.attr="disabled" wire:target="cancelWholeOrder"
+                                    class="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-wait disabled:opacity-60">
+                                    <span wire:loading.remove wire:target="cancelWholeOrder">Sí, cancelar el pedido</span>
+                                    <span wire:loading wire:target="cancelWholeOrder">Cancelando…</span>
                                 </button>
-                                <button wire:click="$set('cancelWholeOrder', null)"
+                                <button wire:click="$set('showCancelWholeOrder', false)" wire:loading.attr="disabled" wire:target="cancelWholeOrder"
                                     class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
                                     Volver
                                 </button>

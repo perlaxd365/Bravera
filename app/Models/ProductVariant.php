@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariant extends Model
@@ -21,6 +21,7 @@ class ProductVariant extends Model
         'cost_price',
         'sale_price',
         'compare_price',
+        'discount_percent',
         'weight',
         'length',
         'width',
@@ -34,6 +35,7 @@ class ProductVariant extends Model
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'compare_price' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
         'weight' => 'decimal:2',
         'length' => 'decimal:2',
         'width' => 'decimal:2',

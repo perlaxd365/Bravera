@@ -69,17 +69,17 @@ readonly class ProductData
     public function toArray(): array
     {
         return [
-            'category_id'       => $this->category_id,
-            'brand_id'          => $this->brand_id,
-            'name'              => $this->name,
-            'slug'              => $this->slug,
+            'category_id' => $this->category_id,
+            'brand_id' => $this->brand_id,
+            'name' => $this->name,
+            'slug' => $this->slug,
             'short_description' => $this->short_description,
-            'description'       => $this->description,
-            'status'            => $this->status,
-            'is_featured'       => $this->is_featured,
-            'is_visible'        => $this->is_visible,
-            'seo_title'         => $this->seo_title,
-            'seo_description'   => $this->seo_description,
+            'description' => $this->description,
+            'status' => $this->status,
+            'is_featured' => $this->is_featured,
+            'is_visible' => $this->is_visible,
+            'seo_title' => $this->seo_title,
+            'seo_description' => $this->seo_description,
         ];
     }
 }

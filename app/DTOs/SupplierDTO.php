@@ -29,22 +29,22 @@ class SupplierDTO
     public function toArray(): array
     {
         return [
-            'code'                    => $this->code,
-            'business_name'           => $this->business_name,
-            'trade_name'              => $this->trade_name,
-            'tax_id'                  => $this->tax_id,
-            'contact_name'            => $this->contact_name,
-            'email'                   => $this->email,
-            'phone'                   => $this->phone,
-            'whatsapp'                => $this->whatsapp,
-            'website'                 => $this->website,
-            'location_id'             => $this->location_id,
-            'address'                 => $this->address,
+            'code' => $this->code,
+            'business_name' => $this->business_name,
+            'trade_name' => $this->trade_name,
+            'tax_id' => $this->tax_id,
+            'contact_name' => $this->contact_name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'whatsapp' => $this->whatsapp,
+            'website' => $this->website,
+            'location_id' => $this->location_id,
+            'address' => $this->address,
             'estimated_dispatch_days' => $this->estimated_dispatch_days,
-            'status'                  => $this->status,
-            'internal_notes'          => $this->internal_notes,
-            'created_by'              => $this->created_by,
-            'updated_by'              => $this->updated_by,
+            'status' => $this->status,
+            'internal_notes' => $this->internal_notes,
+            'created_by' => $this->created_by,
+            'updated_by' => $this->updated_by,
         ];
     }
 }

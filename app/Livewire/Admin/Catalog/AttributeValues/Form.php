@@ -4,8 +4,8 @@ namespace App\Livewire\Admin\Catalog\AttributeValues;
 
 use App\Models\Attribute;
 use App\Models\AttributeValue;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -16,10 +16,15 @@ class Form extends Component
     public bool $show = false;
 
     public ?int $attribute_id = null;
+
     public string $value = '';
+
     public string $slug = '';
+
     public ?string $color = null;
+
     public int $sort_order = 0;
+
     public bool $is_active = true;
 
     protected function rules(): array
@@ -32,7 +37,7 @@ class Form extends Component
                 'max:170',
                 Rule::unique('attribute_values')
                     ->ignore($this->attributeValue?->id)
-                    ->where(fn($q) => $q->where('attribute_id', $this->attribute_id)),
+                    ->where(fn ($q) => $q->where('attribute_id', $this->attribute_id)),
             ],
             'color' => ['nullable', 'max:10'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -103,7 +108,7 @@ class Form extends Component
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => 'Valor guardado correctamente.'
+            'message' => 'Valor guardado correctamente.',
         ]);
 
         $this->show = false;

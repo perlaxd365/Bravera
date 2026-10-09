@@ -13,7 +13,7 @@
         'delivered' => [
             'accent' => 'success',
             'heading' => 'Tu pedido fue entregado',
-            'body' => 'Esperamos que disfrutes tu pedido. ¡Gracias por comprar en Brevare!',
+            'body' => 'Esperamos que disfrutes tu pedido. ┬íGracias por comprar en Brevare!',
         ],
         'cancelled' => [
             'accent' => 'danger',
@@ -49,8 +49,10 @@
         {{ $copy['body'] }}
     </p>
 
+    <x-brevare.mail-order-timeline :status="$order->status" />
+
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-        style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+        style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;">
         <tr>
             <td style="background-color:#f9fafb;padding:12px 16px;font-size:13px;color:#6b7280;width:45%;">
                 Pedido
@@ -61,18 +63,18 @@
         </tr>
         <tr>
             <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-top:1px solid #f3f4f6;">
-                Estado anterior
+                Estado
             </td>
-            <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-top:1px solid #f3f4f6;">
-                {{ $previousStatus->label() }}
+            <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#111827;border-top:1px solid #f3f4f6;">
+                {{ $newStatus->label() }}
             </td>
         </tr>
         <tr>
             <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-top:1px solid #f3f4f6;">
-                Estado actual
+                Envío
             </td>
-            <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#111827;border-top:1px solid #f3f4f6;">
-                {{ $newStatus->label() }}
+            <td style="padding:12px 16px;font-size:13px;color:#111827;border-top:1px solid #f3f4f6;">
+                S/ {{ number_format((float) $order->shipping_total, 2) }}
             </td>
         </tr>
         <tr>
@@ -103,7 +105,7 @@
         </h2>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-            style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;border-collapse:separate;">
+            style="margin:0 0 24px;border:1px solid #e5e7eb;border-collapse:separate;">
             <thead>
                 <tr style="background-color:#f9fafb;">
                     <th width="{{ $thumb + 20 }}" style="padding:0;font-size:11px;line-height:1px;">
@@ -133,7 +135,7 @@
                             @if ($item->variant_attributes)
                                 <br>
                                 <span style="font-size:12px;color:#6b7280;">
-                                    {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' · ') }}
+                                    {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' ┬À ') }}
                                 </span>
                             @endif
                             @if ($item->supplier_name)
@@ -159,4 +161,5 @@
             Ver mis pedidos
         </a>
     </p>
+
 </x-brevare.mail-layout>

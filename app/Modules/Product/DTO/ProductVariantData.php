@@ -14,6 +14,7 @@ readonly class ProductVariantData
         public float $cost_price,
         public float $sale_price,
         public ?float $compare_price,
+        public float $discount_percent,
         public ?float $weight,
         public ?float $length,
         public ?float $width,
@@ -47,6 +48,8 @@ readonly class ProductVariantData
             compare_price: isset($data['compare_price'])
                 ? (float) $data['compare_price']
                 : null,
+
+            discount_percent: (float) ($data['discount_percent'] ?? 0),
 
             weight: isset($data['weight'])
                 ? (float) $data['weight']
@@ -102,11 +105,15 @@ readonly class ProductVariantData
 
             cost_price: (float) $variant->cost_price,
 
-            sale_price: (float) $variant->sale_price,
+            sale_price: (float) ($variant->discount_percent > 0 && $variant->compare_price !== null
+                ? $variant->compare_price
+                : $variant->sale_price),
 
             compare_price: $variant->compare_price !== null
                 ? (float) $variant->compare_price
                 : null,
+
+            discount_percent: (float) $variant->discount_percent,
 
             weight: $variant->weight !== null
                 ? (float) $variant->weight
@@ -142,13 +149,17 @@ readonly class ProductVariantData
      */
     public function toArray(): array
     {
+        $basePrice = $this->sale_price;
+        $discountedPrice = round($basePrice * (1 - ($this->discount_percent / 100)), 2);
+
         return [
             'product_id' => $this->product_id,
             'sku' => $this->sku,
             'barcode' => $this->barcode,
             'cost_price' => $this->cost_price,
-            'sale_price' => $this->sale_price,
-            'compare_price' => $this->compare_price,
+            'sale_price' => $discountedPrice,
+            'compare_price' => $this->discount_percent > 0 ? $basePrice : $this->compare_price,
+            'discount_percent' => $this->discount_percent,
             'weight' => $this->weight,
             'length' => $this->length,
             'width' => $this->width,

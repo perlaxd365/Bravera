@@ -37,7 +37,7 @@ class Show extends Component
     /** @var array<int, bool> orderItemId => mostrar el formulario de cancelación */
     public array $showCancelFor = [];
 
-    public ?int $cancelWholeOrder = null;
+    public bool $showCancelWholeOrder = false;
 
     public string $cancelWholeOrderReason = '';
 
@@ -88,6 +88,9 @@ class Show extends Component
         }
 
         $this->order->update(['status' => $to]);
+
+        // Marcar timestamp del nuevo estado
+        $this->order->markStatusTimestamp($to);
 
         OrderStatusChanged::dispatch($this->order->fresh(), $from, $to);
 
@@ -177,7 +180,7 @@ class Show extends Component
             auth()->id(),
         );
 
-        $this->cancelWholeOrder = null;
+        $this->showCancelWholeOrder = false;
         $this->cancelWholeOrderReason = '';
 
         $this->order->refresh();

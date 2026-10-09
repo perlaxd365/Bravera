@@ -8,6 +8,8 @@ use App\Enums\PaymentStatus;
 use App\Enums\SupplierOrderStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Livewire\Admin\Orders\Show;
+use App\Listeners\SendOrderConfirmationEmail;
+use App\Mail\AdminOrderConfirmationMail;
 use App\Mail\OrderConfirmationMail;
 use App\Mail\OrderItemCancelledMail;
 use App\Mail\OrderStatusChangedMail;
@@ -16,6 +18,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
 use App\Models\SupplierOrder;
@@ -24,6 +27,7 @@ use App\Models\SupplierPayment;
 use App\Models\SupplierVariant;
 use App\Models\User;
 use App\Modules\Ordering\Events\OrderStatusChanged;
+use App\Modules\Ordering\Events\OrderPaid;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Database\DatabaseTransactionsManager;
@@ -132,6 +136,17 @@ class OrderManagementTest extends TestCase
                 'is_active' => true,
             ]);
 
+            if ($i === 0) {
+                ProductImage::create([
+                    'product_variant_id' => $productVariant->id,
+                    'public_id' => 'orders/producto-uno',
+                    'file_name' => 'producto-uno.jpg',
+                    'url' => 'https://images.example.test/producto-uno.jpg',
+                    'secure_url' => 'https://images.example.test/producto-uno.jpg',
+                    'is_primary' => true,
+                ]);
+            }
+
             $variant = SupplierVariant::create([
                 'supplier_id' => $supplier->id,
                 'product_variant_id' => $productVariant->id,
@@ -211,6 +226,33 @@ class OrderManagementTest extends TestCase
         });
     }
 
+    public function test_admin_receives_order_confirmation_with_purchase_details(): void
+    {
+        Mail::fake();
+        config()->set('mail.admin_address', 'administracion@brevare.com');
+
+        [$order] = $this->orderWithTwoProducts();
+
+        app(SendOrderConfirmationEmail::class)->handle(new OrderPaid($order));
+
+        Mail::assertQueued(AdminOrderConfirmationMail::class, function (AdminOrderConfirmationMail $mail) use ($order) {
+            $html = $mail->render();
+
+            return $mail->hasTo('administracion@brevare.com')
+                && $mail->order->is($order)
+                && str_contains($html, $order->order_number)
+                && str_contains($html, 'Cliente Demo')
+                && str_contains($html, 'Producto Uno')
+                && str_contains($html, 'Producto Dos')
+                && str_contains($html, 'https://images.example.test/producto-uno.jpg')
+                && str_contains($html, '220.00');
+        });
+
+        Mail::assertQueued(OrderConfirmationMail::class, fn (OrderConfirmationMail $mail) =>
+            $mail->hasTo('cliente@test.com')
+        );
+    }
+
     public function test_each_supplier_receives_only_its_own_products(): void
     {
         Mail::fake();
@@ -235,6 +277,7 @@ class OrderManagementTest extends TestCase
         // Cada proveedor solo ve su parte, nunca la del otro.
         $this->assertStringNotContainsString('Producto Dos', $first->render());
         $this->assertStringNotContainsString('Producto Uno', $second->render());
+        $this->assertStringContainsString('https://images.example.test/producto-uno.jpg', $first->render());
 
         // Y ambos correos referencian el pedido del cliente.
         $this->assertStringContainsString('BRV-TEST-1001', $first->render());

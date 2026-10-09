@@ -17,7 +17,7 @@ class LivewireGenerator extends BaseGenerator
 
                 '{{lower}}' => strtolower($this->module),
 
-                '{{plural}}' => strtolower($this->module) . 's',
+                '{{plural}}' => strtolower($this->module).'s',
 
             ]
         );

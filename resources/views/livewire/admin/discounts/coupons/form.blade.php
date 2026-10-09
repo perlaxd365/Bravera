@@ -55,7 +55,7 @@
 
                         <div>
                             <x-input label="Subtotal mínimo (S/)" type="number" step="0.01" min="0"
-                                wire:model.live="form.min_subtotal" placeholder="Opcional" />
+                                wire:model.live="form.min_subtotal" placeholder="0.00" />
                         </div>
 
                         <div>
@@ -65,7 +65,7 @@
 
                         <div>
                             <x-input label="Límite por usuario" type="number" min="1"
-                                wire:model.live="form.per_user_limit" placeholder="Opcional" />
+                                wire:model.live="form.per_user_limit" placeholder="1" />
                         </div>
 
                         <div>

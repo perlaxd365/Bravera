@@ -1,29 +1,25 @@
 <header x-data="{ navOpen: false }" class="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur-lg">
-    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3">
-            <a href="{{ route('home') }}" class="flex items-center gap-2 text-xl font-bold tracking-tight text-gray-900">
-                <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
+            <a href="{{ route('home') }}" class="flex items-center gap-2 text-xl font-extrabold tracking-tight text-gray-950">
+                <span class="flex size-9 items-center justify-center rounded-xl bg-amber-300 text-amber-950 shadow-sm">
                     <flux:icon name="shopping-bag" class="size-4" />
                 </span>
                 Brevare
             </a>
         </div>
 
-        <div class="hidden flex-1 justify-center px-4 lg:flex">
+        <div class="hidden flex-1 justify-center px-4 sm:flex lg:flex">
             <form class="w-full max-w-md" action="{{ route('store.search') }}" method="GET" role="search">
                 <div class="relative">
                     <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
                     <input type="search" name="q" value="{{ request('q') }}" placeholder="Buscar productos..."
-                        class="w-full rounded-full border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:outline-none" aria-label="Buscar">
+                        class="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-400/20 focus:outline-none" aria-label="Buscar">
                 </div>
             </form>
         </div>
 
         <div class="flex items-center gap-2">
-            <a href="{{ route('store.search') }}" class="hidden rounded-full p-2.5 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 sm:block lg:hidden" aria-label="Buscar">
-                <flux:icon name="magnifying-glass" class="size-5" />
-            </a>
-
             <livewire:store.components.cart-badge />
 
             @auth
@@ -61,13 +57,23 @@
                 </div>
             @else
                 <a href="{{ route('login') }}" class="hidden rounded-full px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 sm:inline-flex">Entrar</a>
-                <a href="{{ route('register') }}" class="rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">Crear cuenta</a>
+                <a href="{{ route('register') }}" class="rounded-full bg-gray-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-800 sm:px-4 sm:text-sm">Crear cuenta</a>
             @endauth
 
-            <button type="button" class="rounded-full p-2.5 text-gray-600 transition hover:bg-gray-100 lg:hidden" @click="navOpen = !navOpen" aria-label="Abrir menú">
+            <button type="button" class="rounded-full p-2.5 text-gray-600 transition hover:bg-amber-50 lg:hidden" @click="navOpen = !navOpen" aria-label="Abrir menú">
                 <flux:icon name="bars-3" class="size-5" />
             </button>
         </div>
+    </div>
+
+    <div class="border-t border-gray-100 bg-white px-4 py-2 sm:hidden">
+        <form action="{{ route('store.search') }}" method="GET" role="search">
+            <div class="relative">
+                <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                <input type="search" name="q" value="{{ request('q') }}" placeholder="¿Qué estás buscando?"
+                    class="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:bg-white focus:outline-none" aria-label="Buscar productos">
+            </div>
+        </form>
     </div>
 
     <div x-cloak class="lg:hidden">

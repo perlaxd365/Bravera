@@ -168,8 +168,7 @@ class ShippingRateService
     ): void {
         if ($productVariantId && ! $productId) {
             throw ValidationException::withMessages([
-                'product_variant_id' =>
-                'Una variante debe estar asociada a un producto.',
+                'product_variant_id' => 'Una variante debe estar asociada a un producto.',
             ]);
         }
     }
@@ -193,8 +192,7 @@ class ShippingRateService
 
         if (! $exists) {
             throw ValidationException::withMessages([
-                'product_variant_id' =>
-                'La variante seleccionada no pertenece al proveedor indicado o no está activa.',
+                'product_variant_id' => 'La variante seleccionada no pertenece al proveedor indicado o no está activa.',
             ]);
         }
     }
@@ -221,8 +219,7 @@ class ShippingRateService
 
         if ($query->exists()) {
             throw ValidationException::withMessages([
-                'shipping_zone_id' =>
-                'Ya existe una tarifa con esta combinación de proveedor, zona, producto y variante.',
+                'shipping_zone_id' => 'Ya existe una tarifa con esta combinación de proveedor, zona, producto y variante.',
             ]);
         }
     }

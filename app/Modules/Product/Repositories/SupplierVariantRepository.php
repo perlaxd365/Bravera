@@ -37,6 +37,7 @@ class SupplierVariantRepository
             ->latest()
             ->paginate($perPage);
     }
+
     /**
      * Buscar proveedor de variante por ID.
      */

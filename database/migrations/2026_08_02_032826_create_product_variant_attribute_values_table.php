@@ -63,7 +63,7 @@ return new class extends Migration
             $table->unique(
                 [
                     'product_variant_id',
-                    'attribute_id'
+                    'attribute_id',
                 ],
                 'pvav_variant_attribute_unique'
             );

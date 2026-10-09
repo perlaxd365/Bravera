@@ -1,7 +1,7 @@
 @php
     $customerName = $order->customer_snapshot['name'] ?? $order->user?->name ?? '';
     $items = $order->items;
-    $thumb = 56;
+    $thumb = 72;
 @endphp
 
 <x-brevare.mail-layout :title="'Pedido '.$order->order_number.' confirmado'" heading="¡Tu pedido fue confirmado!" accent="success"
@@ -19,65 +19,32 @@
         Productos ({{ $items->count() }})
     </h2>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-        style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;border-collapse:separate;">
-
-        <thead>
-            <tr style="background-color:#f9fafb;">
-                <th width="{{ $thumb + 20 }}" style="padding:0;font-size:11px;line-height:1px;">
-                    <span style="display:none;font-size:1px;line-height:1px;">&nbsp;</span>
-                </th>
-                <th align="left" style="padding:10px 4px 10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;">
-                    Producto
-                </th>
-                <th align="center" style="padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:52px;">
-                    Cant.
-                </th>
-                <th align="right" style="padding:10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:82px;">
-                    P. unit.
-                </th>
-                <th align="right" style="padding:10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;width:92px;">
-                    Subtotal
-                </th>
+    @foreach ($items as $item)
+        @php $image = $item->imageUrl(240); @endphp
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+            style="width:100%;margin:0 0 12px;border:1px solid #e5e7eb;border-radius:12px;border-collapse:separate;">
+            <tr>
+                <td width="88" valign="top" style="width:88px;padding:12px 10px 12px 12px;">
+                    <x-brevare.mail-thumb :src="$image" :alt="$item->product_name" :size="$thumb" />
+                </td>
+                <td valign="top" style="padding:12px 12px 12px 0;word-break:break-word;font-size:14px;line-height:1.5;color:#111827;">
+                    <strong>{{ $item->product_name }}</strong>
+                    @if ($item->variant_attributes)
+                        <br><span style="font-size:12px;color:#6b7280;">
+                            {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' · ') }}
+                        </span>
+                    @endif
+                    @if ($item->supplier_name)
+                        <br><span style="font-size:11px;color:#9ca3af;">Proveedor: {{ $item->supplier_name }}</span>
+                    @endif
+                    <br><span style="color:#6b7280;">Cantidad: {{ $item->quantity }} · Unitario: S/ {{ number_format((float) $item->unit_price, 2) }}</span>
+                    <br><strong>Subtotal: S/ {{ number_format((float) $item->line_subtotal, 2) }}</strong>
+                </td>
             </tr>
-        </thead>
+        </table>
+    @endforeach
 
-        <tbody>
-            @foreach ($items as $item)
-                @php $image = $item->imageUrl(160); @endphp
-                <tr>
-                    <td width="{{ $thumb + 20 }}" valign="top"
-                        style="padding:12px 0 12px 14px;border-top:1px solid #f3f4f6;">
-                        <x-brevare.mail-thumb :src="$image" :alt="$item->product_name" :size="$thumb" />
-                    </td>
-                    <td style="padding:12px 14px 12px 4px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;vertical-align:top;">
-                        {{ $item->product_name }}
-                        @if ($item->variant_attributes)
-                            <br>
-                            <span style="font-size:12px;color:#6b7280;">
-                                {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' · ') }}
-                            </span>
-                        @endif
-                        @if ($item->supplier_name)
-                            <br>
-                            <span style="font-size:11px;color:#9ca3af;">
-                                Proveedor: {{ $item->supplier_name }}
-                            </span>
-                        @endif
-                    </td>
-                    <td align="center" style="padding:12px 8px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;">
-                        {{ $item->quantity }}
-                    </td>
-                    <td align="right" style="padding:12px 8px;border-top:1px solid #f3f4f6;font-size:14px;color:#4b5563;white-space:nowrap;">
-                        S/ {{ number_format((float) $item->unit_price, 2) }}
-                    </td>
-                    <td align="right" style="padding:12px 14px;border-top:1px solid #f3f4f6;font-size:14px;font-weight:600;color:#111827;white-space:nowrap;">
-                        S/ {{ number_format((float) $item->line_subtotal, 2) }}
-                    </td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
+    <div style="height:12px;line-height:12px;">&nbsp;</div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;font-size:14px;">
         <tr>
