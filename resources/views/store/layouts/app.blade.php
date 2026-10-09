@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.favicon')
     @php
         $pageTitle = $title ?? (config('app.name').' | Tienda online');
         $pageDescription = $seoDescription ?? 'Descubre moda, tecnología, hogar y más en Brevare. Compra online con atención cercana y seguimiento de tus pedidos.';
