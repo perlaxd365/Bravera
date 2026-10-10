@@ -9,6 +9,20 @@
         </div>
     </div>
 
+    <div class="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500">
+        <span>Powered by</span>
+        <img
+            src="https://culqi.com/LogoCulqi.png"
+            alt="Culqi"
+            width="82"
+            height="24"
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+            style="display:block;width:auto!important;height:22px!important;max-width:82px!important;object-fit:contain"
+        >
+    </div>
+
     <ul
         class="mx-auto mt-4 w-full {{ $compact ? 'max-w-[480px]' : 'max-w-[560px]' }}"
         aria-label="Medios de pago disponibles con Culqi"
@@ -39,17 +53,4 @@
         @endforeach
     </ul>
 
-    <div class="mt-3 flex items-center justify-center gap-1.5 border-t border-gray-100 pt-3 text-xs text-gray-500">
-        <span>Powered by</span>
-        <img
-            src="https://culqi.com/LogoCulqi.png"
-            alt="Culqi"
-            width="82"
-            height="24"
-            loading="lazy"
-            decoding="async"
-            referrerpolicy="no-referrer"
-            style="display:block;width:auto!important;height:22px!important;max-width:82px!important;object-fit:contain"
-        >
-    </div>
 </div>
