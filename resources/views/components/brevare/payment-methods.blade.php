@@ -9,28 +9,53 @@
         </div>
     </div>
 
-    <ul class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Medios de pago aceptados">
-        <li class="flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2" aria-label="Visa">
-            <span class="text-base font-black italic tracking-tight text-blue-800">VISA</span>
-        </li>
-        <li class="flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2" aria-label="Mastercard">
-            <span class="flex -space-x-1.5" aria-hidden="true">
-                <span class="size-5 rounded-full bg-red-500/95"></span>
-                <span class="size-5 rounded-full bg-amber-400/95"></span>
+    <ul class="mt-4 flex flex-wrap items-start justify-center gap-x-3 gap-y-4 sm:gap-x-5" aria-label="Medios de pago aceptados">
+        <li class="w-16 text-center sm:w-[72px]" aria-label="Visa">
+            <span @class(['mx-auto flex items-center justify-center overflow-hidden rounded-full border-[3px] border-gray-300 bg-white p-1 shadow-[0_4px_0_#d1d5db]', 'size-14' => $compact, 'size-16 sm:size-[72px]' => ! $compact])>
+                <span class="relative flex size-full items-center justify-center overflow-hidden rounded-full bg-white">
+                    <span class="absolute inset-x-0 top-[24%] h-[40%] bg-[#173783]"></span>
+                    <span class="absolute inset-x-0 bottom-0 h-[24%] bg-[#f5a623]"></span>
+                    <span class="relative z-10 text-sm font-black italic tracking-tight text-white sm:text-base">VISA</span>
+                </span>
             </span>
-            <span class="text-xs font-semibold text-gray-700">mastercard</span>
+            <span class="mt-2 block text-[10px] font-medium text-gray-600">Tarjeta</span>
         </li>
-        <li class="flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2" aria-label="Yape">
-            <span class="flex size-6 items-center justify-center rounded-full bg-purple-700 text-xs font-black text-white" aria-hidden="true">Y</span>
-            <span class="text-sm font-bold text-purple-800">Yape</span>
+        <li class="w-16 text-center sm:w-[72px]" aria-label="Mastercard">
+            <span @class(['mx-auto flex items-center justify-center overflow-hidden rounded-full border-[3px] border-gray-300 bg-white p-1 shadow-[0_4px_0_#d1d5db]', 'size-14' => $compact, 'size-16 sm:size-[72px]' => ! $compact])>
+                <span class="relative flex size-full items-center justify-center overflow-hidden rounded-full bg-[#1676a8]">
+                    <span class="absolute left-[18%] size-7 rounded-full bg-[#eb3328] sm:size-8"></span>
+                    <span class="absolute right-[18%] size-7 rounded-full bg-[#f6a623]/95 sm:size-8"></span>
+                    <span class="relative z-10 rounded-full bg-[#1676a8]/90 px-1 text-[8px] font-extrabold tracking-tight text-white sm:text-[9px]">Mastercard</span>
+                </span>
+            </span>
+            <span class="mt-2 block text-[10px] font-medium text-gray-600">Mastercard</span>
         </li>
-        <li class="flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2" aria-label="Plin">
-            <span class="flex size-6 items-center justify-center rounded-full bg-fuchsia-600 text-xs font-black text-white" aria-hidden="true">P</span>
-            <span class="text-sm font-bold text-fuchsia-700">Plin</span>
+        <li class="w-16 text-center sm:w-[72px]" aria-label="Yape">
+            <span @class(['mx-auto flex items-center justify-center overflow-hidden rounded-full border-[3px] border-gray-300 bg-white p-1 shadow-[0_4px_0_#d1d5db]', 'size-14' => $compact, 'size-16 sm:size-[72px]' => ! $compact])>
+                <span class="flex size-full flex-col items-center justify-center rounded-full bg-[#710080] text-white">
+                    <span class="text-[8px] font-semibold leading-none text-[#8df4db]">S/</span>
+                    <span class="mt-0.5 text-base font-black italic leading-none sm:text-lg">yape</span>
+                </span>
+            </span>
+            <span class="mt-2 block text-[10px] font-medium text-gray-600">Yape</span>
         </li>
-        <li class="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 sm:col-span-1" aria-label="Pago en efectivo">
-            <flux:icon name="banknotes" class="size-5 text-emerald-700" />
-            <span class="text-xs font-semibold text-gray-700">Pago en efectivo</span>
+        <li class="w-16 text-center sm:w-[72px]" aria-label="Plin">
+            <span @class(['mx-auto flex items-center justify-center overflow-hidden rounded-full border-[3px] border-gray-300 bg-white p-1 shadow-[0_4px_0_#d1d5db]', 'size-14' => $compact, 'size-16 sm:size-[72px]' => ! $compact])>
+                <span class="flex size-full flex-col items-center justify-center rounded-full bg-[#ec168c] text-white">
+                    <span class="text-xl font-black leading-none">P</span>
+                    <span class="text-[9px] font-bold leading-none">plin</span>
+                </span>
+            </span>
+            <span class="mt-2 block text-[10px] font-medium text-gray-600">Plin</span>
+        </li>
+        <li class="w-16 text-center sm:w-[72px]" aria-label="Pago en efectivo">
+            <span @class(['mx-auto flex items-center justify-center overflow-hidden rounded-full border-[3px] border-gray-300 bg-white p-1 shadow-[0_4px_0_#d1d5db]', 'size-14' => $compact, 'size-16 sm:size-[72px]' => ! $compact])>
+                <span class="flex size-full flex-col items-center justify-center rounded-full bg-emerald-600 text-white">
+                    <flux:icon name="banknotes" class="size-6" />
+                    <span class="mt-0.5 text-[8px] font-bold leading-none">EFECTIVO</span>
+                </span>
+            </span>
+            <span class="mt-2 block text-[10px] font-medium text-gray-600">Efectivo</span>
         </li>
     </ul>
 </div>
