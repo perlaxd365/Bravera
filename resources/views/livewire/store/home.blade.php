@@ -130,7 +130,7 @@
                             <span class="mt-1 block text-xs font-medium text-white/90 sm:text-sm">Explora la
                                 colección</span>
                         </span>
-                        <span    style="padding-right: 3%"
+                        <span    style="padding-left: 3%"
                             class="flex size-10 shrink-0 items-center justify-center
                          rounded-full bg-amber-300 text-gray-950 shadow-lg 
                          transition duration-300 group-hover:translate-x-1 
