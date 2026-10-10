@@ -1,4 +1,7 @@
-<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" data-culqi-public-key="{{ $culqiPublicKey ?? '' }}">
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+    data-culqi-public-key="{{ $culqiPublicKey ?? '' }}"
+    data-order-status-url-template="{{ route('store.order.placed', ['order' => '__ORDER__']) }}"
+    data-orders-url="{{ route('account.orders') }}">
     <h1 class="mb-6 flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900">
         <flux:icon name="credit-card" class="size-6" /> Finalizar compra
     </h1>
@@ -22,10 +25,11 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,.35);
         ">
-            <div
+            <div id="culqi-processing-spinner"
                 style="
                 width: 55px;
                 height: 55px;
+                display: block;
                 margin: 0 auto 20px;
                 border: 5px solid #e5e7eb;
                 border-top-color: #143c64;
@@ -34,7 +38,7 @@
             ">
             </div>
 
-            <h3
+            <h3 id="culqi-processing-title"
                 style="
                 margin: 0 0 10px;
                 font-size: 20px;
@@ -44,7 +48,7 @@
                 Procesando tu pago
             </h3>
 
-            <p
+            <p id="culqi-processing-description"
                 style="
                 margin: 0;
                 color: #6b7280;
@@ -54,6 +58,16 @@
                 Estamos confirmando tu pago.<br>
                 Por favor, no cierres ni recargues esta página.
             </p>
+
+            <div id="culqi-processing-recovery" style="display: none; margin-top: 20px;">
+                <p style="margin: 0 0 14px; color: #92400e; font-size: 14px; line-height: 1.5;">
+                    No vuelvas a intentar el pago todavía. Revisa el estado de este pedido para evitar un cobro duplicado.
+                </p>
+                <a id="culqi-processing-order-link" href="{{ route('account.orders') }}"
+                    style="display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; background: #111827; padding: 10px 18px; color: white; font-size: 14px; font-weight: 600; text-decoration: none;">
+                    Ver el estado de mi pedido
+                </a>
+            </div>
         </div>
     </div>
 

@@ -1,5 +1,3 @@
-import Swal from 'sweetalert2';
-
 export const plain = (value) => {
     if (Array.isArray(value) && value.length === 2
         && value[1] && typeof value[1] === 'object' && 's' in value[1]) {
@@ -99,15 +97,6 @@ export const safeErrorMessage = (error) => {
     return 'No pudimos procesar el pago. Inténtalo de nuevo.';
 };
 
-let swalInstance = null;
-
-const closeSweetAlert = () => {
-    if (swalInstance) {
-        swalInstance.close();
-        swalInstance = null;
-    }
-};
-
 export const openModal = async (rawSession, publicKey, state) => {
     const session = plain(rawSession);
 
@@ -127,6 +116,12 @@ export const openModal = async (rawSession, publicKey, state) => {
         notify('No pudimos abrir el formulario de Culqi. Revisa tu conexión e inténtalo de nuevo.');
         return;
     }
+
+    const checkoutRoot = document.querySelector('[data-culqi-public-key]');
+    const statusUrlTemplate = checkoutRoot?.dataset.orderStatusUrlTemplate;
+    state.orderStatusUrl = statusUrlTemplate && session.orderNumber
+        ? statusUrlTemplate.replace('__ORDER__', encodeURIComponent(session.orderNumber))
+        : checkoutRoot?.dataset.ordersUrl ?? null;
 
     let Ctor;
     try {
@@ -213,7 +208,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                     return;
                 }
 
-                showPaymentProcessing();
+                showPaymentProcessing(state);
 
                 if (typeof checkout.close === 'function') {
                     checkout.close();
@@ -238,11 +233,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                         error
                     );
 
-                    hidePaymentProcessing();
-
-                    notify(
-                        'Ocurrió un error al procesar el pago. Inténtalo nuevamente.'
-                    );
+                    showPaymentStalled(state);
                 }
 
                 return;
@@ -269,7 +260,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                     return;
                 }
 
-                showPaymentProcessing();
+                showPaymentProcessing(state);
 
                 if (typeof checkout.close === 'function') {
                     checkout.close();
@@ -295,11 +286,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                         error
                     );
 
-                    hidePaymentProcessing();
-
-                    notify(
-                        'Ocurrió un error al procesar el pago con Yape. Inténtalo nuevamente.'
-                    );
+                    showPaymentStalled(state);
                 }
 
                 return;
@@ -331,7 +318,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                     return;
                 }
 
-                showPaymentProcessing();
+                showPaymentProcessing(state);
 
                 try {
 
@@ -351,11 +338,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                         error
                     );
 
-                    hidePaymentProcessing();
-
-                    notify(
-                        'Ocurrió un error al procesar el pago. Inténtalo nuevamente.'
-                    );
+                    showPaymentStalled(state);
                 }
 
                 return;
@@ -445,6 +428,7 @@ export const openModal = async (rawSession, publicKey, state) => {
 
 export const handleCulqiSettled = (payload) => {
     const kind = payload.kind ?? 'idle';
+    const state = window.__brevareCulqi ?? {};
 
     if (kind === 'idle') {
         hidePaymentProcessing();
@@ -453,13 +437,12 @@ export const handleCulqiSettled = (payload) => {
 
     if (kind === 'paid') {
         hidePaymentProcessing();
-        alert('¡Pago confirmado!');
-        if (payload.url) {
-            window.location.href = payload.url;
-        }
+        const destination = payload.url ?? state.orderStatusUrl;
+        if (destination) window.location.assign(destination);
     } else if (kind === 'pending') {
         hidePaymentProcessing();
-        alert('Estamos verificando tu pago. Te avisamos en cuanto Culqi confirme la operación.');
+        const destination = payload.url ?? state.orderStatusUrl;
+        if (destination) window.location.assign(destination);
     }
 };
 
@@ -539,6 +522,10 @@ export const initCheckout = (publicKey, wireId) => {
                     state.checkout.close();
                     state.checkout = null;
                 }
+
+                if (state.paymentRequestInFlight) {
+                    showPaymentStalled(state);
+                }
             });
         }
     });
@@ -589,7 +576,9 @@ if (document.readyState === 'loading') {
     autoInit();
 }
 
-const showPaymentProcessing = () => {
+const PROCESSING_TIMEOUT_MS = 45_000;
+
+const showPaymentProcessing = (state = window.__brevareCulqi ?? {}) => {
     const overlay = document.getElementById('culqi-processing-overlay');
 
     if (!overlay) {
@@ -598,6 +587,24 @@ const showPaymentProcessing = () => {
     }
 
     overlay.style.display = 'flex';
+    state.paymentRequestInFlight = true;
+    state.paymentRequestTimedOut = false;
+
+    window.clearTimeout(state.paymentProcessingTimer);
+    state.paymentProcessingTimer = window.setTimeout(() => {
+        showPaymentStalled(state);
+    }, PROCESSING_TIMEOUT_MS);
+
+    const title = document.getElementById('culqi-processing-title');
+    const description = document.getElementById('culqi-processing-description');
+    const spinner = document.getElementById('culqi-processing-spinner');
+    const recovery = document.getElementById('culqi-processing-recovery');
+    const orderLink = document.getElementById('culqi-processing-order-link');
+    if (title) title.textContent = 'Procesando tu pago';
+    if (description) description.innerHTML = 'Estamos confirmando tu pago.<br>Por favor, no cierres ni recargues esta página.';
+    if (spinner) spinner.style.display = 'block';
+    if (recovery) recovery.style.display = 'none';
+    if (orderLink && state.orderStatusUrl) orderLink.href = state.orderStatusUrl;
 
     // Bloquear scroll
     document.body.style.overflow = 'hidden';
@@ -605,12 +612,48 @@ const showPaymentProcessing = () => {
     console.debug('[Culqi] Página bloqueada - procesando pago...');
 };
 
+const showPaymentStalled = (state = window.__brevareCulqi ?? {}) => {
+    const overlay = document.getElementById('culqi-processing-overlay');
+    if (!overlay) return;
+
+    state.paymentRequestTimedOut = true;
+
+    const title = document.getElementById('culqi-processing-title');
+    const description = document.getElementById('culqi-processing-description');
+    const spinner = document.getElementById('culqi-processing-spinner');
+    const recovery = document.getElementById('culqi-processing-recovery');
+    const orderLink = document.getElementById('culqi-processing-order-link');
+    if (title) title.textContent = 'La confirmación está tardando';
+    if (description) description.textContent = 'El servidor aún no confirma el resultado. No vuelvas a pagar hasta revisar el estado de tu pedido.';
+    if (spinner) spinner.style.display = 'none';
+    if (recovery) recovery.style.display = 'block';
+    if (orderLink && state.orderStatusUrl) orderLink.href = state.orderStatusUrl;
+
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+};
+
 const hidePaymentProcessing = () => {
+    const state = window.__brevareCulqi ?? {};
+    window.clearTimeout(state.paymentProcessingTimer);
+    state.paymentProcessingTimer = null;
+    state.paymentRequestInFlight = false;
+    state.paymentRequestTimedOut = false;
+
     const overlay = document.getElementById('culqi-processing-overlay');
 
     if (overlay) {
         overlay.style.display = 'none';
     }
+
+    const title = document.getElementById('culqi-processing-title');
+    const description = document.getElementById('culqi-processing-description');
+    const spinner = document.getElementById('culqi-processing-spinner');
+    const recovery = document.getElementById('culqi-processing-recovery');
+    if (title) title.textContent = 'Procesando tu pago';
+    if (description) description.innerHTML = 'Estamos confirmando tu pago.<br>Por favor, no cierres ni recargues esta página.';
+    if (spinner) spinner.style.display = 'block';
+    if (recovery) recovery.style.display = 'none';
 
     document.body.style.overflow = '';
 };
