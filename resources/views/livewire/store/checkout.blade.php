@@ -306,6 +306,7 @@
                                 </span>
                             </p>
                         </div>
+                        <x-brevare.payment-methods compact class="mt-4" />
                         <p class="mt-3 flex items-start gap-2 text-xs text-gray-500">
                             <flux:icon name="lock-closed" class="size-4 shrink-0" />
                             Tu tarjeta se procesa dentro del formulario de Culqi. No almacenamos el número completo.
