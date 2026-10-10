@@ -443,7 +443,7 @@
                         <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
                             wire:target="startCulqiCheckout"
                             class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                            <span wire:loading.remove wire:target="startCulqiCheckout">Abrir formulario de pago</span>
+                            <span wire:loading.remove wire:target="startCulqiCheckout">Continuar al pago</span>
                             <span wire:loading wire:target="startCulqiCheckout">Cargando Culqi...</span>
                         </button>
                     @endif

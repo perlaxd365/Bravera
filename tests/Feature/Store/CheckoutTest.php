@@ -1403,7 +1403,7 @@ class CheckoutTest extends TestCase
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
             ->call('startCulqiCheckout')
-            ->assertSee('Continuar al pago');
+            ->assertSee('Completa tu pago');
 
         // El pago entra por el webhook, no por esta pantalla: se simula el
         // estado final para comprobar que la vista deja de ofrecer el reintento.

@@ -10,7 +10,10 @@
 
         $missingSelection = $requiresVariantSelection && ! $selectedVariant;
 
+        // La imagen principal elegida en el panel debe ser la primera de la
+        // galería, aunque tenga un sort_order posterior a las demás.
         $galleryUrls = $currentVariant?->images
+            ->sortByDesc('is_primary')
             ->map(fn ($image) => $image->secure_url ?? $image->url)
             ->values()
             ->all() ?? [];
