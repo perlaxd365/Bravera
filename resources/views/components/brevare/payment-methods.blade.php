@@ -10,8 +10,9 @@
     </div>
 
     <ul
-        class="mx-auto mt-4 grid w-full {{ $compact ? 'max-w-[480px]' : 'max-w-[560px]' }} grid-cols-3 gap-2 sm:grid-cols-6"
+        class="mx-auto mt-4 w-full {{ $compact ? 'max-w-[480px]' : 'max-w-[560px]' }}"
         aria-label="Medios de pago disponibles con Culqi"
+        style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"
     >
         @foreach ([
             ['Visa', 'visa.svg'],
@@ -21,17 +22,18 @@
             ['Yape', 'yape.svg'],
             ['Plin', 'plin.svg'],
         ] as [$name, $logo])
-            <li class="flex h-12 items-center justify-center rounded-xl border border-gray-200 bg-white px-2 sm:h-14">
+            <li class="flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white px-2"
+                style="width:72px;height:48px;flex:0 0 72px">
                 <img
                     src="https://culqi.com/assets/images/shared/logos/{{ $logo }}"
                     alt="{{ $name }}"
                     title="{{ $name }}"
-                    width="88"
-                    height="36"
+                    width="76"
+                    height="28"
                     loading="lazy"
                     decoding="async"
                     referrerpolicy="no-referrer"
-                    class="max-h-8 w-full object-contain"
+                    style="display:block;width:auto!important;height:28px!important;max-width:100%!important;object-fit:contain"
                 >
             </li>
         @endforeach
