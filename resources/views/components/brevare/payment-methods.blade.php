@@ -12,7 +12,7 @@
     <div class="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500">
         <span>Powered by</span>
         <img
-            src="https://culqi.com/LogoCulqi.png"
+            src="https://culqi.com/assets/images/shared/logos/culqiConNombre.svg"
             alt="Culqi"
             width="82"
             height="24"
