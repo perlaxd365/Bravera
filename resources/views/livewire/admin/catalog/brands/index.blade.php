@@ -77,7 +77,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-14 text-center">
-                                <x-brevare.empty-state icon="tags" title="No existen marcas registradas" description="Crea la primera marca para comenzar." />
+                                <x-brevare.empty-state icon="tag" title="No existen marcas registradas" description="Crea la primera marca para comenzar." />
                             </td>
                         </tr>
                     @endforelse

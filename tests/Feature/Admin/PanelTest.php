@@ -49,6 +49,7 @@ class PanelTest extends TestCase
         $this->actingAs($this->admin());
 
         $this->get(route('admin.dashboard'))->assertOk();
+        $this->get(route('admin.catalog.brands.index'))->assertOk();
         $this->get(route('admin.orders.index'))->assertOk();
         $this->get(route('admin.dropshipping.orders.index'))->assertOk();
         $this->get(route('admin.discounts.coupons.index'))->assertOk();
