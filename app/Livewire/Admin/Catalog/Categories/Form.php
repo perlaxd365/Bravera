@@ -63,7 +63,7 @@ class Form extends Component
 
             'parent_id' => 'nullable|exists:categories,id',
 
-            'image' => 'nullable|string|max:255',
+            'image' => 'nullable|string|max:2048',
 
             'position' => 'required|integer|min:0',
 
@@ -281,6 +281,8 @@ class Form extends Component
             'slug.unique' => 'Ya existe una categoría con ese nombre.',
 
             'parent_id.exists' => 'La categoría padre seleccionada no existe.',
+
+            'image.max' => 'La URL de la imagen es demasiado larga. Intenta con un archivo de nombre más corto.',
         ];
     }
 

@@ -60,7 +60,7 @@ class Form extends Component
 
             'description' => 'nullable|string',
 
-            'image' => 'nullable|string|max:255',
+            'image' => 'nullable|string|max:2048',
 
             'sort_order' => 'required|integer|min:0',
 
@@ -258,6 +258,7 @@ class Form extends Component
             'slug.required' => 'El slug es obligatorio.',
             'slug.unique' => 'Ya existe una marca con ese nombre.',
 
+            'image.max' => 'La URL del logo es demasiado larga. Intenta con un archivo de nombre más corto.',
         ];
     }
 
