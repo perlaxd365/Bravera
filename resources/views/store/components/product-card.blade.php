@@ -39,6 +39,9 @@
             @if ($product->is_featured ?? false)
                 <span class="absolute right-3 top-3 rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">Destacado</span>
             @endif
+            @if ($product->isSoldByBrevare())
+                <span class="absolute bottom-3 left-3 rounded-full border border-white/70 bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900 shadow-sm">Vendido por Brevare</span>
+            @endif
         </div>
 
         <div class="flex flex-1 flex-col p-3.5 sm:p-4">

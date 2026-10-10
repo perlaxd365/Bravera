@@ -125,6 +125,29 @@ class Product extends Model
         return $this->availableVariants()->exists();
     }
 
+    public function isSoldByBrevare(): bool
+    {
+        if ($this->relationLoaded('variants')) {
+            $variantsHaveSuppliersLoaded = $this->variants->every(
+                fn ($variant) => $variant->relationLoaded('supplierVariants')
+            );
+
+            if ($variantsHaveSuppliersLoaded) {
+                return $this->variants->contains(fn ($variant) => $variant->supplierVariants
+                    ->contains(fn ($supplierVariant) => $supplierVariant->is_active
+                        && $supplierVariant->availableStock() > 0
+                        && $supplierVariant->supplier?->is_internal));
+            }
+        }
+
+        return $this->variants()
+            ->whereHas('supplierVariants', fn ($query) => $query
+                ->active()
+                ->whereColumn('stock', '>', 'reserved_stock')
+                ->whereHas('supplier', fn ($supplier) => $supplier->where('is_internal', true)))
+            ->exists();
+    }
+
     public function coverImage(): ?string
     {
         return $this->coverImageModel()?->imageUrl();

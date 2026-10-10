@@ -17,6 +17,7 @@ class SupplierRepository
     ): LengthAwarePaginator {
 
         return Supplier::query()
+            ->where('is_internal', false)
 
             ->when($search, function ($query) use ($search) {
 

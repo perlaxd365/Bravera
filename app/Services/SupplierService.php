@@ -61,6 +61,7 @@ class SupplierService
         Supplier $supplier,
         SupplierDTO $dto
     ): Supplier {
+        abort_if($supplier->is_internal, 403, 'El registro interno de Brevare no se edita desde proveedores.');
         if (
             $dto->tax_id &&
             Supplier::where('tax_id', $dto->tax_id)
@@ -100,6 +101,8 @@ class SupplierService
      */
     public function delete(Supplier $supplier): void
     {
+        abort_if($supplier->is_internal, 403, 'El registro interno de Brevare no se puede eliminar.');
+
         $this->repository->delete($supplier);
     }
 

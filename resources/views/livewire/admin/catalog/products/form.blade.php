@@ -318,7 +318,7 @@
                                                                 </button>
                                                                 <button type="button" wire:click="createSupplierVariant({{ $variant->id }})"
                                                                     class="inline-flex items-center gap-1 rounded-full border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-50">
-                                                                    <flux:icon name="truck" class="size-3.5" /> Proveedores
+                                                                    <flux:icon name="truck" class="size-3.5" /> Vendedor y stock
                                                                 </button>
                                                                 <button type="button" wire:click="openGallery({{ $variant->id }})"
                                                                     @class([
@@ -455,9 +455,9 @@
                                                 <div>
                                                     <h4 class="flex items-center gap-2 font-bold text-gray-900">
                                                         <flux:icon name="truck" class="size-4 text-gray-500" />
-                                                        Proveedores de la variante
+                                                        Vendedor y stock de la variante
                                                     </h4>
-                                                    <p class="mt-0.5 text-sm text-gray-500">Administra los proveedores asociados a esta variante.</p>
+                                                    <p class="mt-0.5 text-sm text-gray-500">Agrega inventario propio de Brevare o inventario de un proveedor externo.</p>
                                                 </div>
                                                 <button type="button" wire:click="createSupplierVariant({{ $supplierVariantVariantId }})"
                                                     class="inline-flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
@@ -479,7 +479,7 @@
                                                                     <option value="">Seleccione un proveedor...</option>
                                                                     @foreach ($suppliers as $supplier)
                                                                         <option value="{{ $supplier->id }}">
-                                                                            {{ $supplier->trade_name ?: $supplier->business_name }}
+                                                                            {{ $supplier->is_internal ? 'Vendido por Brevare — inventario propio' : ($supplier->trade_name ?: $supplier->business_name) }}
                                                                         </option>
                                                                     @endforeach
                                                                 </x-select>

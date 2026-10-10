@@ -6,6 +6,7 @@ use App\Enums\SupplierOrderStatus;
 use App\Models\Order;
 use App\Models\SupplierOrder;
 use App\Models\SupplierOrderItem;
+use App\Models\Supplier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -27,6 +28,12 @@ class SupplierOrderService
             $created = collect();
 
             foreach ($grouped as $supplierId => $items) {
+                if (Supplier::query()->whereKey($supplierId)->value('is_internal')) {
+                    $this->decrementStock($items);
+
+                    continue;
+                }
+
                 $supplierOrder = $this->createSupplyOrder($order, (int) $supplierId, $items);
 
                 $this->decrementStock($items);

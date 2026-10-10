@@ -23,7 +23,7 @@ class StoreCatalogRepository
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.supplierVariants', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereHas('variants', function ($query) {

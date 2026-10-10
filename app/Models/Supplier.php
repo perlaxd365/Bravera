@@ -30,6 +30,7 @@ class Supplier extends Model
         'address',
         'estimated_dispatch_days',
         'status',
+        'is_internal',
         'internal_notes',
         'location_id',
         'created_by',
@@ -43,6 +44,7 @@ class Supplier extends Model
      */
     protected $casts = [
         'estimated_dispatch_days' => 'integer',
+        'is_internal' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
