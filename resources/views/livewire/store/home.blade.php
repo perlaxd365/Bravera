@@ -105,7 +105,7 @@
                             <span class="block text-xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-2xl lg:text-3xl">{{ $category->name }}</span>
                             <span class="mt-1 block text-xs font-medium text-white/90 sm:text-sm">Explora la colección</span>
                         </span>
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-300 text-gray-950 shadow-lg transition duration-300 group-hover:translate-x-1 group-hover:bg-white sm:size-12"><flux:icon name="arrow-right" class="size-5 pl-2" /></span>
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-300 text-gray-950 shadow-lg transition duration-300 group-hover:translate-x-1 group-hover:bg-white sm:size-12"><flux:icon name="arrow-right" class="size-5" style="padding-left: 3%" /></span>
                     </span>
                 </a>
             @endforeach
