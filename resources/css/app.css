@@ -41,6 +41,35 @@ main > * {
     max-width: 100%;
 }
 
+/* Horizontal category rail: keep the touch carousel clean while retaining
+   native scrolling, keyboard access, and snap points. */
+.category-carousel {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.category-carousel > a {
+    flex-basis: 72%;
+}
+
+@media (min-width: 640px) {
+    .category-carousel > a {
+        flex-basis: 42%;
+    }
+}
+
+@media (min-width: 1024px) {
+    .category-carousel > a {
+        flex-basis: calc((100% - 3rem) / 4);
+    }
+}
+
+.category-carousel::-webkit-scrollbar {
+    display: none;
+}
+
 .responsive-table-scroll {
     width: 100%;
     min-width: 0;

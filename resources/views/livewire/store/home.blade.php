@@ -136,29 +136,83 @@
     </section>
 
     {{-- Otras categorías --}}
-    <section class="mx-auto max-w-7xl px-4 pb-7 pt-3 sm:px-6 sm:pb-9 lg:px-8">
-        <div class="reveal mb-3 flex items-center justify-between">
+    <section x-data="{
+        index: 0,
+        timer: null,
+        paused: false,
+        get cards() { return this.$refs.track?.children ?? [] },
+        move(direction = 1) {
+            const track = this.$refs.track;
+            if (!track || this.cards.length < 2) return;
+            const max = Math.max(0, track.scrollWidth - track.clientWidth);
+            const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+            const step = this.cards[0].getBoundingClientRect().width + gap;
+            if (direction > 0 && track.scrollLeft + step > max - 8) {
+                this.index = 0;
+                track.scrollTo({ left: 0, behavior: 'smooth' });
+            } else {
+                track.scrollBy({ left: direction * step, behavior: 'smooth' });
+                this.index = Math.max(0, Math.min(this.cards.length - 1, this.index + direction));
+            }
+        },
+        start() {
+            this.stop();
+            if (this.cards.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                this.timer = setInterval(() => { if (!this.paused) this.move() }, 4200);
+            }
+        },
+        stop() { clearInterval(this.timer); this.timer = null }
+    }"
+        x-init="start()"
+        @mouseenter="paused = true"
+        @mouseleave="paused = false"
+        @focusin="paused = true"
+        @focusout="paused = false"
+        @visibilitychange.window="document.hidden ? stop() : start()"
+        class="overflow-hidden bg-gradient-to-b from-amber-50/70 to-white py-8 sm:py-11">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="reveal mb-5 flex items-end justify-between gap-4 sm:mb-6">
             <div>
-                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-800">Más formas de encontrar lo que buscas</p>
-                <h2 class="mt-0.5 text-lg font-bold tracking-tight text-gray-900">{{ $homeTexts['categories'] ?? 'Explora todo' }}</h2>
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-800">Un mundo por descubrir</p>
+                <h2 class="mt-1 text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">{{ $homeTexts['categories'] ?? 'Explora nuestras categorías' }}</h2>
+                <p class="mt-1 text-sm text-gray-600">Encuentra eso que hace especial cada día.</p>
             </div>
-            <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-600 transition hover:text-amber-800">Ver todo <span aria-hidden="true">→</span></a>
+            <div class="flex shrink-0 items-center gap-2">
+                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-600 transition hover:text-amber-800 sm:inline-flex">Ver todo <span class="ml-1" aria-hidden="true">→</span></a>
+                <button type="button" @click="move(-1)" aria-label="Categorías anteriores" class="flex size-10 items-center justify-center rounded-full border border-amber-200 bg-white text-gray-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-amber-500">
+                    <flux:icon name="chevron-left" class="size-5" />
+                </button>
+                <button type="button" @click="move(1)" aria-label="Siguientes categorías" class="flex size-10 items-center justify-center rounded-full border border-amber-300 bg-amber-300 text-gray-950 shadow-sm transition hover:bg-amber-200 focus-visible:outline-2 focus-visible:outline-amber-600">
+                    <flux:icon name="chevron-right" class="size-5" />
+                </button>
+            </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+        <div x-ref="track" class="category-carousel flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-4 sm:gap-4" role="region" aria-label="Categorías de compra" tabindex="0">
             @forelse ($categories as $category)
                 <a href="{{ route('store.category', ['path' => $category->path]) }}"
-                    class="reveal group flex min-h-[68px] items-center gap-2.5 rounded-2xl border border-amber-100/80 bg-white p-2 text-left transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/60 hover:shadow-md sm:min-h-[76px] sm:gap-3 sm:p-2.5"
-                    style="transition-delay: {{ ($loop->index % 4) * 70 }}ms">
-                    <img src="{{ $category->store_image }}" alt="" loading="lazy" class="size-12 shrink-0 rounded-xl bg-amber-50 object-cover sm:size-14">
-                    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800 sm:text-[15px]">{{ $category->name }}</span>
-                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition group-hover:bg-amber-200 group-hover:text-amber-950" aria-hidden="true">
-                        <flux:icon name="arrow-right" class="size-4" />
+                    class="reveal group relative isolate flex min-h-[210px] shrink-0 snap-start items-end overflow-hidden rounded-[1.4rem] bg-gray-900 text-left shadow-md shadow-gray-900/10 transition duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-950/15 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500 sm:min-h-[250px] lg:min-h-[280px]"
+                    style="transition-delay: {{ ($loop->index % 4) * 60 }}ms">
+                    <img src="{{ $category->store_image }}" alt="" loading="lazy" class="absolute inset-0 z-0 h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105">
+                    <span class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-gray-950/85 via-gray-950/15 to-transparent"></span>
+                    <span class="relative z-20 flex w-full items-end justify-between gap-2 p-4 sm:p-5">
+                        <span class="min-w-0">
+                            <span class="block truncate text-lg font-bold tracking-tight text-white sm:text-xl">{{ $category->name }}</span>
+                            <span class="mt-1 block text-xs font-medium text-white/85 sm:text-sm">Ver colección</span>
+                        </span>
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-300 text-gray-950 shadow-lg transition duration-300 group-hover:translate-x-1 group-hover:bg-white" aria-hidden="true">
+                            <flux:icon name="arrow-right" class="size-4" />
+                        </span>
                     </span>
                 </a>
             @empty
                 <div class="col-span-2 py-10 text-center text-sm text-gray-500 sm:col-span-4">Aún no hay categorías disponibles.</div>
             @endforelse
+        </div>
+        <div class="mt-1 flex items-center justify-between sm:hidden">
+            <span class="text-xs font-medium text-gray-500">Desliza para descubrir más</span>
+            <a href="{{ route('store.search') }}" class="text-xs font-bold text-amber-900">Ver todas →</a>
+        </div>
         </div>
     </section>
 
