@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Models\User;
 use App\Services\EmailVerificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -17,14 +18,40 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function mount(EmailVerificationService $verification): void
     {
-        if (Auth::user()->hasVerifiedEmail()) {
+        // Compatibilidad con sesiones anteriores al flujo de verificación pendiente.
+        if (Auth::check()) {
+            $authenticatedUser = Auth::user();
+
+            if ($authenticatedUser->hasVerifiedEmail()) {
+                $this->redirectRoute('home', navigate: true);
+
+                return;
+            }
+
+            Session::put('pending_email_verification_user_id', $authenticatedUser->id);
+            Auth::logout();
+            Session::regenerate();
+        }
+
+        $user = $this->pendingUser();
+
+        if (! $user) {
+            $this->redirectRoute('login', navigate: true);
+
+            return;
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            Session::forget('pending_email_verification_user_id');
+            Auth::login($user);
+            Session::regenerate();
             $this->redirectRoute('home', navigate: true);
 
             return;
         }
 
-        if (blank(Auth::user()->email_verification_code)) {
-            $verification->sendCode(Auth::user(), force: true);
+        if (blank($user->email_verification_code)) {
+            $verification->sendCode($user, force: true);
 
             Session::flash('status', 'code-sent');
         }
@@ -39,9 +66,18 @@ new #[Layout('layouts.guest')] class extends Component
             'code' => ['required', 'string', 'size:6', 'digits:6'],
         ]);
 
-        $user = Auth::user();
+        $user = $this->pendingUser();
+
+        if (! $user) {
+            $this->redirectRoute('login', navigate: true);
+
+            return;
+        }
 
         if ($verification->verify($user, $this->code)) {
+            Session::forget('pending_email_verification_user_id');
+            Auth::login($user);
+            Session::regenerate();
             Session::flash('status', 'verified');
 
             $this->redirectRoute('home', navigate: true);
@@ -57,14 +93,22 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function resend(EmailVerificationService $verification): void
     {
-        if (Auth::user()->hasVerifiedEmail()) {
+        $user = $this->pendingUser();
+
+        if (! $user) {
+            $this->redirectRoute('login', navigate: true);
+
+            return;
+        }
+
+        if ($user->hasVerifiedEmail()) {
             $this->redirectRoute('home', navigate: true);
 
             return;
         }
 
         try {
-            $verification->sendCode(Auth::user());
+            $verification->sendCode($user);
         } catch (ValidationException $e) {
             $this->reset('code');
             $this->addError('code', $e->validator->errors()->first('verification_code'));
@@ -92,7 +136,12 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function maskedEmail(): string
     {
-        $email = Auth::user()->email;
+        $email = $this->pendingUser()?->email;
+
+        if (! $email) {
+            return '';
+        }
+
         [$local, $domain] = explode('@', $email);
 
         $visible = substr($local, 0, 3);
@@ -105,8 +154,21 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function cooldown(): int
     {
+        $user = $this->pendingUser();
+
+        if (! $user) {
+            return 0;
+        }
+
         return app(EmailVerificationService::class)
-            ->secondsUntilCanResend(Auth::user());
+            ->secondsUntilCanResend($user);
+    }
+
+    private function pendingUser(): ?User
+    {
+        $userId = Session::get('pending_email_verification_user_id');
+
+        return $userId ? User::find($userId) : null;
     }
 }; ?>
 

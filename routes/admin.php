@@ -18,7 +18,7 @@ use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
 use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/', DashboardIndex::class)
         ->name('dashboard');

@@ -3,8 +3,8 @@
 use App\Events\CustomerRegistered;
 use App\Models\User;
 use App\Services\EmailVerificationService;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -44,7 +44,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         $verification->sendCode($user);
 
-        Auth::login($user);
+        Session::regenerate();
+        Session::put('pending_email_verification_user_id', $user->id);
 
         $this->redirectRoute('verification.notice', navigate: true);
     }

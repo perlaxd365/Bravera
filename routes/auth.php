@@ -45,14 +45,14 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 */
 
+Volt::route('verify-email', 'pages.auth.verify-email')
+    ->name('verification.notice');
+
 Route::middleware('auth')->group(function () {
 
     // Paso previo: el usuario que entró con Google aún no tiene contraseña.
     Volt::route('auth/completar-contrasena', 'pages.auth.set-password')
         ->name('set-password');
-
-    Volt::route('verify-email', 'pages.auth.verify-email')
-        ->name('verification.notice');
 
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])

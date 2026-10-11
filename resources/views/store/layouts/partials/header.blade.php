@@ -23,38 +23,42 @@
             <livewire:store.components.cart-badge />
 
             @auth
-                <div class="relative" x-data="{ open: false }" @click.outside="open = false">
-                    <button type="button" @click="open = !open" class="flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50" aria-expanded="false">
-                        @if (Auth::user()->avatar)
-                            <img src="{{ Auth::user()->avatar }}" alt="{{ Auth::user()->name }}" class="size-5 rounded-full object-cover" loading="lazy">
-                        @else
-                            <flux:icon name="user-circle" class="size-5 text-gray-500" />
-                        @endif
-                        <span class="hidden max-w-32 truncate md:inline">{{ Auth::user()->name }}</span>
-                    </button>
+                @if (Auth::user()->hasVerifiedEmail())
+                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                        <button type="button" @click="open = !open" class="flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50" aria-expanded="false">
+                            @if (Auth::user()->avatar)
+                                <img src="{{ Auth::user()->avatar }}" alt="{{ Auth::user()->name }}" class="size-5 rounded-full object-cover" loading="lazy">
+                            @else
+                                <flux:icon name="user-circle" class="size-5 text-gray-500" />
+                            @endif
+                            <span class="hidden max-w-32 truncate md:inline">{{ Auth::user()->name }}</span>
+                        </button>
 
-                    <div x-show="open" x-transition.opacity.scale.origin.top.right.duration.150ms x-cloak
-                        class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl shadow-gray-950/5">
-                        <div class="border-b border-gray-100 px-4 py-2 text-sm text-gray-500">{{ Auth::user()->email }}</div>
-                        <a href="{{ route('account.orders') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
-                            <flux:icon name="cube" class="size-4 text-gray-400" /> Mis pedidos
-                        </a>
-                        <a href="{{ route('account.addresses') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
-                            <flux:icon name="map-pin" class="size-4 text-gray-400" /> Direcciones
-                        </a>
-                        <a href="{{ route('account.profile') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
-                            <flux:icon name="user" class="size-4 text-gray-400" /> Mi perfil
-                        </a>
-                        <div class="mt-1 border-t border-gray-100">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 transition hover:bg-red-50">
-                                    <flux:icon name="arrow-right-start-on-rectangle" class="size-4" /> Cerrar sesión
-                                </button>
-                            </form>
+                        <div x-show="open" x-transition.opacity.scale.origin.top.right.duration.150ms x-cloak
+                            class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl shadow-gray-950/5">
+                            <div class="border-b border-gray-100 px-4 py-2 text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                            <a href="{{ route('account.orders') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="cube" class="size-4 text-gray-400" /> Mis pedidos
+                            </a>
+                            <a href="{{ route('account.addresses') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="map-pin" class="size-4 text-gray-400" /> Direcciones
+                            </a>
+                            <a href="{{ route('account.profile') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="user" class="size-4 text-gray-400" /> Mi perfil
+                            </a>
+                            <div class="mt-1 border-t border-gray-100">
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 transition hover:bg-red-50">
+                                        <flux:icon name="arrow-right-start-on-rectangle" class="size-4" /> Cerrar sesión
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
+                @else
+                    <a href="{{ route('verification.notice') }}" class="rounded-full bg-amber-300 px-3 py-2 text-xs font-semibold text-amber-950 sm:px-4 sm:text-sm">Verificar correo</a>
+                @endif
             @else
                 <a href="{{ route('login') }}" class="hidden rounded-full px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 sm:inline-flex">Entrar</a>
                 <a href="{{ route('register') }}" class="rounded-full bg-gray-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-800 sm:px-4 sm:text-sm">Crear cuenta</a>
@@ -89,8 +93,12 @@
                 <a href="{{ route('home') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Inicio</a>
                 <a href="{{ route('store.search') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Catálogo</a>
                 @auth
-                    <a href="{{ route('account.orders') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Mis pedidos</a>
-                    <a href="{{ route('account.addresses') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Direcciones</a>
+                    @if (Auth::user()->hasVerifiedEmail())
+                        <a href="{{ route('account.orders') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Mis pedidos</a>
+                        <a href="{{ route('account.addresses') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Direcciones</a>
+                    @else
+                        <a href="{{ route('verification.notice') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50">Verificar correo</a>
+                    @endif
                 @endauth
             </nav>
         </div>

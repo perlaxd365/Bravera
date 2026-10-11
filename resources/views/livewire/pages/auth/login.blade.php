@@ -19,15 +19,19 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->form->authenticate();
 
-        Session::regenerate();
-
         $user = Auth::user();
 
         if ($user && ! $user->hasVerifiedEmail()) {
+            Session::put('pending_email_verification_user_id', $user->id);
+            Auth::logout();
+            Session::regenerate();
+
             $this->redirectRoute('verification.notice', navigate: true);
 
             return;
         }
+
+        Session::regenerate();
 
         $this->redirectIntended(
             default: $this->redirectAfterLogin(),

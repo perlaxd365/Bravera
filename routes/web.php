@@ -56,9 +56,11 @@ Route::get('carrito', CartIndex::class)
     ->name('store.cart');
 
 Route::get('checkout', Checkout::class)
+    ->middleware('verified.if.authenticated')
     ->name('checkout');
 
 Route::get('pedido/{order:order_number}/confirmado', OrderPlaced::class)
+    ->middleware('verified.if.authenticated')
     ->name('store.order.placed');
 
 /*
@@ -67,7 +69,7 @@ Route::get('pedido/{order:order_number}/confirmado', OrderPlaced::class)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('mi-cuenta')->name('account.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('mi-cuenta')->name('account.')->group(function () {
     Route::get('perfil', Profile::class)
         ->name('profile');
 
@@ -89,7 +91,7 @@ Route::view('dashboard', 'dashboard')
     ->name('dashboard');
 
 Route::redirect('profile', '/mi-cuenta/perfil')
-    ->middleware(['auth'])
+    ->middleware(['auth', 'verified'])
     ->name('profile');
 
 require __DIR__.'/auth.php';

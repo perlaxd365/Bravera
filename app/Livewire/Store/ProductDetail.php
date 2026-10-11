@@ -297,6 +297,12 @@ class ProductDetail extends Component
             return;
         }
 
+        if (! auth()->user()->hasVerifiedEmail()) {
+            $this->redirect(route('verification.notice'), navigate: true);
+
+            return;
+        }
+
         $this->validate([
             'reviewRating' => ['required', 'integer', 'between:1,5'],
             'reviewComment' => ['required', 'string', 'min:5', 'max:1500'],
