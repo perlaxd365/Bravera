@@ -1,4 +1,4 @@
-<header x-data="{ navOpen: false }" class="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur-lg">
+<header x-data="{ navOpen: false }" class="relative z-40 border-b border-gray-200 bg-white/90 backdrop-blur-lg lg:sticky lg:top-0">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3">
             <a href="{{ route('home') }}" class="flex items-center gap-2 text-xl font-extrabold tracking-tight text-gray-950">
