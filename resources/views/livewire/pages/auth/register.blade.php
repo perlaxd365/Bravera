@@ -103,7 +103,9 @@ new #[Layout('layouts.guest')] class extends Component
                     wire:model="terms"
                     id="terms"
                     type="checkbox"
-                    class="mt-0.5 size-4 rounded border-gray-300 text-gray-900 shadow-sm focus:ring-gray-900/20"
+                    @error('terms') aria-describedby="terms-error" @enderror
+                    aria-invalid="@error('terms') true @else false @enderror"
+                    class="mt-0.5 size-4 rounded border-gray-300 text-gray-900 shadow-sm focus:ring-gray-900/20 @error('terms') border-red-500 focus:ring-red-500 @enderror"
                     required
                 >
                 <span>
@@ -114,6 +116,9 @@ new #[Layout('layouts.guest')] class extends Component
                     de Brevare.
                 </span>
             </label>
+            @error('terms')
+                <p id="terms-error" class="-mt-3 text-sm font-medium text-red-700" role="alert">Marca la casilla para aceptar los Términos y Condiciones y la Política de Privacidad.</p>
+            @enderror
 
             <x-brevare.button class="w-full">
                 Crear cuenta
