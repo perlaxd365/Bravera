@@ -30,6 +30,67 @@ body {
     font-synthesis-weight: none;
 }
 
+/* Shared responsive behavior for data tables across the storefront,
+   account pages, and admin workspace. Email tables live outside <main>. */
+main {
+    min-width: 0;
+}
+
+main > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.responsive-table-scroll {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.responsive-table-scroll:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.responsive-table-scroll > table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+}
+
+.responsive-table-scroll th {
+    white-space: nowrap;
+}
+
+.responsive-table-scroll td {
+    vertical-align: middle;
+}
+
+.responsive-table-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.responsive-table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+
+@media (max-width: 767px) {
+    .responsive-table-scroll > table {
+        min-width: max-content;
+    }
+
+    .responsive-table-scroll th,
+    .responsive-table-scroll td {
+        padding-inline: 0.75rem;
+    }
+}
+
 /* Hide Alpine-powered elements before hydration */
 [x-cloak] {
     display: none !important;

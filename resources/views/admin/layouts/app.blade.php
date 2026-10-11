@@ -15,7 +15,7 @@
 
             @include('admin.layouts.partials.navbar')
 
-            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+            <main class="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
                 {{ $slot }}
             </main>
 

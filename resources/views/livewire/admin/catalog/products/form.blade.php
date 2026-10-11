@@ -276,7 +276,7 @@
                                     {{-- LISTADO DE VARIANTES --}}
                                     {{-- ================================================= --}}
 
-                                    <div class="overflow-x-auto">
+                                    <div class="responsive-table-scroll" role="region" aria-label="Tabla desplazable horizontalmente" tabindex="0">
                                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                                             <thead class="bg-gray-50">
                                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -553,7 +553,7 @@
                                             </div>
 
                                             {{-- LISTADO DE PROVEEDORES --}}
-                                            <div class="overflow-x-auto">
+                                            <div class="responsive-table-scroll" role="region" aria-label="Tabla desplazable horizontalmente" tabindex="0">
                                                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                                                     <thead class="bg-gray-50">
                                                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">

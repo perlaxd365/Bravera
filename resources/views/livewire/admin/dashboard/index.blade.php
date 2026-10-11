@@ -65,7 +65,7 @@
                 </h2>
                 <a href="{{ route('admin.orders.index') }}" class="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-900 transition hover:bg-gray-50">Ver todos</a>
             </header>
-            <div class="overflow-x-auto">
+            <div class="responsive-table-scroll" role="region" aria-label="Tabla desplazable horizontalmente" tabindex="0">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
