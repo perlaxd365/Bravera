@@ -114,7 +114,6 @@ new #[Layout('layouts.guest')] class extends Component
     <x-brevare.auth-card
         title="Verifica tu correo"
         subtitle="Te enviamos un código de 6 dígitos para confirmar tu cuenta."
-        :plain-on-mobile="true"
     >
         <div class="auth-rise" style="animation-delay: 80ms">
             <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
