@@ -59,6 +59,44 @@ class Catalog extends Component
         $this->resetPage();
     }
 
+    public function updatedBrandId(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMinPrice(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMaxPrice(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearBrand(): void
+    {
+        $this->brandId = null;
+        $this->resetPage();
+    }
+
+    public function clearAttributeValue(int $attributeId, int $valueId): void
+    {
+        $this->attributeValues[$attributeId] = array_values(array_filter(
+            $this->attributeValues[$attributeId] ?? [],
+            fn ($selectedId) => (int) $selectedId !== $valueId,
+        ));
+
+        $this->attributeValues = array_filter($this->attributeValues);
+        $this->resetPage();
+    }
+
+    public function clearPriceRange(): void
+    {
+        $this->reset(['minPrice', 'maxPrice']);
+        $this->resetPage();
+    }
+
     public function clearFilters(): void
     {
         $this->reset(['search', 'brandId', 'attributeValues', 'minPrice', 'maxPrice', 'sort']);

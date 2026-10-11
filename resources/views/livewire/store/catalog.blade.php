@@ -1,4 +1,4 @@
-<div>
+<div x-data="{ filtersOpen: false }">
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {{-- Migas de pan --}}
         <nav aria-label="breadcrumb" class="mb-3 text-sm">
@@ -35,17 +35,42 @@
             </div>
         @endif
 
-        <div class="grid gap-6 lg:grid-cols-4">
+        @php
+            $selectedAttributeFilters = $attributes->flatMap(function ($attribute) use ($attributeValues) {
+                $selectedIds = array_map('strval', $attributeValues[$attribute->id] ?? []);
+
+                return $attribute->values
+                    ->filter(fn ($value) => in_array((string) $value->id, $selectedIds, true))
+                ->map(fn ($value) => ['attribute_id' => $attribute->id, 'id' => $value->id, 'label' => $attribute->name.': '.$value->value]);
+            })->values();
+            $activeFilterCount = (int) filled($brandId)
+                + $selectedAttributeFilters->count()
+                + (int) filled($minPrice)
+                + (int) filled($maxPrice);
+        @endphp
+
+        <div class="grid gap-4 lg:grid-cols-4 lg:gap-6">
 
             {{-- Filtros --}}
             <aside class="lg:col-span-1">
-                <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+                <button
+                    type="button"
+                    class="flex min-h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm lg:hidden"
+                    @click="filtersOpen = !filtersOpen"
+                    :aria-expanded="filtersOpen.toString()"
+                    aria-controls="catalog-filters"
+                >
+                    <span class="inline-flex items-center gap-2"><flux:icon name="funnel" class="size-4" /> Filtros @if ($activeFilterCount) <span class="rounded-full bg-amber-300 px-2 py-0.5 text-xs text-amber-950">{{ $activeFilterCount }}</span> @endif</span>
+                    <flux:icon name="chevron-down" class="size-4 transition-transform" x-bind:class="filtersOpen ? 'rotate-180' : ''" />
+                </button>
+
+                <div id="catalog-filters" class="mt-3 hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:sticky lg:top-24 lg:mt-0 lg:block lg:p-5" x-bind:class="filtersOpen ? '!block' : ''">
                     <div class="mb-4 flex items-center justify-between">
                         <h2 class="text-sm font-bold text-gray-900">
                             <span class="inline-flex items-center gap-1.5"><flux:icon name="funnel" class="size-4" /> Filtros</span>
                         </h2>
                         @if ($brandId || $attributeValues || $minPrice || $maxPrice || $search)
-                            <button class="text-sm font-medium text-gray-600 transition hover:text-gray-900" wire:click="clearFilters">
+                            <button class="text-sm font-medium text-gray-600 transition hover:text-gray-900" wire:click="clearFilters" @click="filtersOpen = false">
                                 Limpiar
                             </button>
                         @endif
@@ -68,7 +93,7 @@
                     <div class="mb-4">
                         <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-500">Marca</label>
                         <div class="relative">
-                            <select wire:model.live="brandId"
+                            <select wire:model.live="brandId" @change="filtersOpen = false"
                                 class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                                 <option value="">Todas</option>
                                 @foreach ($brands as $brand)
@@ -83,10 +108,10 @@
                     <div class="mb-4">
                         <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-500">Precio (S/)</label>
                         <div class="flex items-center gap-2">
-                            <input type="number" wire:model.live.debounce.500ms="minPrice" placeholder="Mín" min="0" step="0.01"
+                            <input type="number" wire:model.live.debounce.500ms="minPrice" @change="filtersOpen = false" placeholder="Mín" min="0" step="0.01"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <span class="text-gray-400">-</span>
-                            <input type="number" wire:model.live.debounce.500ms="maxPrice" placeholder="Máx" min="0" step="0.01"
+                            <input type="number" wire:model.live.debounce.500ms="maxPrice" @change="filtersOpen = false" placeholder="Máx" min="0" step="0.01"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         </div>
                     </div>
@@ -101,6 +126,7 @@
                                     <input type="checkbox"
                                         wire:model.live="attributeValues.{{ $attribute->id }}"
                                         value="{{ $value->id }}" id="attr-{{ $attribute->id }}-{{ $value->id }}"
+                                        @change="filtersOpen = false"
                                         class="size-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900/30">
                                     {{ $value->value }}
                                     @if ($value->color)
@@ -110,11 +136,35 @@
                             @endforeach
                         </div>
                     @endforeach
+
+                    <button type="button" class="mt-3 min-h-11 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 lg:hidden" @click="filtersOpen = false">
+                        Ver productos
+                    </button>
                 </div>
             </aside>
 
             {{-- Productos --}}
             <div class="lg:col-span-3">
+                @if ($activeFilterCount)
+                    <div class="mb-4 flex flex-wrap items-center gap-2" aria-label="Filtros aplicados">
+                        <span class="mr-1 text-xs font-semibold text-gray-500">Aplicados:</span>
+                        @if ($brandId && $selectedBrand = $brands->firstWhere('id', $brandId))
+                            <button type="button" wire:click="clearBrand" class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950">
+                                {{ $selectedBrand->name }} <span aria-hidden="true">×</span><span class="sr-only">Quitar filtro de marca</span>
+                            </button>
+                        @endif
+                        @foreach ($selectedAttributeFilters as $selectedFilter)
+                            <button type="button" wire:click="clearAttributeValue({{ $selectedFilter['attribute_id'] }}, {{ $selectedFilter['id'] }})" class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950">
+                                {{ $selectedFilter['label'] }} <span aria-hidden="true">×</span><span class="sr-only">Quitar filtro</span>
+                            </button>
+                        @endforeach
+                        @if (filled($minPrice) || filled($maxPrice))
+                            <button type="button" wire:click="clearPriceRange" class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950">
+                                Precio: {{ filled($minPrice) ? 'S/ '.number_format($minPrice, 2) : 'S/ 0' }} – {{ filled($maxPrice) ? 'S/ '.number_format($maxPrice, 2) : 'sin máximo' }} <span aria-hidden="true">×</span><span class="sr-only">Quitar filtro de precio</span>
+                            </button>
+                        @endif
+                    </div>
+                @endif
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <span class="text-sm text-gray-500">{{ $products->total() }} producto(s)</span>
                     <div class="relative">

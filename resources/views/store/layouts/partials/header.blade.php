@@ -82,13 +82,6 @@
 
     <div x-cloak class="lg:hidden">
         <div x-show="navOpen" x-transition.opacity.duration.150ms class="border-t border-gray-200 bg-white px-4 py-4">
-            <form class="mb-3" action="{{ route('store.search') }}" method="GET" role="search">
-                <div class="relative">
-                    <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-                    <input type="search" name="q" value="{{ request('q') }}" placeholder="Buscar productos..."
-                        class="w-full rounded-full border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none" aria-label="Buscar">
-                </div>
-            </form>
             <nav class="flex flex-col gap-1">
                 <a href="{{ route('home') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Inicio</a>
                 <a href="{{ route('store.search') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Catálogo</a>
