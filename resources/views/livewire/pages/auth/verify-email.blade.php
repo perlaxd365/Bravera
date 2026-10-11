@@ -110,7 +110,7 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div>
+<div class="w-full min-w-0">
     <x-brevare.auth-card
         title="Verifica tu correo"
         subtitle="Te enviamos un código de 6 dígitos para confirmar tu cuenta."

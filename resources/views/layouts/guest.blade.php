@@ -17,7 +17,7 @@
         @livewireStyles
     </head>
     <body class="min-h-screen bg-[#f9fafb] font-sans text-gray-900 antialiased">
-        <div class="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+        <div class="grid min-h-screen min-w-0 lg:grid-cols-[1.05fr_1fr]">
 
             {{-- Panel de marca (estilo Ripley / Falabella) --}}
             <aside class="relative hidden overflow-hidden bg-gray-950 lg:block" aria-hidden="true">
@@ -82,7 +82,7 @@
             </aside>
 
             {{-- Columna del formulario --}}
-            <main class="relative flex min-w-0 flex-col">
+            <main class="relative flex min-h-screen min-w-0 flex-col overflow-x-clip">
                 <div class="flex items-center justify-between px-6 pt-6 sm:px-10 lg:hidden">
                     <a href="{{ route('home') }}" wire:navigate class="flex items-center gap-2">
                         <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
@@ -92,7 +92,7 @@
                     </a>
                 </div>
 
-                <div class="flex min-w-0 flex-1 items-start justify-center px-4 py-6 sm:items-center sm:px-10 sm:py-10">
+                <div class="flex min-h-0 min-w-0 flex-1 items-start justify-center px-4 py-6 sm:items-center sm:px-10 sm:py-10">
                     {{ $slot }}
                 </div>
 

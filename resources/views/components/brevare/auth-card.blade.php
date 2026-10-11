@@ -4,8 +4,8 @@
     'icon' => null,
 ])
 
-<section {{ $attributes->merge(['class' => 'auth-rise w-full max-w-md']) }}>
-    <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl shadow-gray-950/5 sm:p-8">
+<section {{ $attributes->merge(['class' => 'auth-rise mx-auto w-full min-w-0 max-w-md']) }}>
+    <div class="w-full min-w-0 rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl shadow-gray-950/5 sm:p-8">
 
         @if ($icon)
             <span class="mb-5 inline-flex size-11 items-center justify-center rounded-2xl bg-gray-900 text-white">

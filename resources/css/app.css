@@ -403,15 +403,14 @@ button.bg-emerald-600:not(:disabled):active {
     }
 }
 
-/* OTP: estado "pegado" al escribir */
-.otp-input {
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+/* OTP: casillas de tamaño fijo; el input transparente recibe teclado y pegado. */
+.otp-code-entry:focus-within .otp-input {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
 }
 
-.otp-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
-    transform: translateY(-2px);
+.otp-input {
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .otp-input.otp-filled {
