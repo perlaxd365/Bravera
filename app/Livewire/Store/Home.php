@@ -42,6 +42,7 @@ class Home extends Component
                         $q->active()->whereColumn('stock', '>', 'reserved_stock');
                     });
             })
+            ->when($featured->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $featured->modelKeys()))
             ->latest()
             ->limit(12)
             ->get();
@@ -72,7 +73,10 @@ class Home extends Component
             'general' => 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=82',
         ];
 
-        $categories->each(function (Category $category) use ($categoryFallbacks) {
+        $allCategories = $primaryCategories->concat($categories)->unique('id')->values();
+        $discoveryCategory = $categories->first() ?? $allCategories->first();
+
+        $allCategories->each(function (Category $category) use ($categoryFallbacks) {
             $label = mb_strtolower($category->name.' '.$category->path);
             $key = match (true) {
                 str_contains($label, 'tecnolog') || str_contains($label, 'electr') || str_contains($label, 'celular') || str_contains($label, 'comput') => 'tech',
@@ -105,6 +109,6 @@ class Home extends Component
             'url' => route('store.product', ['slug' => $product->slug]),
         ])->values();
 
-        return view('livewire.store.home', compact('featured', 'latest', 'primaryCategories', 'categories', 'brands', 'heroSlides', 'rotatingProducts', 'homeTexts'));
+        return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'rotatingProducts', 'homeTexts'));
     }
 }

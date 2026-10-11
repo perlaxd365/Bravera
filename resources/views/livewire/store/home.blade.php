@@ -1,235 +1,199 @@
-<div>
-    {{-- Descubrimiento de productos: la pequeña recomendación cambia cada 3 segundos. --}}
+<div class="home-editorial">
+    {{-- Descubrimiento destacado: una pausa editorial entre navegación y campaña. --}}
     @if ($rotatingProducts->isNotEmpty())
-        <section x-data="{ items: @js($rotatingProducts), active: 0, timer: null, paused: false, next() { this.active = (this.active + 1) % this.items.length }, start() { this.stop(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.items.length > 1) this.timer = setInterval(() => { if (!this.paused) this.next() }, 3000) }, stop() { clearInterval(this.timer); this.timer = null } }"
+        <section x-data="{ items: @js($rotatingProducts), active: 0, timer: null, paused: false, next() { this.active = (this.active + 1) % this.items.length }, start() { this.stop(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.items.length > 1) this.timer = setInterval(() => { if (!this.paused) this.next() }, 4800) }, stop() { clearInterval(this.timer); this.timer = null } }"
             x-init="start()" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
-            class="mx-auto mt-3 max-w-7xl px-4 sm:px-6 lg:px-8">
-            <a :href="items[active].url" class="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 shadow-sm transition hover:border-amber-300 hover:bg-amber-100 sm:px-5">
+            class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+            <a :href="items[active].url" class="group flex min-h-[58px] items-center justify-between gap-4 rounded-2xl bg-[#f8f5ed] px-4 py-2.5 transition-colors hover:bg-amber-50 sm:px-5">
                 <span class="flex min-w-0 items-center gap-3">
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-300 text-amber-950"><flux:icon name="sparkles" class="size-4" /></span>
-                    <span class="min-w-0"><span class="block text-[10px] font-bold uppercase tracking-[.16em] text-amber-900/70" x-text="items[active].phrase"></span><span class="block truncate text-sm font-semibold text-gray-900" x-text="items[active].name"></span></span>
+                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-amber-800"><flux:icon name="sparkles" class="size-4" /></span>
+                    <span class="min-w-0"><span class="block text-[10px] font-bold uppercase tracking-[.16em] text-amber-900/65" x-text="items[active].phrase"></span><span class="block truncate text-sm font-semibold text-gray-900" x-text="items[active].name"></span></span>
                 </span>
-                <span class="flex shrink-0 items-center gap-3"><img :src="items[active].image" alt="" class="size-11 rounded-xl bg-white object-cover shadow-sm" x-show="items[active].image"><span class="hidden text-sm font-semibold text-amber-950 sm:inline">Descubrir <span aria-hidden="true">→</span></span></span>
+                <span class="flex shrink-0 items-center gap-3"><img :src="items[active].image" alt="" class="size-10 rounded-xl object-cover" x-show="items[active].image"><span class="hidden text-sm font-semibold text-gray-800 sm:inline">Descubrir <span aria-hidden="true">↗</span></span></span>
             </a>
         </section>
     @endif
 
-    {{-- Portadas de temporada y categorías --}}
+    {{-- Portada de campaña: fotografía protagonista y texto con espacio propio. --}}
     @if ($heroSlides)
         <section x-data="{
             active: 0,
             slides: @js($heroSlides),
             timer: null,
-            next() { this.active = (this.active + 1) % this.slides.length; },
-            prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length; },
-            go(i) { this.active = i; },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 4000); },
-            stop() { if (this.timer) clearInterval(this.timer); this.timer = null; }
+            next() { this.active = (this.active + 1) % this.slides.length },
+            prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
+            go(i) { this.active = i },
+            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 6500) },
+            stop() { clearInterval(this.timer); this.timer = null }
         }"
-            x-init="start()"
-            @mouseenter="stop()"
-            @mouseleave="start()"
-            @focusin="stop()"
-            @focusout="start()"
+            x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
             @visibilitychange.window="document.hidden ? stop() : start()"
-            class="mx-auto mt-4 w-full max-w-7xl overflow-hidden px-4 sm:px-6 lg:px-8">
+            class="mx-auto mt-5 max-w-screen-2xl px-4 sm:mt-7 sm:px-6 lg:px-10">
+            <div class="home-hero relative overflow-hidden rounded-[1.75rem] bg-[#f5f2eb] sm:rounded-[2.25rem]">
+                <div class="grid min-h-[540px] lg:grid-cols-[.9fr_1.1fr]">
+                    <div class="order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-10 lg:order-1 lg:px-14 lg:py-14 xl:px-[4.5rem]">
+                        <template x-for="(slide, i) in slides" :key="'copy-' + i">
+                            <div x-show="i === active" x-transition.opacity.duration.400ms x-cloak>
+                                <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70 sm:text-xs" x-text="slide.eyebrow"></p>
+                                <h1 class="mt-4 max-w-xl text-[2.35rem] font-semibold leading-[1.04] tracking-[-.045em] text-[#171714] sm:text-5xl lg:text-[3.8rem] xl:text-[4.2rem]">
+                                    <span x-text="slide.title"></span>
+                                    <span class="text-amber-700" x-text="slide.highlight"></span>
+                                </h1>
+                                <p class="mt-5 max-w-md text-base leading-7 text-gray-600 sm:text-lg sm:leading-8" x-text="slide.subtitle"></p>
+                                <a :href="slide.url" class="mt-7 inline-flex min-h-12 items-center gap-3 rounded-full bg-[#171714] px-6 text-sm font-semibold text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-900">
+                                    <span x-text="slide.cta"></span><span aria-hidden="true">↗</span>
+                                </a>
+                            </div>
+                        </template>
 
-            <div class="relative h-[320px] w-full overflow-hidden rounded-[1.5rem] border border-amber-100 bg-gray-900 shadow-xl shadow-amber-950/10 sm:h-[380px] sm:rounded-[2rem] lg:h-[430px]">
-                <template x-for="(slide, i) in slides" :key="i">
-                    <div x-show="i === active" x-transition.opacity.duration.500ms x-cloak class="absolute inset-0">
-                        <img :src="slide.image" :alt="slide.title"
-                            class="absolute inset-0 h-full w-full animate-hero-pan object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-r from-gray-950/85 via-gray-950/45 to-gray-950/5"></div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-gray-950/40 via-transparent to-transparent"></div>
-
-                        <div class="absolute inset-x-0 bottom-0 px-5 pb-16 sm:px-10 sm:pb-20 lg:px-16">
-                            <p class="text-xs font-bold uppercase tracking-[0.22em] text-amber-300 sm:text-sm" x-text="slide.eyebrow"></p>
-                            <h2 class="mt-2 max-w-xl text-2xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-[2.6rem]">
-                                <span x-text="slide.title"></span>
-                                <span class="text-amber-300" x-text="slide.highlight"></span>
-                            </h2>
-                            <p class="mt-2 max-w-lg text-sm leading-relaxed text-white/85 sm:text-base" x-text="slide.subtitle"></p>
-                            <a :href="slide.url"
-                                class="mt-5 inline-flex min-h-12 items-center gap-2 rounded-full bg-amber-300 px-6 py-3 text-sm font-bold text-gray-950 shadow-lg shadow-black/15 transition hover:bg-amber-200">
-                                <span x-text="slide.cta"></span>
-                                <flux:icon name="arrow-right" class="size-4" />
-                            </a>
+                        <div class="mt-10 flex items-center gap-4 sm:mt-14">
+                            <button type="button" @click="prev()" aria-label="Portada anterior" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
+                                <flux:icon name="chevron-left" class="size-5" />
+                            </button>
+                            <div class="flex items-center gap-1.5" role="group" aria-label="Seleccionar portada">
+                                <template x-for="(slide, i) in slides" :key="'dot-' + i">
+                                    <button type="button" @click="go(i)" :aria-label="'Ir a portada ' + (i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-11 min-w-5 items-center justify-center focus-visible:outline-2 focus-visible:outline-amber-700">
+                                        <span class="h-1.5 rounded-full transition-all duration-500" :class="i === active ? 'w-7 bg-amber-700' : 'w-1.5 bg-gray-400/65'"></span>
+                                    </button>
+                                </template>
+                            </div>
+                            <button type="button" @click="next()" aria-label="Siguiente portada" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
+                                <flux:icon name="chevron-right" class="size-5" />
+                            </button>
+                            <span class="ml-auto hidden items-center gap-2 text-xs font-medium text-gray-500 sm:inline-flex"><span class="size-1.5 rounded-full bg-emerald-600"></span>Ideas para cada temporada</span>
                         </div>
                     </div>
-                </template>
 
-                <div>
-                        <button type="button" @click="prev()" aria-label="Anterior"
-                            class="absolute left-4 top-1/2 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition hover:bg-white/20 sm:flex">
-                            <flux:icon name="chevron-left" class="size-5" />
-                        </button>
-                        <button type="button" @click="next()" aria-label="Siguiente"
-                            class="absolute right-4 top-1/2 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition hover:bg-white/20 sm:flex">
-                            <flux:icon name="chevron-right" class="size-5" />
-                        </button>
-                </div>
-
-                <div class="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1 rounded-full border border-white/15 bg-gray-950/35 px-2 py-1 backdrop-blur-md" role="group" aria-label="Seleccionar portada">
-                    <template x-for="(slide, i) in slides" :key="'dot-' + i">
-                        <button type="button" @click="go(i)" :aria-label="'Ir al slide ' + (i + 1)"
-                            :aria-current="i === active ? 'true' : 'false'"
-                            class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                            <span class="block h-1.5 rounded-full transition-all duration-300" :class="i === active ? 'w-5 bg-amber-300' : 'w-1.5 bg-white/65'"></span>
-                        </button>
-                    </template>
+                    <div class="relative order-1 h-[250px] overflow-hidden bg-[#e6e0d4] sm:h-[360px] lg:order-2 lg:h-full lg:min-h-[540px]">
+                        <template x-for="(slide, i) in slides" :key="'image-' + i">
+                            <div x-show="i === active" x-transition.opacity.duration.700ms x-cloak class="absolute inset-0">
+                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" class="h-full w-full object-cover">
+                                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:to-black/[.04]"></div>
+                            </div>
+                        </template>
+                        <span class="absolute bottom-4 right-4 rounded-full border border-white/50 bg-white/75 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.16em] text-gray-800 backdrop-blur-md sm:bottom-6 sm:right-6">Brevare · Perú</span>
+                    </div>
                 </div>
             </div>
         </section>
     @endif
 
-    {{-- Productos destacados: visibles pronto para acortar el camino a la compra. --}}
-    @if ($featured->isNotEmpty())
-        <section class="mx-auto max-w-7xl px-4 pb-5 pt-6 sm:px-6 sm:pb-7 sm:pt-8 lg:px-8">
-            <div class="reveal mb-4 flex items-end justify-between gap-3 sm:mb-5">
-                <div>
-                    <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-800">Selección Brevare</p>
-                    <h2 class="mt-1 text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">{{ $homeTexts['featured'] ?? 'Productos destacados' }}</h2>
-                </div>
-                <a href="{{ route('store.search') }}" class="shrink-0 text-sm font-semibold text-gray-600 transition hover:text-amber-800">Ver tienda <span aria-hidden="true">→</span></a>
-            </div>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                @foreach ($featured as $product)
-                    <div class="reveal" style="transition-delay: {{ ($loop->index % 4) * 55 }}ms">
-                        @include('store.components.product-card', ['product' => $product])
+    {{-- Categorías en una única vitrina: movimiento horizontal suave y natural. --}}
+    @if ($allCategories->isNotEmpty())
+        <section x-data="{
+            index: 0,
+            direction: 1,
+            timer: null,
+            paused: false,
+            get cards() { return this.$refs.track?.children ?? [] },
+            move(direction = 1) {
+                const track = this.$refs.track;
+                if (!track || this.cards.length < 2) return;
+                const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+                const step = this.cards[0].getBoundingClientRect().width + gap;
+                const max = Math.max(0, track.scrollWidth - track.clientWidth);
+                const destination = track.scrollLeft + direction * step;
+                if (direction > 0 && destination >= max - 4) {
+                    this.index = this.cards.length - 1;
+                    this.direction = -1;
+                    track.scrollTo({ left: max, behavior: 'smooth' });
+                } else if (direction < 0 && destination <= 4) {
+                    this.index = 0;
+                    this.direction = 1;
+                    track.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    track.scrollBy({ left: direction * step, behavior: 'smooth' });
+                    this.index = Math.max(0, this.index + direction);
+                    this.direction = direction;
+                }
+            },
+            start() { this.stop(); if (this.cards.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) this.timer = setInterval(() => { if (!this.paused) this.move(this.direction) }, 5200) },
+            stop() { clearInterval(this.timer); this.timer = null }
+        }"
+            x-init="start()" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
+            @visibilitychange.window="document.hidden ? stop() : start()"
+            class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
+            <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+                <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Hecho para encontrar</p>
+                        <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl lg:text-[2.5rem]">Un buen hallazgo empieza aquí.</h2>
+                        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">Explora colecciones elegidas para acompañar tus días.</p>
                     </div>
+                    <div class="mb-1 flex shrink-0 items-center gap-2">
+                        <a href="{{ route('store.search') }}" class="mr-2 hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">Ver todas <span class="ml-1" aria-hidden="true">↗</span></a>
+                        <button type="button" @click="move(-1)" aria-label="Categorías anteriores" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 bg-white/80 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700"><flux:icon name="chevron-left" class="size-5" /></button>
+                        <button type="button" @click="move(1)" aria-label="Siguientes categorías" class="flex size-11 items-center justify-center rounded-full bg-[#171714] text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"><flux:icon name="chevron-right" class="size-5" /></button>
+                    </div>
+                </div>
+
+                <div x-ref="track" class="category-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 sm:gap-5 lg:gap-6" role="region" aria-label="Explora categorías" tabindex="0">
+                    @foreach ($allCategories as $category)
+                        <a href="{{ route('store.category', ['path' => $category->path]) }}" class="home-category-card group relative isolate flex min-h-[270px] shrink-0 snap-start items-end overflow-hidden rounded-[1.5rem] bg-[#e8e3da] text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700 sm:min-h-[340px] sm:rounded-[1.8rem] lg:min-h-[390px]">
+                            <img src="{{ $category->store_image }}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]">
+                            <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
+                            <span class="relative flex w-full items-end justify-between gap-3 p-5 sm:p-6 lg:p-7">
+                                <span class="min-w-0">
+                                    <span class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-white/80">Colección Brevare</span>
+                                    <span class="block truncate text-2xl font-semibold tracking-[-.03em] sm:text-3xl">{{ $category->name }}</span>
+                                </span>
+                                <span class="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/15 text-white backdrop-blur-md transition group-hover:border-white group-hover:bg-white group-hover:text-gray-900" aria-hidden="true"><span class="text-xl leading-none">↗</span></span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+                <div class="mt-3 flex items-center justify-between text-xs text-gray-500 sm:hidden"><span>Desliza para explorar</span><a href="{{ route('store.search') }}" class="font-semibold text-gray-800">Ver todas ↗</a></div>
+            </div>
+        </section>
+    @endif
+
+    {{-- Productos reales; el módulo editorial llena el espacio si hay poca selección. --}}
+    @if ($featured->isNotEmpty())
+        <section class="mx-auto max-w-screen-2xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-10">
+            <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Selección Brevare</p>
+                    <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['featured'] ?? 'Productos destacados' }}</h2>
+                </div>
+                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">Ver la tienda <span class="ml-1" aria-hidden="true">↗</span></a>
+            </div>
+            @if ($featured->count() <= 2 && $allCategories->isNotEmpty())
+                <div class="grid gap-5 lg:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)] lg:gap-7">
+                    <div class="home-featured-card">
+                        @include('store.components.product-card', ['product' => $featured->first()])
+                    </div>
+                    @php($discoveryCategory = $allCategories->first())
+                    <a href="{{ route('store.category', ['path' => $discoveryCategory->path]) }}" class="home-discovery-card group relative isolate flex min-h-[390px] items-end overflow-hidden rounded-[1.75rem] bg-[#e8e3da] sm:min-h-[440px]">
+                        <img src="{{ $discoveryCategory->store_image }}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]">
+                        <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
+                        <span class="relative max-w-lg p-6 text-white sm:p-9 lg:p-11">
+                            <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">Más para descubrir</span>
+                            <span class="mt-2 block text-3xl font-semibold leading-tight tracking-[-.035em] sm:text-4xl">Pequeños detalles. Grandes momentos.</span>
+                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">Explora {{ $discoveryCategory->name }} <span aria-hidden="true">↗</span></span>
+                        </span>
+                    </a>
+                </div>
+            @else
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+                    @foreach ($featured as $product)
+                        <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+    @endif
+
+    @if ($latest->isNotEmpty())
+        <section class="mx-auto max-w-screen-2xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-10">
+            <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
+                <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Recién llegados</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2></div>
+                <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">Descubrir novedades ↗</a>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+                @foreach ($latest as $product)
+                    <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
                 @endforeach
             </div>
         </section>
     @endif
-
-    {{-- Categorías principales --}}
-    <section class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-        <div class="reveal mb-4 flex items-center justify-between sm:mb-5">
-            <div>
-                <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">Encuentra tu estilo</p>
-                <h2 class="mt-1 text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">{{ $homeTexts['primary_categories'] ?? 'Compra por categoría' }}</h2>
-            </div>
-            <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-600 transition hover:text-amber-800">Ver tienda <span aria-hidden="true">→</span></a>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            @foreach ($primaryCategories as $category)
-                <a href="{{ route('store.category', ['path' => $category->path]) }}"
-                    class="reveal group relative isolate flex aspect-[5/4] min-h-[170px] items-end overflow-hidden rounded-[1.25rem] bg-gray-900 text-left shadow-sm shadow-gray-900/10 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-950/15 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500 sm:min-h-[220px] sm:rounded-[1.5rem] lg:min-h-[270px]"
-                    style="transition-delay: {{ $loop->index * 70 }}ms">
-                    @if ($category->image)
-                        <img src="{{ $category->image }}" alt="{{ $category->name }}" loading="lazy" class="absolute inset-0 z-0 h-full w-full object-cover transition duration-1000 ease-out group-hover:scale-110">
-                    @else
-                        <div class="absolute inset-0 z-0 bg-gradient-to-br from-amber-700 via-orange-900 to-gray-950"></div>
-                    @endif
-                    <span class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-gray-950/90 via-gray-950/10 to-gray-950/5 transition duration-500 group-hover:from-gray-950/95"></span>
-                    <span class="relative z-20 flex w-full items-end justify-between gap-2 p-3.5 sm:p-5 lg:p-6">
-                        <span class="min-w-0 translate-y-1 transition duration-300 group-hover:translate-y-0">
-                            <span class="block text-xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-2xl lg:text-3xl">{{ $category->name }}</span>
-                            <span class="mt-1 block text-xs font-medium text-white/90 sm:text-sm">Explora la colección</span>
-                        </span>
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-300 text-gray-950 shadow-lg transition duration-300 group-hover:translate-x-1 group-hover:bg-white sm:size-12"><flux:icon name="arrow-right" class="size-5" /></span>
-                    </span>
-                </a>
-            @endforeach
-        </div>
-    </section>
-
-    {{-- Otras categorías --}}
-    <section x-data="{
-        index: 0,
-        timer: null,
-        paused: false,
-        get cards() { return this.$refs.track?.children ?? [] },
-        move(direction = 1) {
-            const track = this.$refs.track;
-            if (!track || this.cards.length < 2) return;
-            const max = Math.max(0, track.scrollWidth - track.clientWidth);
-            const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-            const step = this.cards[0].getBoundingClientRect().width + gap;
-            if (direction > 0 && track.scrollLeft + step > max - 8) {
-                this.index = 0;
-                track.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                track.scrollBy({ left: direction * step, behavior: 'smooth' });
-                this.index = Math.max(0, Math.min(this.cards.length - 1, this.index + direction));
-            }
-        },
-        start() {
-            this.stop();
-            if (this.cards.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                this.timer = setInterval(() => { if (!this.paused) this.move() }, 4200);
-            }
-        },
-        stop() { clearInterval(this.timer); this.timer = null }
-    }"
-        x-init="start()"
-        @mouseenter="paused = true"
-        @mouseleave="paused = false"
-        @focusin="paused = true"
-        @focusout="paused = false"
-        @visibilitychange.window="document.hidden ? stop() : start()"
-        class="overflow-hidden bg-gradient-to-b from-amber-50/70 to-white py-8 sm:py-11">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="reveal mb-5 flex items-end justify-between gap-4 sm:mb-6">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-800">Un mundo por descubrir</p>
-                <h2 class="mt-1 text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">{{ $homeTexts['categories'] ?? 'Explora nuestras categorías' }}</h2>
-                <p class="mt-1 text-sm text-gray-600">Encuentra eso que hace especial cada día.</p>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
-                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-600 transition hover:text-amber-800 sm:inline-flex">Ver todo <span class="ml-1" aria-hidden="true">→</span></a>
-                <button type="button" @click="move(-1)" aria-label="Categorías anteriores" class="flex size-10 items-center justify-center rounded-full border border-amber-200 bg-white text-gray-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-amber-500">
-                    <flux:icon name="chevron-left" class="size-5" />
-                </button>
-                <button type="button" @click="move(1)" aria-label="Siguientes categorías" class="flex size-10 items-center justify-center rounded-full border border-amber-300 bg-amber-300 text-gray-950 shadow-sm transition hover:bg-amber-200 focus-visible:outline-2 focus-visible:outline-amber-600">
-                    <flux:icon name="chevron-right" class="size-5" />
-                </button>
-            </div>
-        </div>
-
-        <div x-ref="track" class="category-carousel flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-4 sm:gap-4" role="region" aria-label="Categorías de compra" tabindex="0">
-            @forelse ($categories as $category)
-                <a href="{{ route('store.category', ['path' => $category->path]) }}"
-                    class="reveal group relative isolate flex min-h-[210px] shrink-0 snap-start items-end overflow-hidden rounded-[1.4rem] bg-gray-900 text-left shadow-md shadow-gray-900/10 transition duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-950/15 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500 sm:min-h-[250px] lg:min-h-[280px]"
-                    style="transition-delay: {{ ($loop->index % 4) * 60 }}ms">
-                    <img src="{{ $category->store_image }}" alt="" loading="lazy" class="absolute inset-0 z-0 h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105">
-                    <span class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-gray-950/85 via-gray-950/15 to-transparent"></span>
-                    <span class="relative z-20 flex w-full items-end justify-between gap-2 p-4 sm:p-5">
-                        <span class="min-w-0">
-                            <span class="block truncate text-lg font-bold tracking-tight text-white sm:text-xl">{{ $category->name }}</span>
-                            <span class="mt-1 block text-xs font-medium text-white/85 sm:text-sm">Ver colección</span>
-                        </span>
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-300 text-gray-950 shadow-lg transition duration-300 group-hover:translate-x-1 group-hover:bg-white" aria-hidden="true">
-                            <flux:icon name="arrow-right" class="size-4" />
-                        </span>
-                    </span>
-                </a>
-            @empty
-                <div class="col-span-2 py-10 text-center text-sm text-gray-500 sm:col-span-4">Aún no hay categorías disponibles.</div>
-            @endforelse
-        </div>
-        <div class="mt-1 flex items-center justify-between sm:hidden">
-            <span class="text-xs font-medium text-gray-500">Desliza para descubrir más</span>
-            <a href="{{ route('store.search') }}" class="text-xs font-bold text-amber-900">Ver todas →</a>
-        </div>
-        </div>
-    </section>
-
-    {{-- Recién llegados --}}
-    <section class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <h2 class="reveal mb-5 text-lg font-bold tracking-tight text-gray-900">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2>
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            @forelse ($latest as $product)
-                <div class="reveal" style="transition-delay: {{ ($loop->index % 4) * 70 }}ms">
-                    @include('store.components.product-card', ['product' => $product])
-                </div>
-            @empty
-                <div class="col-span-2 py-10 text-center text-sm text-gray-500 sm:col-span-4">
-                    <flux:icon name="cube" class="mx-auto mb-2 size-8 text-gray-300" />
-                    Aún no hay productos disponibles.
-                </div>
-            @endforelse
-        </div>
-    </section>
 </div>
