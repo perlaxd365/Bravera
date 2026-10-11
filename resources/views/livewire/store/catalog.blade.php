@@ -1,4 +1,14 @@
-<div x-data="{ filtersOpen: false }">
+<div
+    x-data="{ filtersOpen: false }"
+    x-on:catalog-filters-updated.window="
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.getElementById('catalog-top')?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+        if (!reducedMotion) $nextTick(() => $refs.catalogResults?.animate(
+            [{ opacity: 0.55, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+            { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+        ));
+    "
+>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {{-- Migas de pan --}}
         <nav aria-label="breadcrumb" class="mb-3 text-sm">
@@ -20,7 +30,7 @@
             </ol>
         </nav>
 
-        <h1 class="mb-5 text-2xl font-bold tracking-tight text-gray-900">
+        <h1 id="catalog-top" class="mb-5 text-2xl font-bold tracking-tight text-gray-900">
             {{ $currentCategory?->name ?? ($search ? 'Resultados de búsqueda' : 'Catálogo completo') }}
         </h1>
 
@@ -147,7 +157,7 @@
             </aside>
 
             {{-- Productos --}}
-            <div class="lg:col-span-3">
+            <div class="lg:col-span-3" x-ref="catalogResults">
                 @if ($activeFilterCount)
                     <div class="mb-4 flex flex-wrap items-center gap-2" aria-label="Filtros aplicados">
                         <span class="mr-1 text-xs font-semibold text-gray-500">Aplicados:</span>

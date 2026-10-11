@@ -56,28 +56,28 @@ class Catalog extends Component
 
     public function updatedAttributeValues(): void
     {
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function updatedBrandId(): void
     {
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function updatedMinPrice(): void
     {
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function updatedMaxPrice(): void
     {
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function clearBrand(): void
     {
         $this->brandId = null;
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function clearAttributeValue(int $valueId): void
@@ -87,19 +87,19 @@ class Catalog extends Component
             fn (int $selectedId) => $selectedId !== $valueId,
         ));
 
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function clearPriceRange(): void
     {
         $this->reset(['minPrice', 'maxPrice']);
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function clearFilters(): void
     {
         $this->reset(['search', 'brandId', 'attributeValues', 'minPrice', 'maxPrice', 'sort']);
-        $this->resetPage();
+        $this->filtersChanged();
     }
 
     public function render(StoreCatalogRepository $repository)
@@ -163,5 +163,11 @@ class Catalog extends Component
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function filtersChanged(): void
+    {
+        $this->resetPage();
+        $this->dispatch('catalog-filters-updated');
     }
 }
