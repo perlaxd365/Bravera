@@ -34,7 +34,7 @@
                     </button>
 
                     <div x-show="open" x-transition.opacity.scale.origin.top.right.duration.150ms x-cloak
-                        class="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl shadow-gray-950/5">
+                        class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl shadow-gray-950/5">
                         <div class="border-b border-gray-100 px-4 py-2 text-sm text-gray-500">{{ Auth::user()->email }}</div>
                         <a href="{{ route('account.orders') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
                             <flux:icon name="cube" class="size-4 text-gray-400" /> Mis pedidos
