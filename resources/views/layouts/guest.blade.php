@@ -16,8 +16,8 @@
         @fluxAppearance
         @livewireStyles
     </head>
-    <body class="min-h-dvh bg-white font-sans text-gray-900 antialiased lg:bg-[#f9fafb]">
-        <div class="grid min-h-dvh min-w-0 lg:grid-cols-[1.05fr_1fr]">
+    <body class="min-h-screen bg-[#f9fafb] font-sans text-gray-900 antialiased">
+        <div class="grid min-h-screen min-w-0 lg:grid-cols-[1.05fr_1fr]">
 
             {{-- Panel de marca (estilo Ripley / Falabella) --}}
             <aside class="relative hidden overflow-hidden bg-gray-950 lg:block" aria-hidden="true">
@@ -82,8 +82,8 @@
             </aside>
 
             {{-- Columna del formulario --}}
-            <main class="relative flex min-h-dvh min-w-0 flex-col overflow-x-clip">
-                <div class="flex items-center justify-between px-5 pt-5 sm:px-10 sm:pt-8 lg:hidden">
+            <main class="relative flex min-h-screen min-w-0 flex-col overflow-x-clip">
+                <div class="flex items-center justify-between px-6 pt-6 sm:px-10 lg:hidden">
                     <a href="{{ route('home') }}" wire:navigate class="flex items-center gap-2">
                         <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
                             <flux:icon name="shopping-bag" class="size-4" variant="solid" />
@@ -92,11 +92,11 @@
                     </a>
                 </div>
 
-                <div class="flex min-h-0 min-w-0 flex-1 items-start justify-center px-5 py-7 sm:items-center sm:px-10 sm:py-10">
+                <div class="flex min-h-0 min-w-0 flex-1 items-start justify-center px-4 py-6 sm:items-center sm:px-10 sm:py-10">
                     {{ $slot }}
                 </div>
 
-                <p class="px-5 pb-5 text-center text-xs text-gray-400 lg:hidden">
+                <p class="pb-6 text-center text-xs text-gray-400 lg:hidden">
                     &copy; {{ date('Y') }} Brevare &middot; Tu tienda online
                 </p>
             </main>
