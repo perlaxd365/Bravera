@@ -74,6 +74,10 @@ class PaymentService
 
         // 3. Resultado y confirmación.
         return DB::transaction(function () use ($payment, $result, $order, $gatewayName) {
+            // El gateway puede persistir metadatos (p. ej. la clave idempotente
+            // de una preferencia) antes de consultar al proveedor.
+            $payment->refresh();
+
             $payment->update([
                 'status' => $result['status'],
                 'raw_response' => $result['raw'],
@@ -96,19 +100,25 @@ class PaymentService
                     (array) config('payments.modal_gateways', []),
                     true,
                 );
+            $retryableCheckout = ! $pending
+                && in_array(
+                    $gatewayName,
+                    (array) config('payments.retryable_checkout_gateways', []),
+                    true,
+                );
 
             $order->update([
                 'status' => OrderStatus::PENDING,
                 // Un rechazo de tarjeta/Yape dentro del checkout modal no
                 // cancela la orden. El comprador puede corregir los datos y
                 // volver a intentar con la misma orden y la reserva vigente.
-                'payment_status' => ($pending || $retryableModal)
+                'payment_status' => ($pending || $retryableModal || $retryableCheckout)
                     ? PaymentStatus::PENDING
                     : PaymentStatus::FAILED,
             ]);
 
             // Fuera del checkout modal, un fallo sí es definitivo y libera stock.
-            if (! $pending && ! $retryableModal) {
+            if (! $pending && ! $retryableModal && ! $retryableCheckout) {
                 app(OrderService::class)->releaseStock($order);
             }
 
@@ -230,13 +240,26 @@ class PaymentService
      */
     public function markAsPaid(Payment $payment, ?array $raw = null): Payment
     {
-        $order = $payment->order;
+        return DB::transaction(function () use ($payment, $raw) {
+            $order = Order::query()->lockForUpdate()->find($payment->order_id);
+            $lockedPayment = Payment::query()->lockForUpdate()->find($payment->id);
 
-        if ($order !== null && $order->payment_status === PaymentStatus::PAID) {
-            return $payment;
-        }
+            if ($lockedPayment === null) {
+                return $payment;
+            }
 
-        return DB::transaction(function () use ($payment, $order, $raw) {
+            if ($order === null) {
+                return $lockedPayment;
+            }
+
+            $payment = $lockedPayment;
+
+            // La guarda se hace bajo lock: retorno y webhook pueden llegar a
+            // la vez, y el stock/evento de pedido pagado solo debe ejecutarse una vez.
+            if ($order->payment_status === PaymentStatus::PAID) {
+                return $payment;
+            }
+
             $payment->update(array_filter([
                 'status' => PaymentStatus::PAID,
                 'paid_at' => now(),
@@ -304,6 +327,12 @@ class PaymentService
         }
 
         $gateway = app($class);
+
+        if (method_exists($gateway, 'isAvailable') && ! $gateway->isAvailable()) {
+            throw new PaymentGatewayNotConfiguredException(
+                "La pasarela [{$name}] está registrada, pero no está habilitada o no tiene toda su configuración requerida."
+            );
+        }
 
         return [$gateway, $gateway->name()];
     }

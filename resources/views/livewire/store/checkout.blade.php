@@ -293,6 +293,26 @@
                     Método de pago
                 </h2>
 
+                @if (count($availableGateways) > 1)
+                    <div class="mb-4 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Pasarela de pago">
+                        @foreach ($availableGateways as $gatewayKey => $gatewayLabel)
+                            <label for="gateway-{{ $gatewayKey }}"
+                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $selectedGateway === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }} {{ $awaitingPayment ? 'cursor-not-allowed opacity-70' : '' }}">
+                                <input id="gateway-{{ $gatewayKey }}" type="radio" name="payment_gateway"
+                                    value="{{ $gatewayKey }}" wire:model.live="selectedGateway"
+                                    @disabled($awaitingPayment)
+                                    class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
+                                <span>
+                                    <span class="block text-sm font-semibold text-gray-900">{{ $gatewayKey === 'culqi' ? 'Culqi' : 'Mercado Pago' }}</span>
+                                    <span class="mt-0.5 block text-xs leading-5 text-gray-500">
+                                        {{ $gatewayKey === 'culqi' ? 'Tarjetas, Yape y otros medios disponibles.' : 'Pago seguro en la página de Mercado Pago.' }}
+                                    </span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
+
                 @if ($usesProviderModal)
                     {{-- Culqi muestra aquí sus medios habilitados, sin salir
                          del checkout de Brevare. --}}
@@ -319,6 +339,13 @@
                             El pago con tarjeta no está disponible en este momento. Escríbenos y coordinamos tu compra.
                         </div>
                     @endif
+                @elseif ($selectedGateway === 'mercadopago')
+                    <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-4">
+                        <p class="flex items-start gap-3 text-sm text-gray-900">
+                            <flux:icon name="lock-closed" class="mt-0.5 size-5 shrink-0" />
+                            <span>Al continuar, te llevaremos al checkout seguro de Mercado Pago. Podrás elegir los medios habilitados para tu cuenta.</span>
+                        </p>
+                    </div>
                 @elseif ($paymentMethods === [])
                     <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
                         No hay métodos de pago disponibles en este momento. Escríbenos y coordinamos tu compra.
@@ -415,7 +442,7 @@
                         <p class="font-semibold">Tu pedido {{ $pendingOrderNumber }} está reservado y esperando el
                             pago.</p>
                         <p class="mt-1 text-amber-800">
-                            Vuelve a abrir el formulario de Culqi para completarlo. Lo dejamos reservado un tiempo;
+                            Vuelve a {{ $selectedGateway === 'mercadopago' ? 'continuar a Mercado Pago' : 'abrir el formulario de Culqi' }} para completarlo. Lo dejamos reservado un tiempo;
                             si no lo pagas, se libera automáticamente.
                         </p>
                     </div>
@@ -466,7 +493,7 @@
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        <span wire:loading.remove>Realizar pedido y pagar</span>
+                        <span wire:loading.remove>{{ $selectedGateway === 'mercadopago' ? 'Continuar a Mercado Pago' : 'Realizar pedido y pagar' }}</span>
                         <span wire:loading>Procesando...</span>
                     </button>
                 @endif

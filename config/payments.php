@@ -2,6 +2,7 @@
 
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\DemoGateway;
+use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
 
 return [
 
@@ -32,6 +33,7 @@ return [
 
     'gateways' => [
         'culqi' => CulqiGateway::class,
+        'mercadopago' => MercadoPagoGateway::class,
         'demo' => DemoGateway::class,
         'manual' => DemoGateway::class,
     ],
@@ -119,6 +121,15 @@ return [
         ],
     ],
 
+    'mercadopago' => [
+        'enabled' => env('MP_ENABLED', false),
+        'access_token' => env('MP_ACCESS_TOKEN'),
+        'webhook_secret' => env('MP_WEBHOOK_SECRET'),
+        'webhook_url' => env('MP_WEBHOOK_URL'),
+        'timeout' => env('MP_TIMEOUT', 15),
+        'statement_descriptor' => env('MP_STATEMENT_DESCRIPTOR', 'BREVARE'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Horas que un pedido espera el pago antes de cancelarse
@@ -142,6 +153,7 @@ return [
         'card' => 'Tarjeta de débito/crédito',
         'yape' => 'Yape',
         'transferencia' => 'Transferencia bancaria',
+        'mercadopago' => 'Mercado Pago',
     ],
 
     /*
@@ -166,6 +178,7 @@ return [
 
     'gateway_methods' => [
         'culqi' => ['card', 'yape'],
+        'mercadopago' => ['mercadopago'],
         'demo' => ['card', 'yape', 'transferencia'],
         'manual' => ['card', 'yape', 'transferencia'],
     ],
@@ -187,6 +200,10 @@ return [
     */
 
     'modal_gateways' => ['culqi'],
+
+    // Si el proveedor no crea la sesión externa, conserva la reserva para que
+    // el cliente pueda reintentar sin duplicar el pedido ni perder el stock.
+    'retryable_checkout_gateways' => ['mercadopago'],
 
     /*
     |--------------------------------------------------------------------------

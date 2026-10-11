@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Webhooks\CulqiWebhookController;
+use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
+use App\Http\Controllers\MercadoPagoReturnController;
 use App\Http\Controllers\Seo\SitemapController;
 use App\Http\Controllers\Seo\GoogleMerchantFeedController;
 use App\Livewire\Account\Addresses;
@@ -29,6 +31,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('webhooks/culqi', CulqiWebhookController::class)
     ->name('webhooks.culqi');
+
+Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)
+    ->name('webhooks.mercadopago');
+
+Route::get('pagos/mercadopago/retorno', MercadoPagoReturnController::class)
+    ->name('payments.mercadopago.return');
 
 Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('feeds/google-shopping.xml', GoogleMerchantFeedController::class)->name('google.merchant-feed');

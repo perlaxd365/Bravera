@@ -14,6 +14,7 @@
         "livewire/flux": "^2.20",
         "livewire/livewire": "^3.6.4",
         "livewire/volt": "^1.7.0",
+        "mercadopago/dx-php": "3.16",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {

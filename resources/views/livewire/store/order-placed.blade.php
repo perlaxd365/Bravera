@@ -1,24 +1,34 @@
 <div>
     <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
         <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-10">
-            <span class="mx-auto flex size-16 items-center justify-center rounded-full bg-green-50 text-green-600">
-                <flux:icon name="check-circle" class="size-9" />
+            <span class="mx-auto flex size-16 items-center justify-center rounded-full {{ $order->payment_status->value === 'paid' ? 'bg-green-50 text-green-600' : ($order->payment_status->value === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600') }}">
+                <flux:icon name="{{ $order->payment_status->value === 'paid' ? 'check-circle' : ($order->payment_status->value === 'pending' ? 'clock' : 'exclamation-circle') }}" class="size-9" />
             </span>
-            <h1 class="mt-5 text-2xl font-bold tracking-tight text-gray-900">¡Gracias por tu compra!</h1>
+            <h1 class="mt-5 text-2xl font-bold tracking-tight text-gray-900">
+                {{ $order->payment_status->value === 'paid' ? '¡Gracias por tu compra!' : ($order->payment_status->value === 'pending' ? 'Estamos verificando tu pago' : 'No se completó el pago') }}
+            </h1>
             <p class="mt-2 text-gray-600">
                 Tu pedido
                 <strong class="text-gray-900">{{ $order->order_number }}</strong>
-                fue confirmado, estamos verificando tu pago.
+                @if ($order->payment_status->value === 'paid')
+                    fue pagado y confirmado.
+                @elseif ($order->payment_status->value === 'pending' && $latestPayment?->status?->value === 'failed')
+                    sigue reservado, pero el intento de pago no se completó. Puedes volver a intentarlo.
+                @elseif ($order->payment_status->value === 'pending')
+                    está reservado. Te mostraremos la confirmación cuando Mercado Pago nos notifique.
+                @else
+                    no se confirmó el pago. Elige otro medio de pago o contáctanos.
+                @endif
             </p>
 
             <div class="mx-auto mt-6 grid max-w-md grid-cols-3 gap-4 text-sm">
                 <div>
-                    <span class="block text-gray-500">Total pagado</span>
+                    <span class="block text-gray-500">{{ $order->payment_status->value === 'paid' ? 'Total pagado' : 'Total del pedido' }}</span>
                     <strong class="text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</strong>
                 </div>
                 <div>
                     <span class="block text-gray-500">Método</span>
-                    <strong class="text-gray-900">{{ strtoupper($order->payment?->method ?? 'tarjeta') }}</strong>
+                    <strong class="text-gray-900">{{ $latestPayment?->gateway === 'mercadopago' ? 'Mercado Pago' : strtoupper($latestPayment?->method ?? 'tarjeta') }}</strong>
                 </div>
                 <div>
                     <span class="block text-gray-500">Estado</span>
@@ -114,6 +124,12 @@
             </div>
 
             <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                @if ($order->payment_status->value === 'pending')
+                    <a href="{{ route('checkout', ['pagar' => $order->order_number]) }}"
+                        class="inline-flex items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
+                        Completar pago
+                    </a>
+                @endif
                 <a href="{{ route('account.orders') }}"
                     class="inline-flex items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
                     Ver mis pedidos

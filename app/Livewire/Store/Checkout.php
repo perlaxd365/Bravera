@@ -16,12 +16,14 @@ use App\Modules\Payments\Exceptions\CulqiApiException;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\Culqi\CulqiStatus;
+use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
 use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Shipping\Services\ShippingQuoteService;
 use App\Services\CartService;
 use App\Services\CustomerAddressService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -75,6 +77,8 @@ class Checkout extends Component
 
     public string $paymentMethod = 'card';
 
+    public string $selectedGateway = 'culqi';
+
     /**
      * Fase del pago para la que está la pantalla: inactivo, procesando,
      * confirmado o pendiente de confirmación.
@@ -125,6 +129,12 @@ class Checkout extends Component
 
     public function mount(CartService $cart, ?string $pagar = null)
     {
+        $configuredDefault = config('payments.default_gateway', 'culqi');
+        $this->selectedGateway = is_string($configuredDefault) && in_array($configuredDefault, $this->availableGatewayNames(), true)
+            ? $configuredDefault
+            : 'culqi';
+        $this->syncPaymentMethodToGateway();
+
         $this->authRequired = ! auth()->check();
 
         if ($this->authRequired) {
@@ -202,7 +212,10 @@ class Checkout extends Component
             ->where('user_id', auth()->id())
             ->where('status', OrderStatus::PENDING)
             ->where('payment_status', PaymentStatus::PENDING)
-            ->whereNotNull('gateway_order_id')
+            ->where(function ($query) {
+                $query->whereNotNull('gateway_order_id')
+                    ->orWhereHas('payments', fn ($payments) => $payments->where('gateway', 'mercadopago'));
+            })
             ->where('created_at', '>=', now()->subHours(max(1, $hours)))
             ->latest('id')
             ->first();
@@ -213,6 +226,17 @@ class Checkout extends Component
 
         $this->culqiOrderId = $order->id;
         $this->pendingOrderNumber = $order->order_number;
+
+        $lastGateway = $order->payments()->latest('id')->value('gateway');
+        if ($lastGateway === 'mercadopago') {
+            if (! in_array('mercadopago', $this->availableGatewayNames(), true)) {
+                return false;
+            }
+            $this->selectedGateway = 'mercadopago';
+            $this->syncPaymentMethodToGateway();
+
+            return true;
+        }
 
         $this->culqiSession = $this->buildCulqiSession(
             $order,
@@ -260,6 +284,17 @@ class Checkout extends Component
 
         $this->culqiOrderId = $order->id;
         $this->pendingOrderNumber = $order->order_number;
+
+        $lastGateway = $order->payments()->latest('id')->value('gateway');
+        if ($lastGateway === 'mercadopago') {
+            if (! in_array('mercadopago', $this->availableGatewayNames(), true)) {
+                return false;
+            }
+            $this->selectedGateway = 'mercadopago';
+            $this->syncPaymentMethodToGateway();
+
+            return true;
+        }
 
         // Sin orden en Culqi (un pedido que no llegó a abrir el modal) se crea
         // aquí; con ella, se reutiliza para no dejar órdenes huérfanas.
@@ -453,6 +488,24 @@ class Checkout extends Component
             return;
         }
 
+        if (! in_array($this->selectedGateway, $this->availableGatewayNames(), true)) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'La forma de pago seleccionada no está disponible.']);
+
+            return;
+        }
+
+        $pendingOrder = $this->sessionOrder();
+        if ($pendingOrder?->isPayable()) {
+            $previousGateway = $pendingOrder->payments()->latest('id')->value('gateway');
+            if ($previousGateway && $previousGateway !== $this->selectedGateway) {
+                $this->dispatch('notify', ['type' => 'error', 'message' => 'Continúa el pago de este pedido con la pasarela que seleccionaste al iniciarlo.']);
+
+                return;
+            }
+        }
+
+        $this->syncPaymentMethodToGateway();
+
         // El token solo aplica al método tarjeta y se descarta tras el intento.
         $cardToken = $this->paymentMethod === 'card' ? $cardToken : null;
 
@@ -467,7 +520,11 @@ class Checkout extends Component
             }
         }
 
-        $order = $this->buildOrder([
+        $order = $this->selectedGateway === 'mercadopago'
+            ? $this->payablePendingOrder()
+            : null;
+
+        $order ??= $this->buildOrder([
             'paymentMethod' => ['required', Rule::in($this->supportedMethods())],
         ]);
 
@@ -475,20 +532,66 @@ class Checkout extends Component
             return;
         }
 
+        if ($this->selectedGateway === 'mercadopago') {
+            $this->culqiOrderId = $order->id;
+            $this->pendingOrderNumber = $order->order_number;
+            $order->cart?->update(['status' => 'converted']);
+        }
+
         try {
             // El cobro va FUERA de toda transacción. Culqi no tiene
             // idempotency key: si la transacción envolviera el cobro y luego
             // revirtiera, el cliente habría pagado sin pedido registrado.
-            $payment = app(PaymentService::class)->charge(
-                $order,
-                $this->paymentMethod,
-                sourceId: $cardToken,
-            );
+            if ($this->selectedGateway === 'mercadopago') {
+                $attempt = Cache::lock('mercadopago:checkout:order:'.$order->id, 45)->block(20, function () use ($order) {
+                    $existingCheckoutUrl = $order->payments()
+                        ->where('gateway', 'mercadopago')
+                        ->where('status', PaymentStatus::PENDING)
+                        ->latest('id')
+                        ->value('checkout_url');
+
+                    if (is_string($existingCheckoutUrl) && $existingCheckoutUrl !== '') {
+                        return ['checkout_url' => $existingCheckoutUrl, 'payment' => null];
+                    }
+
+                    $payment = app(PaymentService::class)->charge(
+                        $order,
+                        'mercadopago',
+                        gatewayName: 'mercadopago',
+                    );
+
+                    return ['checkout_url' => $payment->checkout_url, 'payment' => $payment];
+                });
+
+                if ($attempt['checkout_url']) {
+                    $this->redirect($attempt['checkout_url'], navigate: false);
+
+                    return;
+                }
+
+                $payment = $attempt['payment'];
+            } else {
+                $payment = app(PaymentService::class)->charge(
+                    $order,
+                    $this->paymentMethod,
+                    gatewayName: $this->selectedGateway,
+                    sourceId: $cardToken,
+                );
+            }
 
             // Un pago asíncrono (Yape/QR) no está confirmado todavía: el
             // cliente debe completarlo en Culqi antes de seguir.
             if ($this->isPending($payment) && $payment->checkout_url) {
                 $this->redirect($payment->checkout_url, navigate: false);
+
+                return;
+            }
+
+            if ($payment->status === PaymentStatus::FAILED && $this->selectedGateway === 'mercadopago') {
+                $this->dispatch('notify', [
+                    'type' => 'error',
+                    'message' => 'No se pudo iniciar el pago. Tu pedido sigue reservado; vuelve a intentarlo.',
+                ]);
 
                 return;
             }
@@ -920,7 +1023,7 @@ class Checkout extends Component
         //    de configuración no debe dejar pedidos huérfanos. Se avisa en
         //    pantalla porque el mensaje ya está redactado para el comprador.
         try {
-            app(PaymentService::class)->assertGatewayUsable();
+            app(PaymentService::class)->assertGatewayUsable($this->selectedGateway);
         } catch (PaymentGatewayNotConfiguredException $e) {
             report($e);
 
@@ -1087,7 +1190,7 @@ class Checkout extends Component
      */
     private function usesProviderModal(): bool
     {
-        $gateway = config('payments.default_gateway');
+        $gateway = $this->selectedGateway;
 
         return is_string($gateway)
             && in_array($gateway, (array) config('payments.modal_gateways', []), true);
@@ -1095,7 +1198,7 @@ class Checkout extends Component
 
     private function culqiGateway(): ?CulqiGateway
     {
-        $class = config('payments.gateways.'.config('payments.default_gateway'));
+        $class = config('payments.gateways.'.$this->selectedGateway);
 
         return is_string($class) && is_a($class, CulqiGateway::class, true)
             ? app($class)
@@ -1107,7 +1210,7 @@ class Checkout extends Component
      */
     private function gatewayAcceptsCard(): bool
     {
-        $gateway = config('payments.default_gateway');
+        $gateway = $this->selectedGateway;
 
         return is_string($gateway)
             && in_array($gateway, (array) config('payments.card_token_gateways', []), true);
@@ -1126,7 +1229,7 @@ class Checkout extends Component
     {
         $catalog = array_keys((array) config('payments.methods', []));
 
-        $gateway = config('payments.default_gateway');
+        $gateway = $this->selectedGateway;
 
         if (! is_string($gateway) || $gateway === '') {
             return $catalog;
@@ -1157,6 +1260,47 @@ class Checkout extends Component
         );
     }
 
+    public function updatedSelectedGateway(): void
+    {
+        if (! in_array($this->selectedGateway, $this->availableGatewayNames(), true)) {
+            $this->selectedGateway = 'culqi';
+        }
+
+        $this->syncPaymentMethodToGateway();
+    }
+
+    private function syncPaymentMethodToGateway(): void
+    {
+        if ($this->selectedGateway === 'mercadopago') {
+            $this->paymentMethod = 'mercadopago';
+
+            return;
+        }
+
+        $supported = $this->supportedMethods();
+        if (! in_array($this->paymentMethod, $supported, true)) {
+            $this->paymentMethod = $supported[0] ?? 'card';
+        }
+    }
+
+    /** @return list<string> */
+    private function availableGatewayNames(): array
+    {
+        $names = ['culqi'];
+        if (app(MercadoPagoGateway::class)->isAvailable()) {
+            $names[] = 'mercadopago';
+        }
+
+        return $names;
+    }
+
+    private function payablePendingOrder(): ?Order
+    {
+        $order = $this->sessionOrder();
+
+        return $order && $order->isPayable() ? $order : null;
+    }
+
     public function render(CartService $cart)
     {
         if ($this->authRequired) {
@@ -1185,9 +1329,7 @@ class Checkout extends Component
             ? []
             : $this->availablePaymentMethods();
 
-        $order = $usesModal
-            ? $this->sessionOrder()
-            : null;
+        $order = $this->sessionOrder();
 
         if ($order !== null) {
             Log::info('[Checkout] ORDEN RECUPERADA EN RENDER', [
@@ -1245,6 +1387,11 @@ class Checkout extends Component
             'total' => $totals['total'],
 
             'paymentMethods' => $paymentMethods,
+            'availableGateways' => array_intersect_key([
+                'culqi' => 'Culqi · tarjeta, Yape y otros medios',
+                'mercadopago' => 'Mercado Pago · Checkout Pro',
+            ], array_flip($this->availableGatewayNames())),
+            'selectedGateway' => $this->selectedGateway,
             'usesProviderModal' => $usesModal,
             'culqiPublicKey' => $this->culqiPublicKey(),
 
