@@ -48,10 +48,10 @@
             </ol>
         </nav>
 
-        <div class="grid gap-8 lg:grid-cols-2">
+        <div class="grid min-w-0 items-start gap-6 lg:grid-cols-2 lg:gap-8">
 
             {{-- Galería --}}
-            <div>
+            <div class="min-w-0">
                 @if (count($galleryUrls) > 0)
                     <div x-data="{
                             images: @js($galleryUrls),
@@ -118,11 +118,11 @@
 
                             @if (count($galleryUrls) > 1)
                                 <button type="button" @click="prev()" aria-label="Foto anterior"
-                                    class="absolute left-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 opacity-0 shadow-sm backdrop-blur transition group-hover:opacity-100 hover:bg-white focus:opacity-100">
+                                    class="absolute left-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 shadow-sm backdrop-blur transition hover:bg-white">
                                     <flux:icon name="chevron-left" class="size-5" />
                                 </button>
                                 <button type="button" @click="next()" aria-label="Foto siguiente"
-                                    class="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 opacity-0 shadow-sm backdrop-blur transition group-hover:opacity-100 hover:bg-white focus:opacity-100">
+                                    class="absolute right-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 shadow-sm backdrop-blur transition hover:bg-white">
                                     <flux:icon name="chevron-right" class="size-5" />
                                 </button>
 
@@ -132,7 +132,7 @@
                             @endif
 
                             <button type="button" @click="lightbox = true" aria-label="Ampliar imagen"
-                                class="absolute bottom-3 left-3 flex size-9 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 shadow-sm backdrop-blur transition hover:bg-white">
+                                class="absolute bottom-3 left-3 flex size-11 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-700 shadow-sm backdrop-blur transition hover:bg-white">
                                 <flux:icon name="magnifying-glass-plus" class="size-4" />
                             </button>
                         </div>
@@ -196,7 +196,7 @@
             </div>
 
             {{-- Información --}}
-            <div>
+            <div class="min-w-0">
                 @if ($product->brand)
                     <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                         {{ $product->brand->name }}
@@ -236,7 +236,7 @@
                                 @foreach ($attribute['values'] as $value)
                                     <button type="button"
                                         wire:click="$set('selectedAttributes.{{ $attribute['id'] }}', {{ $value['id'] }})"
-                                        class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition {{ ($selectedAttributes[$attribute['id']] ?? null) == $value['id'] ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400' }}"
+                                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition {{ ($selectedAttributes[$attribute['id']] ?? null) == $value['id'] ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400' }}"
                                         @if ($value['color']) style="border-color:{{ $value['color'] }};" @endif>
                                         @if ($value['color'])<span class="inline-block size-3 rounded-full" style="background:{{ $value['color'] }};"></span>@endif
                                         {{ $value['value'] }}
@@ -292,13 +292,13 @@
                         <label class="text-sm font-semibold text-gray-900">Cantidad</label>
                         <div class="flex items-center rounded-full border border-gray-300 bg-white">
                             <button type="button" wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
-                                class="flex size-9 items-center justify-center rounded-l-full text-gray-600 transition hover:bg-gray-100">
+                                class="flex size-11 items-center justify-center rounded-l-full text-gray-600 transition hover:bg-gray-100">
                                 <flux:icon name="minus" class="size-4" />
                             </button>
                             <input type="number" wire:model.live="quantity" min="1"
                                 class="w-14 border-0 text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-0">
                             <button type="button" wire:click="$set('quantity', {{ $quantity + 1 }})"
-                                class="flex size-9 items-center justify-center rounded-r-full text-gray-600 transition hover:bg-gray-100">
+                                class="flex size-11 items-center justify-center rounded-r-full text-gray-600 transition hover:bg-gray-100">
                                 <flux:icon name="plus" class="size-4" />
                             </button>
                         </div>
