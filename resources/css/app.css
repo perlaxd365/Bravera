@@ -46,6 +46,7 @@ main > * {
 .category-carousel {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    scroll-snap-type: x mandatory;
     overscroll-behavior-inline: contain;
     -webkit-overflow-scrolling: touch;
 }
@@ -95,14 +96,15 @@ main > * {
     background: #f7f5ef;
 }
 
-.home-featured-card > div > a > div:first-child {
-    aspect-ratio: 1 / 1;
+.product-card-media {
+    height: auto;
+    max-height: 460px;
 }
 
-@media (min-width: 1024px) {
-    .home-featured-card > div > a > div:first-child {
-        aspect-ratio: 1 / 1;
-    }
+.product-card-media > img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -117,7 +119,9 @@ main > * {
 }
 
 .category-carousel::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 .responsive-table-scroll {

@@ -9,7 +9,7 @@
                     <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-amber-800"><flux:icon name="sparkles" class="size-4" /></span>
                     <span class="min-w-0"><span class="block text-[10px] font-bold uppercase tracking-[.16em] text-amber-900/65" x-text="items[active].phrase"></span><span class="block truncate text-sm font-semibold text-gray-900" x-text="items[active].name"></span></span>
                 </span>
-                <span class="flex shrink-0 items-center gap-3"><img :src="items[active].image" alt="" class="size-10 rounded-xl object-cover" x-show="items[active].image"><span class="hidden text-sm font-semibold text-gray-800 sm:inline">Descubrir <span aria-hidden="true">↗</span></span></span>
+                <span class="flex shrink-0 items-center gap-3"><img :src="items[active].image" alt="" class="size-10 rounded-xl object-cover" x-show="items[active].image" onerror="this.remove()"><span class="hidden text-sm font-semibold text-gray-800 sm:inline">Descubrir <span aria-hidden="true">↗</span></span></span>
             </a>
         </section>
     @endif
@@ -67,7 +67,7 @@
                     <div class="relative order-1 h-[250px] overflow-hidden bg-[#e6e0d4] sm:h-[360px] lg:order-2 lg:h-full lg:min-h-[540px]">
                         <template x-for="(slide, i) in slides" :key="'image-' + i">
                             <div x-show="i === active" x-transition.opacity.duration.700ms x-cloak class="absolute inset-0">
-                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" class="h-full w-full object-cover">
+                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="h-full w-full object-cover">
                                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:to-black/[.04]"></div>
                             </div>
                         </template>
@@ -130,7 +130,7 @@
                 <div x-ref="track" class="category-carousel flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 sm:gap-5 lg:gap-6" role="region" aria-label="Explora categorías" tabindex="0">
                     @foreach ($allCategories as $category)
                         <a href="{{ route('store.category', ['path' => $category->path]) }}" class="home-category-card group relative isolate flex min-h-[270px] shrink-0 snap-start items-end overflow-hidden rounded-[1.5rem] bg-[#e8e3da] text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700 sm:min-h-[340px] sm:rounded-[1.8rem] lg:min-h-[390px]">
-                            <img src="{{ $category->store_image }}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]">
+                            <img src="{{ $category->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $category->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]">
                             <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
                             <span class="relative flex w-full items-end justify-between gap-3 p-5 sm:p-6 lg:p-7">
                                 <span class="min-w-0">
@@ -164,7 +164,7 @@
                     </div>
                     @php($discoveryCategory = $allCategories->first())
                     <a href="{{ route('store.category', ['path' => $discoveryCategory->path]) }}" class="home-discovery-card group relative isolate flex min-h-[390px] items-end overflow-hidden rounded-[1.75rem] bg-[#e8e3da] sm:min-h-[440px]">
-                        <img src="{{ $discoveryCategory->store_image }}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]">
+                        <img src="{{ $discoveryCategory->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $discoveryCategory->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]">
                         <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
                         <span class="relative max-w-lg p-6 text-white sm:p-9 lg:p-11">
                             <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">Más para descubrir</span>

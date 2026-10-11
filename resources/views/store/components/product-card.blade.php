@@ -1,4 +1,5 @@
 @php
+    $coverImage = $product->coverImageModel()?->sizedUrl(900);
     $cardVariants = $product->availableVariants()->get(['sale_price', 'compare_price']);
     $minVariant = $cardVariants->sortBy('sale_price')->first();
     $minPrice = $minVariant ? (float) $minVariant->sale_price : 0;
@@ -24,10 +25,14 @@
 <div>
     <a href="{{ route('store.product', ['slug' => $product->slug]) }}"
         class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-950/10">
-        <div class="relative aspect-[4/3] overflow-hidden bg-amber-50">
-            @if ($product->coverImage())
-                <img src="{{ $product->coverImage() }}" alt="{{ $product->name }}" loading="lazy"
-                    class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]">
+        <div class="product-card-media relative aspect-[4/3] max-h-[460px] overflow-hidden bg-[#f7f5ef]">
+            @if ($coverImage)
+                <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6" aria-hidden="true">
+                    <flux:icon name="photo" class="size-12 text-gray-300" />
+                </div>
+                <img src="{{ $coverImage }}" alt="{{ $product->name }}" loading="lazy" decoding="async"
+                    onerror="this.remove()"
+                    class="relative z-10 h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.025]">
             @else
                 <div class="flex h-full items-center justify-center text-gray-300">
                     <flux:icon name="photo" class="size-12" />

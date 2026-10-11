@@ -63,14 +63,14 @@ class Home extends Component
             ->get();
 
         $categoryFallbacks = [
-            'tech' => 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=82',
-            'fashion' => 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=82',
-            'home' => 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=82',
-            'kitchen' => 'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=800&q=82',
-            'beauty' => 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=800&q=82',
-            'kids' => 'https://images.unsplash.com/photo-1558060370-d644479cb6f7?auto=format&fit=crop&w=800&q=82',
-            'sports' => 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=82',
-            'general' => 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=82',
+            'tech' => 'https://images.pexels.com/photos/7989741/pexels-photo-7989741.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'fashion' => 'https://images.pexels.com/photos/34373606/pexels-photo-34373606.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'home' => 'https://images.pexels.com/photos/14977714/pexels-photo-14977714.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'kitchen' => 'https://images.pexels.com/photos/16443132/pexels-photo-16443132.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'beauty' => 'https://images.pexels.com/photos/3388335/pexels-photo-3388335.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'kids' => 'https://images.pexels.com/photos/28609810/pexels-photo-28609810.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'sports' => 'https://images.pexels.com/photos/14059510/pexels-photo-14059510.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'general' => 'https://images.pexels.com/photos/1477767/pexels-photo-1477767.jpeg?auto=compress&cs=tinysrgb&w=1000',
         ];
 
         $allCategories = $primaryCategories->concat($categories)->unique('id')->values();
@@ -90,6 +90,7 @@ class Home extends Component
             };
 
             $category->store_image = $category->image ?: $categoryFallbacks[$key];
+            $category->store_image_fallback = $categoryFallbacks[$key];
         });
 
         $brands = Brand::query()
@@ -100,15 +101,16 @@ class Home extends Component
 
         $savedSettings = HomepageSetting::query()->first();
         $heroSlides = $savedSettings?->hero_slides ?: config('homepage.slides', []);
+        $heroFallbackImage = config('homepage.slides.0.image');
         $homeTexts = array_merge(config('homepage.texts', []), $savedSettings?->section_texts ?? []);
         $offerPhrases = $savedSettings?->rotating_phrases ?: config('homepage.rotating_phrases', []);
         $rotatingProducts = $featured->take(6)->values()->map(fn (Product $product, int $index) => [
             'phrase' => $offerPhrases[$index % max(1, count($offerPhrases))] ?? 'Encuentra algo especial',
             'name' => $product->name,
-            'image' => $product->coverImage(),
+            'image' => $product->coverImageModel()?->sizedUrl(180),
             'url' => route('store.product', ['slug' => $product->slug]),
         ])->values();
 
-        return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'rotatingProducts', 'homeTexts'));
+        return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'rotatingProducts', 'homeTexts'));
     }
 }
