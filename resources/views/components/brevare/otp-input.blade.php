@@ -13,12 +13,12 @@
     class="relative cursor-text select-none"
     x-on:click="$refs.otp.focus()"
 >
-    <div class="flex gap-2" aria-hidden="true">
+    <div class="mx-auto grid w-full max-w-sm grid-cols-6 gap-2" aria-hidden="true">
         <template x-for="(d, i) in ({{ $model }} + '          ').split('').slice(0, {{ $length }})" :key="i">
             <span
                 x-text="d || ''"
                 :class="d ? 'otp-filled' : ''"
-                class="otp-input pointer-events-none flex h-14 w-full items-center justify-center rounded-xl border border-gray-300 bg-gray-50 text-2xl font-bold tabular-nums text-gray-900"
+                class="otp-input pointer-events-none flex aspect-square w-full items-center justify-center rounded-xl border border-gray-300 bg-gray-50 text-xl font-bold tabular-nums text-gray-900 sm:text-2xl"
             ></span>
         </template>
     </div>

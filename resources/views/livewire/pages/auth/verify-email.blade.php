@@ -156,7 +156,7 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <div
-            class="mt-5 flex items-center justify-center gap-2 text-sm text-gray-500"
+        class="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-gray-500"
             x-data="{
                 wait: @js($this->cooldown()),
                 init() {
@@ -178,7 +178,7 @@ new #[Layout('layouts.guest')] class extends Component
                 wire:click="resend"
                 x-on:click="wait = 60; tick();"
                 x-bind:disabled="wait > 0"
-                class="font-semibold text-gray-900 underline-offset-4 transition hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
+                class="min-h-11 px-1 font-semibold text-gray-900 underline-offset-4 transition hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
             >
                 Reenviar código
             </button>
@@ -193,7 +193,7 @@ new #[Layout('layouts.guest')] class extends Component
                 <button
                     type="button"
                     wire:click="logout"
-                    class="mx-auto flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900"
+                    class="mx-auto flex min-h-11 items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900"
                 >
                     <flux:icon name="arrow-right-start-on-rectangle" class="size-4" />
                     Cerrar sesión

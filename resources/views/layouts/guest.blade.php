@@ -82,7 +82,7 @@
             </aside>
 
             {{-- Columna del formulario --}}
-            <main class="relative flex flex-col">
+            <main class="relative flex min-w-0 flex-col">
                 <div class="flex items-center justify-between px-6 pt-6 sm:px-10 lg:hidden">
                     <a href="{{ route('home') }}" wire:navigate class="flex items-center gap-2">
                         <span class="flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white">
@@ -92,7 +92,7 @@
                     </a>
                 </div>
 
-                <div class="flex flex-1 items-center justify-center px-4 py-10 sm:px-10">
+                <div class="flex min-w-0 flex-1 items-start justify-center px-4 py-6 sm:items-center sm:px-10 sm:py-10">
                     {{ $slot }}
                 </div>
 
