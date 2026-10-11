@@ -80,14 +80,13 @@ class Catalog extends Component
         $this->resetPage();
     }
 
-    public function clearAttributeValue(int $attributeId, int $valueId): void
+    public function clearAttributeValue(int $valueId): void
     {
-        $this->attributeValues[$attributeId] = array_values(array_filter(
-            $this->attributeValues[$attributeId] ?? [],
-            fn ($selectedId) => (int) $selectedId !== $valueId,
+        $this->attributeValues = array_values(array_filter(
+            $this->selectedAttributeValueIds(),
+            fn (int $selectedId) => $selectedId !== $valueId,
         ));
 
-        $this->attributeValues = array_filter($this->attributeValues);
         $this->resetPage();
     }
 
@@ -109,7 +108,7 @@ class Catalog extends Component
             search: $this->search,
             categoryPath: $this->categoryPath,
             brandId: $this->brandId,
-            attributeValueIds: array_values(array_filter($this->attributeValues)),
+            attributeValueIds: $this->selectedAttributeValueIds(),
             minPrice: $this->minPrice,
             maxPrice: $this->maxPrice,
             sort: $this->sort,
@@ -148,5 +147,21 @@ class Catalog extends Component
             'brands',
             'attributes',
         ));
+    }
+
+    /**
+     * Normaliza los valores seleccionados, incluyendo URLs creadas con el formato anterior.
+     *
+     * @return array<int, int>
+     */
+    private function selectedAttributeValueIds(): array
+    {
+        return collect($this->attributeValues)
+            ->flatMap(fn ($value) => is_array($value) ? $value : [$value])
+            ->filter(fn ($value) => is_int($value) || (is_string($value) && ctype_digit($value)))
+            ->map(fn ($value) => (int) $value)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

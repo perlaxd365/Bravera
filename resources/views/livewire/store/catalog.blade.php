@@ -37,11 +37,14 @@
 
         @php
             $selectedAttributeFilters = $attributes->flatMap(function ($attribute) use ($attributeValues) {
-                $selectedIds = array_map('strval', $attributeValues[$attribute->id] ?? []);
+                $selectedIds = collect($attributeValues)
+                    ->flatMap(fn ($selected) => is_array($selected) ? $selected : [$selected])
+                    ->map(fn ($selected) => (string) $selected)
+                    ->all();
 
                 return $attribute->values
                     ->filter(fn ($value) => in_array((string) $value->id, $selectedIds, true))
-                ->map(fn ($value) => ['attribute_id' => $attribute->id, 'id' => $value->id, 'label' => $attribute->name.': '.$value->value]);
+                    ->map(fn ($value) => ['id' => $value->id, 'label' => $attribute->name.': '.$value->value]);
             })->values();
             $activeFilterCount = (int) filled($brandId)
                 + $selectedAttributeFilters->count()
@@ -124,7 +127,7 @@
                             @foreach ($attribute->values as $value)
                                 <label class="mb-1.5 flex cursor-pointer items-center gap-2 text-sm text-gray-700" for="attr-{{ $attribute->id }}-{{ $value->id }}">
                                     <input type="checkbox"
-                                        wire:model.live="attributeValues.{{ $attribute->id }}"
+                                        wire:model.live="attributeValues"
                                         value="{{ $value->id }}" id="attr-{{ $attribute->id }}-{{ $value->id }}"
                                         @change="filtersOpen = false"
                                         class="size-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900/30">
@@ -154,7 +157,7 @@
                             </button>
                         @endif
                         @foreach ($selectedAttributeFilters as $selectedFilter)
-                            <button type="button" wire:click="clearAttributeValue({{ $selectedFilter['attribute_id'] }}, {{ $selectedFilter['id'] }})" class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950">
+                            <button type="button" wire:click="clearAttributeValue({{ $selectedFilter['id'] }})" class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950">
                                 {{ $selectedFilter['label'] }} <span aria-hidden="true">×</span><span class="sr-only">Quitar filtro</span>
                             </button>
                         @endforeach
