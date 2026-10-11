@@ -65,6 +65,28 @@ class ProductDetail extends Component
             }
         }
 
+        // Si no se pidió una variante concreta, inicia en la primera combinación
+        // comprable para que el cliente pueda agregarla sin tener que descubrir
+        // primero que debe seleccionar cada atributo.
+        if ($this->selectedVariantId === null) {
+            $firstAvailableVariant = $this->product->variants
+                ->filter(fn ($variant) => $variant->is_active
+                    && $variant->attributeValues->isNotEmpty()
+                    && $variant->supplierVariants->contains(
+                        fn ($supplier) => $supplier->is_active && $supplier->availableStock() > 0
+                    ))
+                ->sortByDesc('is_default')
+                ->first();
+
+            if ($firstAvailableVariant) {
+                $this->selectedVariantId = (int) $firstAvailableVariant->id;
+                $this->selectedAttributes = $firstAvailableVariant->attributeValues
+                    ->mapWithKeys(fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id])
+                    ->all();
+                $this->resolveSupplierForVariant();
+            }
+        }
+
         $this->recordRecentView();
     }
 
