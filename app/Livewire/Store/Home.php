@@ -70,7 +70,8 @@ class Home extends Component
             'beauty' => 'https://images.pexels.com/photos/3388335/pexels-photo-3388335.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'kids' => 'https://images.pexels.com/photos/28609810/pexels-photo-28609810.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'sports' => 'https://images.pexels.com/photos/14059510/pexels-photo-14059510.jpeg?auto=compress&cs=tinysrgb&w=1000',
-            'general' => 'https://images.pexels.com/photos/1477767/pexels-photo-1477767.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            // This Pexels asset was returning 404 in the live storefront.
+            'general' => 'https://images.pexels.com/photos/34373606/pexels-photo-34373606.jpeg?auto=compress&cs=tinysrgb&w=1000',
         ];
 
         $allCategories = $primaryCategories->concat($categories)->unique('id')->values();
