@@ -121,6 +121,26 @@ class CulqiClient
     }
 
     /**
+     * Consulta una devolución por su ID.
+     *
+     * Verificado contra el spec (GET /v2/refunds/{id} → "Consultar
+     * devolución"): es la forma documentada de conocer el estado real de una
+     * devolución, sin depender del webhook.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getRefund(string $refundId): ?array
+    {
+        $response = $this->api()->get('/refunds/'.$refundId);
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        return $this->json($response);
+    }
+
+    /**
      * Reembolsa total o parcialmente un cargo.
      *
      * Verificado contra la API real (modo test): el endpoint es POST /refunds,
@@ -157,10 +177,23 @@ class CulqiClient
     private function request(string $baseUrl, string $key): PendingRequest
     {
         return Http::withToken($key)
+            // Culqi documenta `x-culqi-product: online` en todos los endpoints
+            // de la API (tokens, cargos, órdenes, devoluciones) como opcional.
+            ->withHeaders(['x-culqi-product' => $this->product()])
             ->acceptJson()
             ->asJson()
             ->timeout((int) config('payments.culqi.timeout', 20))
             ->baseUrl(rtrim($baseUrl, '/'));
+    }
+
+    /**
+     * Identificador de producto que Culqi espera en `x-culqi-product`.
+     */
+    private function product(): string
+    {
+        $product = config('payments.culqi.product', 'online');
+
+        return is_string($product) && trim($product) !== '' ? trim($product) : 'online';
     }
 
     /**

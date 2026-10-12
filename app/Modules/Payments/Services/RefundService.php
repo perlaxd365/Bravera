@@ -9,6 +9,8 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
+use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
+use App\Modules\Payments\Gateways\Culqi\CulqiStatus;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +30,24 @@ use InvalidArgumentException;
  */
 class RefundService
 {
+    /**
+     * Códigos con los que la pasarela rechaza la devolución ANTES de crearla
+     * (verificación del cargo, del monto o de la configuración). En esos casos
+     * no existe nada en Culqi, así que la solicitud puede volver a `pending`.
+     *
+     * Cualquier otro fallo se queda en `failed`: si la petición ya salió, no se
+     * puede descartar que Culqi haya registrado la devolución.
+     */
+    private const PRE_FLIGHT_FAILURES = [
+        'no_charge_id',
+        'charge_not_found',
+        'charge_not_paid',
+        'refund_exceeds_charge',
+        'invalid_amount',
+        'partial_refund_unsupported',
+        'gateway_not_configured',
+    ];
+
     public function __construct(
         protected PaymentService $paymentService,
     ) {}
@@ -125,11 +145,7 @@ class RefundService
         } catch (PaymentGatewayNotConfiguredException $e) {
             // No es un fallo de la devolución: se libera la solicitud para
             // poder reintentarla cuando la pasarela esté configurada.
-            $refund->update([
-                'status' => RefundStatus::PENDING,
-                'validated_by' => null,
-                'validated_at' => null,
-            ]);
+            $this->releaseForRetry($refund, null, 'gateway_not_configured');
 
             throw $e;
         }
@@ -137,22 +153,160 @@ class RefundService
         $result = $gateway->refund($payment, $refund->reason, (float) $refund->amount);
 
         $message = (string) ($result['message'] ?? '');
+        $code = is_string($result['raw']['code'] ?? null) ? $result['raw']['code'] : null;
         $refundId = is_string($result['transaction_id'] ?? null) ? $result['transaction_id'] : null;
         $raw = is_array($result['raw'] ?? null) ? $result['raw'] : null;
 
         if (! ($result['success'] ?? false)) {
+            // Un fallo de verificación previa no creó nada en Culqi: la
+            // solicitud vuelve a quedar pendiente para reintentarla (por
+            // ejemplo, después de vincular el cargo del pago).
+            if ($code !== null && in_array($code, self::PRE_FLIGHT_FAILURES, true)) {
+                return $this->releaseForRetry($refund, $message, $code);
+            }
+
             return $this->settle($refund, RefundStatus::FAILED, $refundId, $raw, $message);
         }
 
         if (($result['status'] ?? null) === PaymentStatus::REFUNDED->value) {
-            $refund = $this->settle($refund, RefundStatus::COMPLETED, $refundId, $raw, null, now());
-            $this->syncPaymentAfterRefund($payment);
-
-            return $refund;
+            return $this->complete($refund, $refundId, $raw);
         }
 
         // La pasarela aceptó la devolución pero la deja en trámite.
         return $this->settle($refund, RefundStatus::PROCESSING, $refundId, $raw, $message);
+    }
+
+    /**
+     * Vincula el cargo de Culqi a un pago cobrado con una orden (`ord_...`).
+     *
+     * El spec de Culqi no documenta cómo obtener el cargo de una orden: el
+     * único camino documentado es consultar el cargo por su ID
+     * (GET /v2/charges/{id}), así que el identificador se toma del panel de
+     * Culqi y aquí se valida contra la API antes de guardarlo.
+     */
+    public function linkCharge(Payment $payment, string $chargeId): Payment
+    {
+        $chargeId = trim($chargeId);
+
+        if (! str_starts_with($chargeId, 'chr_')) {
+            throw new InvalidArgumentException(
+                'El identificador del cargo de Culqi debe empezar con "chr_".'
+            );
+        }
+
+        $gateway = $this->paymentService->gatewayFor((string) $payment->gateway);
+
+        if (! $gateway instanceof CulqiGateway) {
+            throw new InvalidArgumentException('Vincular un cargo solo aplica a pagos de Culqi.');
+        }
+
+        $charge = $gateway->verifyCharge($chargeId);
+
+        if ($charge === null) {
+            throw new InvalidArgumentException(
+                'Culqi no reconoce el cargo '.$chargeId.' con esta llave. Verifica la cuenta y '
+                    .'el entorno (test o producción).'
+            );
+        }
+
+        if (CulqiStatus::resolve($charge) !== CulqiStatus::PAID) {
+            throw new InvalidArgumentException(
+                'El cargo '.$chargeId.' no figura cobrado en Culqi.'
+            );
+        }
+
+        $chargeCents = is_numeric($charge['amount'] ?? null) ? (int) $charge['amount'] : null;
+
+        if ($chargeCents !== null && $chargeCents < (int) round(((float) $payment->amount) * 100)) {
+            throw new InvalidArgumentException(
+                'El cargo '.$chargeId.' es por un monto menor al del pago; verifica que sea el cargo correcto.'
+            );
+        }
+
+        $payment->update(['gateway_charge_id' => $chargeId]);
+
+        return $payment->refresh();
+    }
+
+    /**
+     * Consulta en Culqi el estado real de una devolución ya enviada
+     * (GET /v2/refunds/{id}) y ajusta el estado local.
+     */
+    public function refreshWithGateway(Refund $refund): Refund
+    {
+        $refundId = (string) $refund->gateway_refund_id;
+
+        if ($refundId === '') {
+            throw new InvalidArgumentException(
+                'La devolución todavía no tiene un identificador en la pasarela.'
+            );
+        }
+
+        $remote = $this->culqiGatewayFor($refund)?->verifyRefund($refundId);
+
+        if ($remote === null) {
+            throw new InvalidArgumentException(
+                'Culqi no devolvió la devolución '.$refundId.'. Revisa el entorno de la llave.'
+            );
+        }
+
+        return $this->applyGatewayStatus($refund, $remote);
+    }
+
+    /**
+     * Aplica el estado que Culqi reporta para una devolución.
+     *
+     * Lo usa la validación en el panel, el webhook y la consulta manual: así la
+     * respuesta de Culqi se interpreta en un solo lugar.
+     *
+     * @param  array<string, mixed>  $remote
+     */
+    public function applyGatewayStatus(Refund $refund, array $remote): Refund
+    {
+        $refundId = is_string($remote['id'] ?? null) ? $remote['id'] : $refund->gateway_refund_id;
+
+        return match (CulqiStatus::resolveRefund($remote)) {
+            CulqiStatus::PAID => $this->complete($refund, $refundId, $remote),
+
+            CulqiStatus::PENDING => $this->settle(
+                $refund,
+                RefundStatus::PROCESSING,
+                $refundId,
+                $remote,
+                null
+            ),
+
+            CulqiStatus::FAILED => $this->settle(
+                $refund,
+                RefundStatus::FAILED,
+                $refundId,
+                $remote,
+                'Culqi reporta la devolución como rechazada.'
+            ),
+
+            // Estado no reconocido: no se da por bueno ni se toca el pago.
+            default => $refund,
+        };
+    }
+
+    /**
+     * Devuelve la solicitud a `pending` porque no llegó a crearse en Culqi.
+     *
+     * Se limpia la validación anterior: la decisión del administrador no se
+     * ejecutó, así que debe volver a aprobarse (y el saldo sigue reservado por
+     * estar en un estado que no libera fondos).
+     */
+    public function releaseForRetry(Refund $refund, ?string $note = null, ?string $code = null): Refund
+    {
+        $refund->update([
+            'status' => RefundStatus::PENDING,
+            'validated_by' => null,
+            'validated_at' => null,
+            'gateway_response' => $code !== null ? ['code' => $code] : null,
+            'resolution_notes' => $note !== null && trim($note) !== '' ? trim($note) : null,
+        ]);
+
+        return $refund->refresh();
     }
 
     /**
@@ -198,6 +352,38 @@ class RefundService
     public function refundableAmount(Payment $payment): float
     {
         return round(max(0, (float) $payment->amount - $payment->refundedTotal()), 2);
+    }
+
+    /**
+     * Pasarela de Culqi del pago de la devolución, si aplica.
+     */
+    private function culqiGatewayFor(Refund $refund): ?CulqiGateway
+    {
+        $payment = $refund->payment;
+
+        if ($payment === null) {
+            return null;
+        }
+
+        $gateway = $this->paymentService->gatewayFor((string) $payment->gateway);
+
+        return $gateway instanceof CulqiGateway ? $gateway : null;
+    }
+
+    /**
+     * Cierra la devolución como confirmada por la pasarela.
+     *
+     * @param  array<string, mixed>|null  $raw
+     */
+    private function complete(Refund $refund, ?string $refundId, ?array $raw): Refund
+    {
+        $refund = $this->settle($refund, RefundStatus::COMPLETED, $refundId, $raw, null, now());
+
+        if ($refund->payment !== null) {
+            $this->syncPaymentAfterRefund($refund->payment);
+        }
+
+        return $refund;
     }
 
     /**

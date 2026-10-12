@@ -15,6 +15,7 @@ class Payment extends Model
         'gateway',
         'method',
         'gateway_transaction_id',
+        'gateway_charge_id',
         'source_id',
         'checkout_url',
         'amount',

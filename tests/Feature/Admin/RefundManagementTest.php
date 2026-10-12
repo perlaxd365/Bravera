@@ -119,6 +119,9 @@ class RefundManagementTest extends TestCase
     public function test_el_administrador_aprueba_la_devolucion_y_se_ejecuta_en_culqi(): void
     {
         Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(
+                CulqiResponses::approvedCharge('chr_test_TLdqSCUFh6mh1KMD', 10000)
+            ),
             'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
         ]);
 
@@ -134,6 +137,68 @@ class RefundManagementTest extends TestCase
         $this->assertSame($this->admin()->id, $refund->fresh()->validated_by);
         $this->assertSame(PaymentStatus::REFUNDED, $order->payment->fresh()->status);
         $this->assertSame(PaymentStatus::REFUNDED, $order->fresh()->payment_status);
+    }
+
+    public function test_el_administrador_puede_consultar_la_devolucion_en_culqi(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/refunds/*' => Http::response(
+                CulqiResponses::completedRefund('ref_test_pendiente')
+            ),
+        ]);
+
+        $order = $this->paidOrder();
+        $refund = $this->pendingRefund($order);
+        $refund->update([
+            'status' => RefundStatus::PROCESSING,
+            'gateway_refund_id' => 'ref_test_pendiente',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(RefundsIndex::class)
+            ->call('refresh', $refund->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame(RefundStatus::COMPLETED, $refund->fresh()->status);
+        $this->assertSame(PaymentStatus::REFUNDED, $order->payment->fresh()->status);
+    }
+
+    public function test_el_administrador_vincula_el_cargo_de_un_pago_cobrado_con_orden(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(
+                CulqiResponses::approvedCharge('chr_test_TLdqSCUFh6mh1KMD', 10000)
+            ),
+        ]);
+
+        $order = $this->paidOrder();
+        $order->payment->update(['gateway_transaction_id' => 'ord_test_bHxt0ggE2b9nYa3H']);
+
+        $refund = $this->pendingRefund($order);
+
+        Livewire::actingAs($this->admin())
+            ->test(RefundsIndex::class)
+            ->set('chargeId.'.$refund->id, 'chr_test_TLdqSCUFh6mh1KMD')
+            ->call('linkCharge', $refund->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame('chr_test_TLdqSCUFh6mh1KMD', $order->payment->fresh()->gateway_charge_id);
+    }
+
+    public function test_no_vincula_un_identificador_que_no_es_un_cargo(): void
+    {
+        Http::fake();
+
+        $order = $this->paidOrder();
+        $refund = $this->pendingRefund($order);
+
+        Livewire::actingAs($this->admin())
+            ->test(RefundsIndex::class)
+            ->set('chargeId.'.$refund->id, 'ord_test_bHxt0ggE2b9nYa3H')
+            ->call('linkCharge', $refund->id)
+            ->assertHasErrors('chargeId.'.$refund->id);
+
+        $this->assertNull($order->payment->fresh()->gateway_charge_id);
     }
 
     public function test_el_administrador_rechaza_la_devolucion_sin_reembolsar(): void

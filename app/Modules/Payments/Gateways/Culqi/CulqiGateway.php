@@ -69,10 +69,15 @@ class CulqiGateway implements PaymentGateway
 
     public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
-        $chargeId = $payment->gateway_transaction_id;
+        $chargeId = $this->chargeIdFor($payment);
 
-        if (! is_string($chargeId) || ! str_starts_with($chargeId, 'chr_')) {
-            return $this->failure('El pago no tiene un cargo de Culqi reembolsable.', 'no_charge_id');
+        if ($chargeId === null) {
+            return $this->failure(
+                'El pago no tiene un cargo de Culqi reembolsable. Los métodos asíncronos '
+                    .'(billeteras, banca móvil, agentes, Cuotéalo) se cobran con una orden '
+                    .'`ord_...`; vincula el cargo `chr_...` para poder devolverlo.',
+                'no_charge_id'
+            );
         }
 
         // Culqi admite devoluciones parciales acumulables hasta cubrir el
@@ -88,6 +93,36 @@ class CulqiGateway implements PaymentGateway
             return $this->failure(
                 'El monto de la devolución supera el total cobrado.',
                 'invalid_amount'
+            );
+        }
+
+        // Culqi es la fuente de verdad del cargo: se consulta antes de enviar
+        // la devolución (GET /v2/charges/{id}) para no depender solo de
+        // nuestros registros y para detectar una llave de otro entorno.
+        $charge = $this->verifyCharge($chargeId);
+
+        if ($charge === null) {
+            return $this->failure(
+                'Culqi no reconoce el cargo '.$chargeId.' con esta llave. Verifica que sea la '
+                    .'misma cuenta y el mismo entorno (test o producción) con el que se cobró.',
+                'charge_not_found'
+            );
+        }
+
+        if (CulqiStatus::resolve($charge) !== CulqiStatus::PAID) {
+            return $this->failure(
+                'El cargo '.$chargeId.' no figura cobrado en Culqi, así que no puede devolverse.',
+                'charge_not_paid'
+            );
+        }
+
+        $remaining = $this->chargeRemainingCents($charge);
+
+        if ($remaining !== null && $amountInCents > $remaining) {
+            return $this->failure(
+                'Culqi reporta S/ '.number_format($remaining / 100, 2).' disponibles en el cargo y se '
+                    .'pidió devolver S/ '.number_format($amountInCents / 100, 2).'.',
+                'refund_exceeds_charge'
             );
         }
 
@@ -113,14 +148,13 @@ class CulqiGateway implements PaymentGateway
             return $this->failure('No se pudo procesar el reembolso. Inténtalo de nuevo.', 'refund_request_failed');
         }
 
-        $status = strtolower((string) ($refund['status'] ?? ''));
+        $status = (string) ($refund['status'] ?? '');
         $refundId = (string) ($refund['id'] ?? $chargeId);
 
-        // Verificado contra la API real (modo test): el refund trae
-        // `status: "completa"` (o "pendiente"), no los valores en inglés que
-        // asumíamos. Un estado desconocido no se marca reembolsado.
-        return match ($status) {
-            'completa', 'completado', 'completed', 'refunded' => [
+        // El spec de Culqi define tres estados para la devolución: Completa,
+        // Pendiente y Rechazado. Un estado desconocido NO se marca reembolsado.
+        return match (CulqiStatus::resolveRefund($refund)) {
+            CulqiStatus::PAID => [
                 'success' => true,
                 'transaction_id' => $refundId,
                 'status' => PaymentStatus::REFUNDED->value,
@@ -128,7 +162,7 @@ class CulqiGateway implements PaymentGateway
                 'raw' => $refund,
             ],
 
-            'pendiente', 'pending' => [
+            CulqiStatus::PENDING => [
                 'success' => true,
                 'transaction_id' => $refundId,
                 'status' => PaymentStatus::PENDING->value,
@@ -145,6 +179,60 @@ class CulqiGateway implements PaymentGateway
                 'raw' => $refund,
             ],
         };
+    }
+
+    /**
+     * Cargo de Culqi del pago: el vinculado explícitamente o, si el pago ya se
+     * cobró con un cargo, su propio identificador de transacción.
+     */
+    private function chargeIdFor(Payment $payment): ?string
+    {
+        foreach ([(string) $payment->gateway_charge_id, (string) $payment->gateway_transaction_id] as $candidate) {
+            if (str_starts_with($candidate, 'chr_')) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Saldo del cargo en céntimos según Culqi. `null` cuando la respuesta no
+     * permite calcularlo (entonces no se prejuzga: Culqi decidirá).
+     *
+     * @param  array<string, mixed>  $charge
+     */
+    private function chargeRemainingCents(array $charge): ?int
+    {
+        if (! is_numeric($charge['amount'] ?? null)) {
+            return is_numeric($charge['current_amount'] ?? null)
+                ? (int) $charge['current_amount']
+                : null;
+        }
+
+        if (is_numeric($charge['amount_refunded'] ?? null)) {
+            return max(0, (int) $charge['amount'] - (int) $charge['amount_refunded']);
+        }
+
+        return is_numeric($charge['current_amount'] ?? null)
+            ? (int) $charge['current_amount']
+            : null;
+    }
+
+    /**
+     * Consulta una devolución en Culqi (GET /v2/refunds/{id}).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function verifyRefund(string $refundId): ?array
+    {
+        try {
+            return $this->client->getRefund($refundId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     /**

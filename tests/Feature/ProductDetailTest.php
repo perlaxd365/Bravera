@@ -82,7 +82,10 @@ class ProductDetailTest extends TestCase
         $this->get('/producto/'.$product->slug)
             ->assertOk()
             ->assertSee('img.example.com')
-            ->assertSee('Proveedor Oficial')
+            // Quien vende es Brevare: el proveedor que despacha es interno y no
+            // debe aparecer en la ficha del producto.
+            ->assertDontSee('Proveedor Oficial')
+            ->assertDontSee('Vendido por')
             ->assertSee('S/ 120.00')
             ->assertSee('metodos-de-pago.svg', false)
             ->assertSee('Pago 100% seguro');

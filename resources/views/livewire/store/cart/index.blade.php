@@ -37,7 +37,6 @@
                                 <p class="font-semibold text-gray-900">{{ $item->variant?->product?->name ?? 'Producto' }}</p>
                                 <p class="mb-3 text-xs text-gray-500">
                                     SKU: {{ $item->variant?->sku }}
-                                    · Proveedor: {{ $item->supplierVariant?->supplier?->business_name }}
                                 </p>
 
                                 <div class="flex flex-wrap items-center gap-3">

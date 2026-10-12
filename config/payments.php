@@ -89,6 +89,14 @@ return [
 
         'webhook_url' => env('CULQI_WEBHOOK_URL'),
 
+        /*
+        | Identificador que Culqi espera en la cabecera x-culqi-product.
+        | El spec lo documenta como opcional en todos los endpoints y su
+        | ejemplo es 'online'.
+        */
+
+        'product' => env('CULQI_PRODUCT', 'online'),
+
         'capture' => env('CULQI_CAPTURE', true),
         'timeout' => env('CULQI_TIMEOUT', 20),
 

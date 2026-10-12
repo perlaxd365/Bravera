@@ -282,6 +282,22 @@ class CulqiWebhookTest extends TestCase
      * (`ref_...`), no el del cargo: el pago se ubica por la devolución que
      * registró Brevare.
      */
+    public function test_guarda_el_cargo_de_culqi_al_confirmar_el_pago(): void
+    {
+        Http::fake(['api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge('chr_1'))]);
+
+        $order = $this->order();
+        $payment = $this->payment($order);
+
+        $this->postJson('/webhooks/culqi', [
+            'type' => 'charge.paid',
+            'data' => ['id' => 'chr_1'],
+        ])->assertOk();
+
+        // Sin este cargo no se puede devolver: POST /v2/refunds exige un chr_.
+        $this->assertSame('chr_1', $payment->fresh()->gateway_charge_id);
+    }
+
     public function test_confirma_una_devolucion_creada_en_brevare(): void
     {
         $order = $this->order();
@@ -299,7 +315,13 @@ class CulqiWebhookTest extends TestCase
             'requested_at' => now(),
         ]);
 
-        Http::fake(['api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge('chr_1'))]);
+        // No se confía en el cuerpo del evento: se consulta la devolución en la
+        // API (GET /v2/refunds/{id}).
+        Http::fake([
+            'api.culqi.com/v2/refunds/*' => Http::response(
+                CulqiResponses::completedRefund('ref_test_pendiente')
+            ),
+        ]);
 
         $this->postJson('/webhooks/culqi', [
             'type' => 'refund.creation.succeeded',
@@ -312,7 +334,7 @@ class CulqiWebhookTest extends TestCase
         $this->assertSame(PaymentStatus::REFUNDED, $order->fresh()->payment_status);
     }
 
-    public function test_una_devolucion_fallida_no_toca_el_pago(): void
+    public function test_una_devolucion_que_culqi_no_pudo_crear_vuelve_a_pendiente(): void
     {
         $order = $this->order();
         $payment = $this->payment($order);
@@ -334,6 +356,46 @@ class CulqiWebhookTest extends TestCase
 
         $this->postJson('/webhooks/culqi', [
             'type' => 'refund.creation.failed',
+            'data' => ['id' => 'ref_test_rechazada'],
+        ])->assertOk();
+
+        // Nada se creó en Culqi, así que la solicitud se libera para reintentar.
+        $this->assertSame(RefundStatus::PENDING, $refund->fresh()->status);
+        $this->assertSame('refund_creation_failed', $refund->fresh()->gateway_response['code']);
+        $this->assertSame(PaymentStatus::PAID, $payment->fresh()->status);
+        $this->assertSame(PaymentStatus::PAID, $order->fresh()->payment_status);
+    }
+
+    public function test_una_devolucion_rechazada_en_culqi_no_marca_el_pago(): void
+    {
+        $order = $this->order();
+        $payment = $this->payment($order);
+        $payment->update(['status' => PaymentStatus::PAID]);
+        $order->update(['payment_status' => PaymentStatus::PAID]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'amount' => 51,
+            'currency' => 'PEN',
+            'reason' => 'duplicado',
+            'status' => RefundStatus::PROCESSING,
+            'gateway_refund_id' => 'ref_test_rechazada',
+            'requested_at' => now(),
+        ]);
+
+        Http::fake([
+            'api.culqi.com/v2/refunds/*' => Http::response([
+                'object' => 'refund',
+                'id' => 'ref_test_rechazada',
+                'charge_id' => 'chr_1',
+                'amount' => 5100,
+                'status' => 'rechazado',
+            ]),
+        ]);
+
+        $this->postJson('/webhooks/culqi', [
+            'type' => 'refund.update.succeeded',
             'data' => ['id' => 'ref_test_rechazada'],
         ])->assertOk();
 

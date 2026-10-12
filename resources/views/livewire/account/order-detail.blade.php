@@ -50,7 +50,6 @@
                             <thead class="bg-gray-50">
                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                                     <th class="px-6 py-3">Producto</th>
-                                    <th class="px-6 py-3">Proveedor</th>
                                     <th class="px-6 py-3 text-center">Cant.</th>
                                     <th class="px-6 py-3 text-right">Precio</th>
                                     <th class="px-6 py-3 text-right">Estado</th>
@@ -78,7 +77,6 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 text-gray-600">{{ $item->supplier_name }}</td>
                                         <td class="px-6 py-4 text-center text-gray-900">{{ $item->quantity }}</td>
                                         <td class="px-6 py-4 text-right font-semibold text-gray-900">
                                             S/ {{ number_format((float) $item->unit_price, 2) }}

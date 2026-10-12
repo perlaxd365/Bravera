@@ -30,7 +30,9 @@ class ProductDetail extends Component
     protected array $messages = [
         'quantity.min' => 'La cantidad mínima es 1.',
         'selectedVariantId.required' => 'Selecciona la talla para continuar.',
-        'selectedSupplierVariantId.required' => 'Selecciona un proveedor para continuar.',
+        // El cliente ya no elige proveedor: quien vende es Brevare. Si aparece
+        // este mensaje es porque la variante se quedó sin stock.
+        'selectedSupplierVariantId.required' => 'Este producto no tiene stock disponible por ahora.',
     ];
 
     public function mount(string $slug): void

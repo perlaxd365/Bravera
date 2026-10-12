@@ -299,9 +299,7 @@ class CulqiGatewayTest extends TestCase
 
     public function test_reembolsa_un_cargo(): void
     {
-        Http::fake([
-            'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
-        ]);
+        Http::fake($this->fakeRefund(CulqiResponses::completedRefund()));
 
         $payment = $this->payment();
         $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
@@ -324,9 +322,7 @@ class CulqiGatewayTest extends TestCase
 
     public function test_envia_el_reembolso_con_los_campos_que_exige_culqi(): void
     {
-        Http::fake([
-            'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
-        ]);
+        Http::fake($this->fakeRefund(CulqiResponses::completedRefund()));
 
         $payment = $this->payment();
         $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
@@ -343,19 +339,21 @@ class CulqiGatewayTest extends TestCase
                 && ! array_key_exists('charges_id', $body)
                 && ($body['reason'] ?? null) === 'solicitud_comprador';
         });
+
+        // Culqi documenta `x-culqi-product: online` en todos sus endpoints.
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'api.culqi.com')
+            && $request->header('x-culqi-product')[0] === 'online');
     }
 
     public function test_un_reembolso_pendiente_no_se_marca_reembolsado(): void
     {
-        Http::fake([
-            'api.culqi.com/v2/refunds' => Http::response([
-                'object' => 'refund',
-                'id' => 'ref_test_pendiente',
-                'charge_id' => 'chr_test_TLdqSCUFh6mh1KMD',
-                'amount' => 5100,
-                'status' => 'pendiente',
-            ], 201),
-        ]);
+        Http::fake($this->fakeRefund([
+            'object' => 'refund',
+            'id' => 'ref_test_pendiente',
+            'charge_id' => 'chr_test_TLdqSCUFh6mh1KMD',
+            'amount' => 5100,
+            'status' => 'pendiente',
+        ]));
 
         $payment = $this->payment();
         $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
@@ -364,6 +362,108 @@ class CulqiGatewayTest extends TestCase
 
         $this->assertTrue($result['success']);
         $this->assertSame(PaymentStatus::PENDING->value, $result['status']);
+    }
+
+    public function test_verifica_el_cargo_en_culqi_antes_de_devolver(): void
+    {
+        Http::fake($this->fakeRefund(CulqiResponses::completedRefund()));
+
+        $payment = $this->payment();
+        $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
+
+        app(CulqiGateway::class)->refund($payment);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://api.culqi.com/v2/charges/chr_test_TLdqSCUFh6mh1KMD'
+            && $request->method() === 'GET');
+    }
+
+    public function test_no_reembolsa_si_culqi_no_reconoce_el_cargo(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(['message' => 'Not found'], 404),
+            'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
+        ]);
+
+        $payment = $this->payment();
+        $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
+
+        $result = app(CulqiGateway::class)->refund($payment);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('charge_not_found', $result['raw']['code']);
+        Http::assertNotSent(fn (Request $request) => $request->url() === 'https://api.culqi.com/v2/refunds');
+    }
+
+    public function test_no_reembolsa_mas_de_lo_que_queda_en_el_cargo(): void
+    {
+        // El cargo ya tiene 50.00 devueltos de 51.00 y se intenta devolver 20.00.
+        Http::fake($this->fakeRefund(
+            CulqiResponses::completedRefund(),
+            charge: array_replace(CulqiResponses::approvedCharge(), [
+                'amount_refunded' => 5000,
+                'current_amount' => 100,
+            ]),
+        ));
+
+        $payment = $this->payment();
+        $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
+
+        $result = app(CulqiGateway::class)->refund($payment, null, 20.00);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('refund_exceeds_charge', $result['raw']['code']);
+        Http::assertNotSent(fn (Request $request) => $request->url() === 'https://api.culqi.com/v2/refunds');
+    }
+
+    public function test_consulta_el_estado_real_de_una_devolucion(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/refunds/*' => Http::response([
+                'object' => 'refund',
+                'id' => 'ref_test_TTfLAgaA8nz8PWbO',
+                'charge_id' => 'chr_test_TLdqSCUFh6mh1KMD',
+                'amount' => 5100,
+                'status' => 'completa',
+            ]),
+        ]);
+
+        $refund = app(CulqiGateway::class)->verifyRefund('ref_test_TTfLAgaA8nz8PWbO');
+
+        $this->assertNotNull($refund);
+        $this->assertSame(CulqiStatus::PAID, CulqiStatus::resolveRefund($refund));
+    }
+
+    public function test_no_devuelve_con_dos_llaves_distintas_de_entorno(): void
+    {
+        // `paid: false` y outcome desconocido = la llave ve un cargo que esta
+        // cuenta no cobró (típico de mezclar test y producción).
+        Http::fake($this->fakeRefund(
+            CulqiResponses::completedRefund(),
+            charge: CulqiResponses::declinedCharge('chr_test_TLdqSCUFh6mh1KMD'),
+        ));
+
+        $payment = $this->payment();
+        $payment->update(['gateway_transaction_id' => 'chr_test_TLdqSCUFh6mh1KMD']);
+
+        $result = app(CulqiGateway::class)->refund($payment);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('charge_not_paid', $result['raw']['code']);
+    }
+
+    /**
+     * Fakes de la verificación previa del cargo y de la devolución.
+     *
+     * @param  array<string, mixed>  $refund
+     * @param  array<string, mixed>|null  $charge
+     * @return array<string, mixed>
+     */
+    private function fakeRefund(array $refund, int $status = 201, ?array $charge = null): array
+    {
+        return [
+            'api.culqi.com/v2/charges/*' => Http::response($charge ?? CulqiResponses::approvedCharge(), 200),
+            'api.culqi.com/v2/refunds' => Http::response($refund, $status),
+        ];
     }
 
     /* ---------------------------------------------------------------------

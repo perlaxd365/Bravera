@@ -138,10 +138,6 @@
                                     {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' ┬À ') }}
                                 </span>
                             @endif
-                            @if ($item->supplier_name)
-                                <br>
-                                <span style="font-size:11px;color:#9ca3af;">Proveedor: {{ $item->supplier_name }}</span>
-                            @endif
                         </td>
                         <td align="center" style="padding:12px 8px;border-top:1px solid #f3f4f6;font-size:14px;color:#111827;">
                             {{ $item->quantity }}

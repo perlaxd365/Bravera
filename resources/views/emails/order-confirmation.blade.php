@@ -34,9 +34,6 @@
                             {{ collect($item->variant_attributes)->filter()->map(fn ($v) => is_array($v) ? ($v['value'] ?? '') : $v)->implode(' · ') }}
                         </span>
                     @endif
-                    @if ($item->supplier_name)
-                        <br><span style="font-size:11px;color:#9ca3af;">Proveedor: {{ $item->supplier_name }}</span>
-                    @endif
                     <br><span style="color:#6b7280;">Cantidad: {{ $item->quantity }} · Unitario: S/ {{ number_format((float) $item->unit_price, 2) }}</span>
                     <br><strong>Subtotal: S/ {{ number_format((float) $item->line_subtotal, 2) }}</strong>
                 </td>

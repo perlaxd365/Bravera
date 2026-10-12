@@ -64,9 +64,6 @@
                                 <p class="font-semibold text-gray-900">{{ $item->product_name }}</p>
                                 <p class="text-xs text-gray-500">
                                     {{ $item->variant_sku }}
-                                    @if ($item->supplier_name)
-                                        · {{ $item->supplier_name }}
-                                    @endif
                                     @if ($item->variant_attributes)
                                         · {{ collect($item->variant_attributes)->implode(', ') }}
                                     @endif

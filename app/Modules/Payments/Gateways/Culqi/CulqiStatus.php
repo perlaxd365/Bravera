@@ -72,6 +72,17 @@ final class CulqiStatus
     private const PENDING_STATES = ['pending', 'pendiente', 'paid_in_process'];
 
     /**
+     * Estados de una devolución. El spec (objeto Refunds) define tres:
+     * Completa, Pendiente y Rechazado; se aceptan variantes en inglés porque
+     * Culqi no es uniforme en el resto de objetos.
+     */
+    private const REFUND_DONE = ['completa', 'completado', 'completed', 'refunded', 'pagado'];
+
+    private const REFUND_PENDING = ['pendiente', 'pending', 'en_proceso', 'in_process', 'authorized'];
+
+    private const REFUND_REJECTED = ['rechazado', 'rechazada', 'denied', 'failed', 'cancelado', 'canceled'];
+
+    /**
      * @param  array<string, mixed>  $object
      * @return self::PAID|self::PENDING|self::FAILED|self::UNKNOWN
      */
@@ -80,6 +91,39 @@ final class CulqiStatus
         return self::isOrder($object)
             ? self::resolveOrder($object)
             : self::resolveCharge($object);
+    }
+
+    /**
+     * Resuelve el estado de una devolución (`POST|GET /v2/refunds`).
+     *
+     * Se traduce a los mismos valores que el resto de la clase: PAID = devuelto,
+     * PENDING = en trámite, FAILED = rechazado, UNKNOWN = no reconocido (y por
+     * lo tanto no se da por bueno).
+     *
+     * @param  array<string, mixed>  $refund
+     * @return self::PAID|self::PENDING|self::FAILED|self::UNKNOWN
+     */
+    public static function resolveRefund(array $refund): string
+    {
+        $status = strtolower(trim((string) ($refund['status'] ?? '')));
+
+        if ($status === '') {
+            return self::UNKNOWN;
+        }
+
+        if (in_array($status, self::REFUND_DONE, true)) {
+            return self::PAID;
+        }
+
+        if (in_array($status, self::REFUND_PENDING, true)) {
+            return self::PENDING;
+        }
+
+        if (in_array($status, self::REFUND_REJECTED, true)) {
+            return self::FAILED;
+        }
+
+        return self::UNKNOWN;
     }
 
     /**

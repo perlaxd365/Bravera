@@ -15,7 +15,7 @@
             <li>Datos de identificación: nombre, DNI y datos de contacto.</li>
             <li>Datos de contacto: correo electrónico y número de teléfono.</li>
             <li>Datos de entrega: direcciones de envío y referencias.</li>
-            <li>Datos de navegación y uso de la plataforma.</li>
+            <li>Datos de navegación y uso del sitio web.</li>
             <li>Información de pagos procesada por la pasarela Culqi (no almacenamos datos de tarjeta).</li>
         </ul>
     </section>

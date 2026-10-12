@@ -3,9 +3,9 @@
     <section>
         <h2 class="text-lg font-semibold text-gray-900">1. Información general</h2>
         <p class="mt-2">
-            Bienvenido a <strong>Brevare</strong>, marketplace de productos con envío a todo el Perú.
+            Bienvenido a <strong>Brevare</strong>, tienda online de moda, calzado y accesorios con envío a todo el Perú.
             El uso de este sitio web implica la aceptación plena de los presentes Términos y Condiciones.
-            Si no estás de acuerdo con ellos, te pedimos abstenerte de utilizar la plataforma.
+            Si no estás de acuerdo con ellos, te pedimos abstenerte de utilizar el sitio web.
         </p>
         <p class="mt-2">
             Razón social: {{ $company['legal_name'] }} · RUC: {{ $company['ruc'] }} · Domicilio: {{ $company['address'] }}, distrito de {{ $company['city'] }}, provincia y departamento de {{ $company['region'] }}, {{ $company['country_name'] }}.

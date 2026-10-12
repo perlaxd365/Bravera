@@ -1,7 +1,7 @@
 {
     "name": "Brevare",
     "short_name": "Brevare",
-    "description": "Marketplace de productos con envío a todo el Perú.",
+    "description": "Tienda online de moda, calzado y accesorios con envío a todo el Perú.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#F9FAFB",

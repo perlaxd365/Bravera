@@ -263,26 +263,18 @@
                         </div>
                     @endif
 
-                    {{-- Proveedores disponibles para la variante elegida --}}
-                    @if ($selectedVariant && $currentSuppliers->isNotEmpty())
-                        <div>
-                            <p class="mb-2 text-sm font-semibold text-gray-900">Vendido por</p>
-                            @foreach ($currentSuppliers as $supplierVariant)
-                                <div class="mb-2 flex cursor-pointer items-center rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300">
-                                    <input type="radio" name="supplier"
-                                        wire:model="selectedSupplierVariantId" value="{{ $supplierVariant->id }}"
-                                        id="supplier-{{ $supplierVariant->id }}"
-                                        class="mt-1 size-4 shrink-0 border-gray-300 text-gray-900 focus:ring-gray-900/30">
-                                    <label class="ml-3 w-full cursor-pointer" for="supplier-{{ $supplierVariant->id }}">
-                                        <span class="block text-sm font-semibold text-gray-900">{{ $supplierVariant->supplier?->is_internal ? 'Vendido por Brevare' : ($supplierVariant->supplier?->business_name ?? 'Proveedor') }}</span>
-                                        <span class="block text-xs text-gray-500">
-                                            Disponible: {{ $supplierVariant->availableStock() }} · Envío aprox.
-                                            {{ $supplierVariant->estimated_dispatch_days }} día(s)
-                                        </span>
-                                    </label>
-                                </div>
-                            @endforeach
-                        </div>
+                    {{-- Plazo de entrega de la variante elegida. El proveedor que
+                         despacha es información interna: quien vende es Brevare,
+                         así que el cliente no elige entre terceros. --}}
+                    @php
+                        $dispatchDays = (int) ($currentSuppliers->firstWhere('id', (int) $selectedSupplierVariantId)?->estimated_dispatch_days ?? 0);
+                    @endphp
+
+                    @if ($selectedVariant && $dispatchDays > 0)
+                        <p class="flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                            <flux:icon name="truck" class="size-5 shrink-0 text-gray-400" />
+                            Envío estimado: {{ $dispatchDays }} día(s)
+                        </p>
                     @endif
 
                     {{-- Cantidad --}}

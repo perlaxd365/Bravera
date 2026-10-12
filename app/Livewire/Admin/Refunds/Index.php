@@ -6,6 +6,7 @@ use App\Enums\RefundStatus;
 use App\Models\Refund;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use App\Modules\Payments\Services\RefundService;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -33,6 +34,9 @@ class Index extends Component
 
     /** @var array<int, bool> refundId => formulario de rechazo abierto */
     public array $showRejectFor = [];
+
+    /** @var array<int, string> refundId => cargo de Culqi (chr_...) por vincular */
+    public array $chargeId = [];
 
     public function updatingSearch(): void
     {
@@ -113,6 +117,66 @@ class Index extends Component
         ]);
     }
 
+    /**
+     * Consulta en Culqi el estado real de una devolución en trámite.
+     *
+     * Culqi no necesita webhook para esto: GET /v2/refunds/{id} es la forma
+     * documentada de conocer el estado.
+     */
+    public function refresh(int $refundId): void
+    {
+        $refund = Refund::query()->findOrFail($refundId);
+
+        try {
+            $refund = app(RefundService::class)->refreshWithGateway($refund);
+        } catch (PaymentGatewayNotConfiguredException|InvalidArgumentException $e) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+
+            return;
+        }
+
+        $this->dispatch('notify', [
+            'type' => $refund->status === RefundStatus::COMPLETED ? 'success' : 'warning',
+            'message' => 'Culqi reporta la devolución como "'.$refund->statusLabel().'".',
+        ]);
+    }
+
+    /**
+     * Vincula el cargo de Culqi a un pago cobrado con una orden (`ord_...`).
+     *
+     * Se valida contra la API antes de guardarlo, así que un cargo de otra
+     * cuenta o de otro entorno no llega a persistirse.
+     */
+    public function linkCharge(int $refundId): void
+    {
+        $refund = Refund::query()->findOrFail($refundId);
+        $payment = $refund->payment;
+
+        if ($payment === null) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'La devolución no tiene un pago asociado.',
+            ]);
+
+            return;
+        }
+
+        try {
+            app(RefundService::class)->linkCharge($payment, (string) ($this->chargeId[$refundId] ?? ''));
+        } catch (PaymentGatewayNotConfiguredException|InvalidArgumentException $e) {
+            $this->addError('chargeId.'.$refundId, $e->getMessage());
+
+            return;
+        }
+
+        unset($this->chargeId[$refundId]);
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Cargo vinculado. Ya puedes aprobar la devolución.',
+        ]);
+    }
+
     public function render()
     {
         $counts = collect(RefundStatus::cases())
@@ -128,7 +192,7 @@ class Index extends Component
         $refunds = Refund::query()
             ->with([
                 'order:id,order_number,total,currency,payment_status,customer_snapshot',
-                'payment:id,gateway,method,gateway_transaction_id,status',
+                'payment:id,gateway,method,gateway_transaction_id,gateway_charge_id,status',
                 'requestedBy:id,name',
                 'validatedBy:id,name',
             ])

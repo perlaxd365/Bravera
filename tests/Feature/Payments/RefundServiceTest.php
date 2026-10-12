@@ -7,6 +7,7 @@ use App\Enums\RefundReason;
 use App\Enums\RefundStatus;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Refund;
 use App\Models\User;
 use App\Modules\Payments\Services\RefundService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,6 +114,7 @@ class RefundServiceTest extends TestCase
     public function test_aprobar_envia_la_devolucion_a_culqi_con_el_contrato_que_exige(): void
     {
         Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge(amount: 10000)),
             'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
         ]);
 
@@ -139,6 +141,7 @@ class RefundServiceTest extends TestCase
     public function test_una_devolucion_parcial_no_marca_el_pago_como_reembolsado(): void
     {
         Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge(amount: 10000)),
             'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(amount: 2000), 201),
         ]);
 
@@ -169,6 +172,7 @@ class RefundServiceTest extends TestCase
     public function test_aprobar_dos_veces_envia_una_sola_devolucion_a_culqi(): void
     {
         Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge(amount: 10000)),
             'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
         ]);
 
@@ -178,12 +182,17 @@ class RefundServiceTest extends TestCase
         app(RefundService::class)->approve($refund);
         app(RefundService::class)->approve($refund->fresh());
 
-        Http::assertSentCount(1);
+        $refundCalls = collect(Http::recorded())
+            ->filter(fn (array $pair): bool => $pair[0]->url() === 'https://api.culqi.com/v2/refunds')
+            ->count();
+
+        $this->assertSame(1, $refundCalls);
     }
 
     public function test_el_rechazo_de_culqi_deja_la_devolucion_fallida_y_el_pago_intacto(): void
     {
         Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge(amount: 10000)),
             'api.culqi.com/v2/refunds' => Http::response(
                 CulqiResponses::apiError('parameter_error', 'charge_id'),
                 400
@@ -211,7 +220,96 @@ class RefundServiceTest extends TestCase
         $refund = app(RefundService::class)->request($order->fresh(['payment']), RefundReason::Duplicado, 50.00);
         $result = app(RefundService::class)->approve($refund);
 
-        $this->assertSame(RefundStatus::FAILED, $result->status);
+        // No llegó nada a Culqi: la solicitud vuelve a quedar pendiente, así que
+        // puede reintentarse después de vincular el cargo del pago.
+        $this->assertSame(RefundStatus::PENDING, $result->status);
+        $this->assertSame('no_charge_id', $result->gateway_response['code']);
         $this->assertSame(PaymentStatus::PAID, $order->payment->fresh()->status);
+    }
+
+    public function test_vincula_el_cargo_y_permite_devolver_un_pago_cobrado_con_orden(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(
+                CulqiResponses::approvedCharge('chr_test_TLdqSCUFh6mh1KMD', 10000)
+            ),
+            'api.culqi.com/v2/refunds' => Http::response(CulqiResponses::completedRefund(), 201),
+        ]);
+
+        $order = $this->paidOrder(100.00);
+
+        // Billetera / banca móvil: Culqi cobra con una orden, y la devolución
+        // solo se puede hacer contra un cargo.
+        $order->payment->update([
+            'gateway_transaction_id' => 'ord_test_bHxt0ggE2b9nYa3H',
+            'source_id' => 'ord_test_bHxt0ggE2b9nYa3H',
+        ]);
+
+        $refund = app(RefundService::class)->request(
+            $order->fresh(['payment']),
+            RefundReason::SolicitudComprador,
+            100.00,
+        );
+
+        $blocked = app(RefundService::class)->approve($refund);
+
+        $this->assertSame(RefundStatus::PENDING, $blocked->status);
+        $this->assertSame('no_charge_id', $blocked->gateway_response['code']);
+        Http::assertNotSent(fn (Request $request) => $request->url() === 'https://api.culqi.com/v2/refunds');
+
+        // El cargo se copia del panel de Culqi y se valida contra la API.
+        $payment = app(RefundService::class)->linkCharge(
+            $order->payment->fresh(),
+            'chr_test_TLdqSCUFh6mh1KMD'
+        );
+
+        $this->assertSame('chr_test_TLdqSCUFh6mh1KMD', $payment->gateway_charge_id);
+
+        $result = app(RefundService::class)->approve($blocked->fresh(), $order->user_id);
+
+        $this->assertSame(RefundStatus::COMPLETED, $result->status);
+        $this->assertSame(PaymentStatus::REFUNDED, $order->payment->fresh()->status);
+    }
+
+    public function test_no_vincula_un_cargo_que_culqi_no_reconoce(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/charges/*' => Http::response(['message' => 'Not found'], 404),
+        ]);
+
+        $order = $this->paidOrder(100.00);
+        $order->payment->update(['gateway_transaction_id' => 'ord_test_bHxt0ggE2b9nYa3H']);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        app(RefundService::class)->linkCharge($order->payment->fresh(), 'chr_test_ajeno');
+    }
+
+    public function test_consulta_en_culqi_una_devolucion_en_proceso(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/refunds/*' => Http::response(
+                CulqiResponses::completedRefund('ref_test_pendiente')
+            ),
+        ]);
+
+        $order = $this->paidOrder(100.00);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'payment_id' => $order->payment->id,
+            'amount' => 100.00,
+            'currency' => 'PEN',
+            'reason' => RefundReason::SolicitudComprador,
+            'status' => RefundStatus::PROCESSING,
+            'gateway_refund_id' => 'ref_test_pendiente',
+            'requested_at' => now(),
+        ]);
+
+        $result = app(RefundService::class)->refreshWithGateway($refund);
+
+        $this->assertSame(RefundStatus::COMPLETED, $result->status);
+        $this->assertNotNull($result->completed_at);
+        $this->assertSame(PaymentStatus::REFUNDED, $order->payment->fresh()->status);
     }
 }
