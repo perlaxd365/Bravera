@@ -23,7 +23,7 @@
             next() { this.active = (this.active + 1) % this.slides.length },
             prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
             go(i) { this.active = i },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 6500) },
+            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 4000) },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
@@ -33,7 +33,7 @@
                 <div class="home-hero-grid grid min-h-[540px] lg:grid-cols-[.9fr_1.1fr]">
                     <div class="home-hero-copy order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-10 lg:order-1 lg:px-14 lg:py-14 xl:px-[4.5rem]">
                         <template x-for="(slide, i) in slides" :key="'copy-' + i">
-                            <div x-show="i === active" x-transition.opacity.duration.400ms x-cloak>
+                            <div x-show="i === active" x-transition:enter="transition ease-out duration-700" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-350" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="home-hero-slide">
                                 <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70 sm:text-xs" x-text="slide.eyebrow"></p>
                                 <h1 class="mt-4 max-w-xl text-[2.35rem] font-semibold leading-[1.04] tracking-[-.045em] text-[#171714] sm:text-5xl lg:text-[3.8rem] xl:text-[4.2rem]">
                                     <span x-text="slide.title"></span>
@@ -46,7 +46,7 @@
                             </div>
                         </template>
 
-                        <div class="mt-10 flex items-center gap-4 sm:mt-14">
+                        <div class="home-hero-controls mt-10 flex items-center gap-4 sm:mt-14">
                             <button type="button" @click="prev()" aria-label="Portada anterior" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
                                 <flux:icon name="chevron-left" class="size-5" />
                             </button>
@@ -67,7 +67,7 @@
                     <div class="home-hero-image relative order-1 h-[250px] overflow-hidden bg-[#e6e0d4] sm:h-[360px] lg:order-2 lg:h-full lg:min-h-[540px]">
                         <template x-for="(slide, i) in slides" :key="'image-' + i">
                             <div x-show="i === active" x-transition.opacity.duration.700ms x-cloak class="absolute inset-0">
-                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="h-full w-full object-cover">
+                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" :class="i === active ? 'home-hero-photo-active' : ''" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="home-hero-photo h-full w-full object-cover">
                                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:to-black/[.04]"></div>
                             </div>
                         </template>

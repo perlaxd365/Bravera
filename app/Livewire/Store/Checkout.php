@@ -79,6 +79,8 @@ class Checkout extends Component
 
     public string $selectedGateway = 'culqi';
 
+    public bool $showMercadoPagoMaintenance = false;
+
     /**
      * Fase del pago para la que está la pantalla: inactivo, procesando,
      * confirmado o pendiente de confirmación.
@@ -484,6 +486,15 @@ class Checkout extends Component
             session()->flash('login_intent', 'Inicia sesión para completar tu compra.');
 
             $this->redirect(route('login'));
+
+            return;
+        }
+
+        // No crear pedidos ni intentar cobros mientras Mercado Pago está en mantenimiento.
+        if ($this->selectedGateway === 'mercadopago') {
+            $this->selectedGateway = 'culqi';
+            $this->syncPaymentMethodToGateway();
+            $this->showMercadoPagoMaintenance = true;
 
             return;
         }
@@ -1262,11 +1273,25 @@ class Checkout extends Component
 
     public function updatedSelectedGateway(): void
     {
+        if ($this->selectedGateway === 'mercadopago') {
+            $this->selectedGateway = 'culqi';
+            $this->syncPaymentMethodToGateway();
+            $this->showMercadoPagoMaintenance = true;
+
+            return;
+        }
+
         if (! in_array($this->selectedGateway, $this->availableGatewayNames(), true)) {
             $this->selectedGateway = 'culqi';
         }
 
+        $this->showMercadoPagoMaintenance = false;
         $this->syncPaymentMethodToGateway();
+    }
+
+    public function dismissMercadoPagoMaintenance(): void
+    {
+        $this->showMercadoPagoMaintenance = false;
     }
 
     private function syncPaymentMethodToGateway(): void
@@ -1359,11 +1384,19 @@ class Checkout extends Component
             );
         }
 
-        $summaryItems = $totals['items']->map(fn ($item) => [
+        $summaryItems = $totals['items']->map(function ($item) {
+            $variantImages = $item->variant?->images;
+            $image = $variantImages?->firstWhere('is_primary', true)
+                ?? $variantImages?->first()
+                ?? $item->variant?->product?->coverImageModel();
+
+            return [
                 'quantity' => (int) $item->quantity,
                 'name' => $item->variant?->product?->name
                     ?? $item->product_name
                     ?? 'Producto',
+                'image' => $image?->sizedUrl(240),
+                'imageFallback' => $image?->imageUrl(),
                 'subtotal' => round(
                     (float) $item->unit_price * (int) $item->quantity,
                     2
@@ -1373,7 +1406,8 @@ class Checkout extends Component
                     (float) $item->unit_price
                 ) * (int) $item->quantity, 2),
                 'discountPercent' => (float) ($item->variant?->discount_percent ?: (1 - ((float) $item->unit_price / max(0.01, (float) ($item->variant?->compare_price ?? $item->unit_price)))) * 100),
-            ]);
+            ];
+        });
         $productDiscount = round($summaryItems->sum(fn ($item) => max(0, $item['regularSubtotal'] - $item['subtotal'])), 2);
 
         return view('livewire.store.checkout', [
@@ -1449,7 +1483,10 @@ class Checkout extends Component
     private function totalsFromOrder(Order $order): array
     {
         return [
-            'items' => $order->items()->with('variant.product')->get(),
+            'items' => $order->items()->with([
+                'variant.images',
+                'variant.product.variants.images',
+            ])->get(),
             'subtotal' => (float) $order->subtotal,
             'shippingTotal' => (float) $order->shipping_total,
             'discount' => (float) $order->discount_total,

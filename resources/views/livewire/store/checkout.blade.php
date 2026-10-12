@@ -305,7 +305,7 @@
                                 <span>
                                     <span class="block text-sm font-semibold text-gray-900">{{ $gatewayKey === 'culqi' ? 'Culqi' : 'Mercado Pago' }}</span>
                                     <span class="mt-0.5 block text-xs leading-5 text-gray-500">
-                                        {{ $gatewayKey === 'culqi' ? 'Tarjetas, Yape y otros medios disponibles.' : 'Pago seguro en la página de Mercado Pago.' }}
+                                        {{ $gatewayKey === 'culqi' ? 'Tarjetas, Yape y otros medios disponibles.' : 'Temporalmente en mantenimiento.' }}
                                     </span>
                                 </span>
                             </label>
@@ -380,14 +380,28 @@
                 <div class="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm">
                     @foreach ($summaryItems as $item)
                         <div class="flex justify-between gap-3">
-                            <div class="min-w-0">
-                                <span class="block truncate text-gray-700">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="relative size-14 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-[#f7f5ef]">
+                                    <div class="absolute inset-0 flex items-center justify-center text-gray-300" aria-hidden="true">
+                                        <flux:icon name="photo" class="size-5" />
+                                    </div>
+                                    @if (filled($item['image']) || filled($item['imageFallback']))
+                                        <img src="{{ $item['image'] ?: $item['imageFallback'] }}"
+                                            @if (filled($item['imageFallback'])) data-fallback="{{ $item['imageFallback'] }}" @endif
+                                            alt="{{ $item['name'] }}" loading="lazy" decoding="async"
+                                            onerror="if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; this.dataset.fallback = ''; } else { this.remove(); }"
+                                            class="relative h-full w-full object-contain">
+                                    @endif
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="block truncate text-gray-700">
                                     {{ $item['quantity'] }} × {{ $item['name'] }}
-                                </span>
-                                @if ($item['regularSubtotal'] > $item['subtotal'])
-                                    <span class="text-xs text-gray-400 line-through">S/ {{ number_format($item['regularSubtotal'], 2) }}</span>
-                                    <span class="ml-1 text-xs font-semibold text-emerald-700">-{{ number_format($item['discountPercent'], 0) }}%</span>
-                                @endif
+                                    </span>
+                                    @if ($item['regularSubtotal'] > $item['subtotal'])
+                                        <span class="text-xs text-gray-400 line-through">S/ {{ number_format($item['regularSubtotal'], 2) }}</span>
+                                        <span class="ml-1 text-xs font-semibold text-emerald-700">-{{ number_format($item['discountPercent'], 0) }}%</span>
+                                    @endif
+                                </div>
                             </div>
                             <strong class="shrink-0 text-gray-900">S/ {{ number_format($item['subtotal'], 2) }}</strong>
                         </div>
@@ -533,6 +547,48 @@
                     @endif
                 </footer>
             </div>
+        </div>
+    @endif
+
+    @if ($showMercadoPagoMaintenance)
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm"
+            role="dialog" aria-modal="true" aria-labelledby="mercadopago-maintenance-title"
+            aria-describedby="mercadopago-maintenance-description" tabindex="-1"
+            wire:click.self="dismissMercadoPagoMaintenance"
+            wire:keydown.escape.window="dismissMercadoPagoMaintenance">
+            <section class="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
+                <div class="h-1.5 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500"></div>
+                <button type="button" wire:click="dismissMercadoPagoMaintenance"
+                    aria-label="Cerrar aviso"
+                    class="absolute right-4 top-4 inline-flex size-10 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/20">
+                    <flux:icon name="x-mark" class="size-5" />
+                </button>
+
+                <div class="px-6 pb-6 pt-8 sm:px-8 sm:pb-8">
+                    <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                        <flux:icon name="clock" class="size-7" />
+                    </span>
+                    <p class="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Medio de pago</p>
+                    <h2 id="mercadopago-maintenance-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-950">
+                        Mercado Pago está en mantenimiento
+                    </h2>
+                    <p id="mercadopago-maintenance-description" class="mt-3 text-sm leading-6 text-gray-600">
+                        Estamos realizando mejoras para ofrecerte una experiencia de pago segura. Por ahora puedes completar tu compra con Culqi, usando tarjeta, Yape y otros medios disponibles.
+                    </p>
+
+                    <div class="mt-6 flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm">
+                            <flux:icon name="shield-check" class="size-5" />
+                        </span>
+                        <span class="text-xs leading-5 text-gray-600">Tu carrito y los datos de tu compra se mantienen intactos.</span>
+                    </div>
+
+                    <button type="button" wire:click="dismissMercadoPagoMaintenance"
+                        class="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-950/30 focus:ring-offset-2">
+                        Continuar con Culqi
+                    </button>
+                </div>
+            </section>
         </div>
     @endif
 </div>
