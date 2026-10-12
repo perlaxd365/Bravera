@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
@@ -41,6 +42,35 @@ class Payment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    /**
+     * Monto comprometido en devoluciones, incluidas las que aún esperan
+     * validación o confirmación de la pasarela. Se excluyen solo las
+     * rechazadas y las que fallaron.
+     */
+    public function refundedTotal(): float
+    {
+        return round((float) $this->refunds()->holdingFunds()->sum('amount'), 2);
+    }
+
+    /**
+     * Saldo del pago que todavía puede devolverse.
+     */
+    public function refundableAmount(): float
+    {
+        return round(max(0, (float) $this->amount - $this->refundedTotal()), 2);
+    }
+
+    public function isRefundable(): bool
+    {
+        return in_array($this->status, [PaymentStatus::PAID, PaymentStatus::REFUNDED], true)
+            && $this->refundableAmount() > 0;
     }
 
     public function markPaid(): void

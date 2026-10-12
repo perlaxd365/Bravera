@@ -83,7 +83,7 @@ class StubGateway implements PaymentGateway
         return static::$result;
     }
 
-    public function refund(Payment $payment, ?RefundReason $reason = null): array
+    public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
         return static::$result;
     }

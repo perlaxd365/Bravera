@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Refund;
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\Culqi\CulqiStatus;
 use App\Modules\Payments\Services\PaymentService;
@@ -53,7 +55,13 @@ class CulqiWebhookController extends Controller
 
             'charge.refunded',
             'order.refunded',
-            'refund.paid' => $this->refund($payment),
+            'refund.paid',
+            // Nombres que Culqi publica de verdad para devoluciones.
+            'refund.creation.succeeded',
+            'refund.update.succeeded' => $this->refund($payment, $objectId),
+
+            'refund.creation.failed',
+            'refund.update.failed' => $this->refundFailed($payment, $objectId, $type),
 
             default => $this->ack(),
         };
@@ -115,7 +123,7 @@ class CulqiWebhookController extends Controller
      * Lo que sí se exige es que el cargo exista realmente en Culqi: sin eso no
      * se toca el estado local y queda registrado para conciliación manual.
      */
-    private function refund(Payment $payment): JsonResponse
+    private function refund(Payment $payment, string $objectId = ''): JsonResponse
     {
         if ($payment->status === PaymentStatus::REFUNDED) {
             return $this->ack();
@@ -136,6 +144,39 @@ class CulqiWebhookController extends Controller
             return $this->ack();
         }
 
+        // Culqi no permite consultar una devolución por API: este webhook es
+        // la confirmación definitiva. Si la devolución se registró en Brevare,
+        // se cierra aquí (el evento trae el ID `ref_...`).
+        $refund = str_starts_with($objectId, 'ref_')
+            ? Refund::query()->where('gateway_refund_id', $objectId)->first()
+            : $payment->refunds()->where('status', RefundStatus::PROCESSING->value)->latest('id')->first();
+
+        if ($refund !== null && $refund->status !== RefundStatus::COMPLETED) {
+            $refund->update([
+                'status' => RefundStatus::COMPLETED,
+                'gateway_refund_id' => $objectId !== '' ? $objectId : $refund->gateway_refund_id,
+                'completed_at' => now(),
+            ]);
+        }
+
+        // Una devolución parcial no convierte el pago en reembolsado: solo
+        // cuando lo confirmado cubre el total cobrado. Sin devoluciones
+        // registradas en Brevare se respeta el aviso de la pasarela.
+        $hasLocalRefunds = $payment->refunds()->exists();
+        $completed = (float) $payment->refunds()
+            ->where('status', RefundStatus::COMPLETED->value)
+            ->sum('amount');
+
+        if ($hasLocalRefunds && $completed + 0.005 < (float) $payment->amount) {
+            Log::info('Devolución parcial de Culqi registrada.', [
+                'payment_id' => $payment->id,
+                'refunded' => $completed,
+                'amount' => (float) $payment->amount,
+            ]);
+
+            return $this->ack();
+        }
+
         $payment->update(['status' => PaymentStatus::REFUNDED]);
 
         $payment->order?->update([
@@ -145,6 +186,35 @@ class CulqiWebhookController extends Controller
         Log::info('Reembolso de Culqi registrado.', [
             'payment_id' => $payment->id,
             'charge_id' => $chargeId,
+        ]);
+
+        return $this->ack();
+    }
+
+    /**
+     * Culqi avisó que la devolución no pudo procesarse.
+     *
+     * No se toca el pago: el dinero no se devolvió. La devolución registrada
+     * queda en `failed` para que el panel muestre el motivo.
+     */
+    private function refundFailed(Payment $payment, string $objectId, string $type): JsonResponse
+    {
+        $refund = str_starts_with($objectId, 'ref_')
+            ? Refund::query()->where('gateway_refund_id', $objectId)->first()
+            : $payment->refunds()->where('status', RefundStatus::PROCESSING->value)->latest('id')->first();
+
+        if ($refund !== null && $refund->status !== RefundStatus::COMPLETED) {
+            $refund->update([
+                'status' => RefundStatus::FAILED,
+                'gateway_refund_id' => $objectId !== '' ? $objectId : $refund->gateway_refund_id,
+                'resolution_notes' => 'Culqi notificó que la devolución no pudo procesarse ('.$type.').',
+            ]);
+        }
+
+        Log::warning('Culqi notificó una devolución fallida.', [
+            'payment_id' => $payment->id,
+            'refund_id' => $objectId,
+            'type' => $type,
         ]);
 
         return $this->ack();
@@ -160,7 +230,20 @@ class CulqiWebhookController extends Controller
             })
             ->first();
 
-        return $payment ?? $this->pendingPaymentForOrder($objectId);
+        if ($payment !== null) {
+            return $payment;
+        }
+
+        // Los webhooks de devolución traen el ID de la devolución (`ref_...`),
+        // no el del cargo, así que el pago se ubica por la devolución
+        // registrada en Brevare.
+        $refundPayment = Refund::query()
+            ->where('gateway_refund_id', $objectId)
+            ->latest('id')
+            ->first()
+            ?->payment;
+
+        return $refundPayment ?? $this->pendingPaymentForOrder($objectId);
     }
 
     /**

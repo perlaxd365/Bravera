@@ -50,7 +50,7 @@ class DemoGateway implements PaymentGateway
         ];
     }
 
-    public function refund(Payment $payment, ?RefundReason $reason = null): array
+    public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
         $this->guardEnabled();
 
@@ -62,6 +62,7 @@ class DemoGateway implements PaymentGateway
             'raw' => [
                 'code' => 'refund_success',
                 'mode' => 'demo',
+                'amount' => $amount ?? (float) $payment->amount,
                 'processed_at' => now()->toDateTimeString(),
             ],
         ];

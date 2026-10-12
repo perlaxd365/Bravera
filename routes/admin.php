@@ -13,6 +13,7 @@ use App\Livewire\Admin\Discounts\Coupons\Index as CouponIndex;
 use App\Livewire\Admin\Dropshipping\Orders\Index as SupplierOrderIndex;
 use App\Livewire\Admin\Orders\Index as OrderIndex;
 use App\Livewire\Admin\Orders\Show as OrderShow;
+use App\Livewire\Admin\Refunds\Index as RefundIndex;
 use App\Livewire\Admin\Settings\Homepage as HomepageSettings;
 use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
 use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
@@ -42,6 +43,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/{order}', OrderShow::class)
             ->name('show');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Devoluciones
+    |--------------------------------------------------------------------------
+    | Toda devolución se solicita desde el pedido y se valida aquí. Solo al
+    | aprobarla se envía el reembolso a la pasarela.
+    */
+
+    Route::prefix('refunds')->name('refunds.')->group(function () {
+
+        Route::get('/', RefundIndex::class)
+            ->name('index');
     });
 
     /*

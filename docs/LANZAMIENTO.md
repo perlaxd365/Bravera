@@ -67,6 +67,25 @@ cobrar con Culqi.
 8. **Storage link** (solo si algún día usas disco local):
    `php artisan storage:link`.
 
+### Actualizaciones directas por SSH (hosting actual)
+
+Para cambios puntuales del sitio publicado, usar SSH/SCP interactivo; no guardar
+contraseñas en el repositorio ni en scripts.
+
+- La raíz de Laravel está en `~/Bravera` (contiene `artisan`, `app/` y `resources/`).
+- El dominio sirve archivos estáticos desde `~/public_html`; su `index.php`
+  arranca Laravel desde `~/Bravera`.
+- Antes de reemplazar archivos, guardar una copia con fecha en `~/backups/`.
+- Compilar localmente con `npm run build`. Subir los archivos fuente modificados
+  a las rutas equivalentes bajo `~/Bravera`.
+- Sincronizar `public/build/manifest.json` y los assets generados a ambas rutas:
+  `~/Bravera/public/build/` y `~/public_html/build/`. La carpeta del dominio
+  también debe tener los iconos y `site.webmanifest` de `public/`.
+- Desde `~/Bravera`, ejecutar `php artisan view:clear && php artisan view:cache`
+  si se publicaron vistas Blade.
+- Recargar el dominio sin caché y comprobar en el navegador que descargó el
+  asset nuevo y que no hay errores de consola o recursos 404.
+
 ---
 
 ## 4. `.env` de producción (valores clave)
