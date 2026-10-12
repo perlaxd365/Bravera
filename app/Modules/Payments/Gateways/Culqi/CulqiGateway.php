@@ -55,7 +55,7 @@ class CulqiGateway implements PaymentGateway
             return $this->failure('El monto del pago debe ser mayor a cero.', 'invalid_amount');
         }
 
-        if (! in_array($payment->method, (array) config('payments.gateway_methods.' . $this->name(), []), true)) {
+        if (! in_array($payment->method, (array) config('payments.gateway_methods.'.$this->name(), []), true)) {
             return $this->failure(
                 "Culqi no admite el método de pago [{$payment->method}].",
                 'unsupported_method'
@@ -67,7 +67,7 @@ class CulqiGateway implements PaymentGateway
             : $this->chargeCard($payment);
     }
 
-    public function refund(Payment $payment, ?RefundReason $reason = null): array
+    public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
         $chargeId = $payment->gateway_transaction_id;
 
@@ -75,10 +75,26 @@ class CulqiGateway implements PaymentGateway
             return $this->failure('El pago no tiene un cargo de Culqi reembolsable.', 'no_charge_id');
         }
 
+        // Culqi admite devoluciones parciales acumulables hasta cubrir el
+        // cargo: se envía el monto pedido y Culqi valida que no exceda lo
+        // disponible en el cargo.
+        $amountInCents = $this->toCents($amount ?? $payment->amount);
+
+        if ($amountInCents <= 0) {
+            return $this->failure('El monto de la devolución debe ser mayor a cero.', 'invalid_amount');
+        }
+
+        if ($amountInCents > $this->toCents($payment->amount)) {
+            return $this->failure(
+                'El monto de la devolución supera el total cobrado.',
+                'invalid_amount'
+            );
+        }
+
         try {
             $refund = $this->client->refund(
                 $chargeId,
-                $this->toCents($payment->amount),
+                $amountInCents,
                 $reason ?? RefundReason::SolicitudComprador,
             );
         } catch (PaymentGatewayNotConfiguredException $e) {
@@ -125,7 +141,7 @@ class CulqiGateway implements PaymentGateway
                 'transaction_id' => $refundId,
                 'status' => PaymentStatus::FAILED->value,
                 'message' => 'Culqi no confirmó el reembolso (estado: '
-                    . ($status !== '' ? $status : 'desconocido') . ').',
+                    .($status !== '' ? $status : 'desconocido').').',
                 'raw' => $refund,
             ],
         };
@@ -269,6 +285,7 @@ class CulqiGateway implements PaymentGateway
                 'charge_request_failed'
             );
         }
+
         return $this->mapCharge($charge);
     }
 
@@ -310,14 +327,14 @@ class CulqiGateway implements PaymentGateway
             'amount' => $this->toCents($order->total),
             'currency_code' => $order->currency ?: 'PEN',
             'order_number' => (string) $order->order_number,
-            'description' => 'Pago del pedido ' . $order->order_number,
+            'description' => 'Pago del pedido '.$order->order_number,
             'client_details' => $clientDetails,
             'expiration_date' => $this->expirationDate($minutes),
 
             'confirm' => false,
 
             'payment_methods' => array_map(
-                static fn(string $type): array => ['type' => $type],
+                static fn (string $type): array => ['type' => $type],
                 array_values($methods)
             ),
         ];
@@ -395,7 +412,7 @@ class CulqiGateway implements PaymentGateway
             'first_name' => $parts[0] ?? '',
             'last_name' => $parts[1] ?? '',
             'phone_number' => $phone,
-        ], fn($value) => $value !== '');
+        ], fn ($value) => $value !== '');
 
         return $details === [] ? null : $details;
     }
@@ -460,7 +477,7 @@ class CulqiGateway implements PaymentGateway
             ]);
 
             $userMessage = 'No pudimos procesar tu tarjeta. Verifica los datos e inténtalo de nuevo, '
-                . 'o prueba con otra tarjeta.';
+                .'o prueba con otra tarjeta.';
         }
 
         return [
@@ -510,7 +527,7 @@ class CulqiGateway implements PaymentGateway
             'city' => 'Lima',
             'country_code' => 'PE',
             'phone_number' => (string) data_get($address, 'phone', ''),
-        ], fn($value) => $value !== '');
+        ], fn ($value) => $value !== '');
     }
 
     /**

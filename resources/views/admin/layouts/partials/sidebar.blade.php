@@ -89,6 +89,11 @@
                 <flux:icon name="shopping-cart" class="size-4.5 shrink-0" />
                 Pedidos
             </a>
+            <a href="{{ route('admin.refunds.index') }}"
+                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.refunds.*') ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                <flux:icon name="arrow-uturn-left" class="size-4.5 shrink-0" />
+                Devoluciones
+            </a>
             <a href="{{ route('admin.dropshipping.orders.index') }}"
                 class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.dropshipping.*') ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <flux:icon name="paper-airplane" class="size-4.5 shrink-0" />

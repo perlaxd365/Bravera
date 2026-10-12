@@ -3,14 +3,19 @@
 namespace App\Livewire\Admin\Orders;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Enums\RefundReason;
 use App\Enums\SupplierOrderStatus;
 use App\Enums\SupplierPaymentStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\SupplierOrder;
 use App\Models\SupplierPayment;
 use App\Modules\Ordering\Events\OrderStatusChanged;
 use App\Modules\Ordering\Services\OrderCancellationService;
+use App\Modules\Payments\Services\RefundService;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -41,6 +46,14 @@ class Show extends Component
 
     public string $cancelWholeOrderReason = '';
 
+    public bool $showRefundForm = false;
+
+    public string $refundReason = 'solicitud_comprador';
+
+    public string $refundAmount = '';
+
+    public string $refundNotes = '';
+
     public function mount(Order $order): void
     {
         $this->order = $order->load([
@@ -49,6 +62,8 @@ class Show extends Component
             'items.product.variants.images',
             'coupon',
             'payment',
+            'refunds.requestedBy',
+            'refunds.validatedBy',
             'supplierOrders.supplier',
             'supplierOrders.items',
             'supplierOrders.payment',
@@ -315,8 +330,95 @@ class Show extends Component
         return round(max(0, $revenue + $shippingCharged - $discountShare - $cost), 2);
     }
 
+    /**
+     * Pago del pedido que puede devolverse (el último cobro acreditado).
+     */
+    private function refundPayment(): ?Payment
+    {
+        return $this->order->payments()
+            ->whereIn('status', [PaymentStatus::PAID->value, PaymentStatus::REFUNDED->value])
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Saldo del pago que todavía no está comprometido en otra devolución.
+     */
+    public function refundableAmount(): float
+    {
+        return $this->refundPayment()?->refundableAmount() ?? 0.0;
+    }
+
+    public function revealRefundForm(): void
+    {
+        $available = $this->refundableAmount();
+
+        if ($available <= 0) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Este pedido no tiene saldo reembolsable pendiente.',
+            ]);
+
+            return;
+        }
+
+        $this->showRefundForm = true;
+        $this->refundAmount = number_format($available, 2, '.', '');
+    }
+
+    /**
+     * Registra la solicitud de devolución.
+     *
+     * Aquí no se devuelve nada: la solicitud queda pendiente y un
+     * administrador la valida en la sección Devoluciones, que es la única que
+     * envía el reembolso a la pasarela.
+     */
+    public function requestRefund(): void
+    {
+        $this->validate([
+            'refundReason' => ['required', 'in:'.implode(',', array_keys(RefundReason::options()))],
+            'refundAmount' => ['nullable', 'numeric', 'gt:0'],
+            'refundNotes' => ['nullable', 'string', 'max:500'],
+        ], [], [
+            'refundReason' => 'motivo',
+            'refundAmount' => 'monto',
+            'refundNotes' => 'detalle',
+        ]);
+
+        $amount = trim($this->refundAmount) === '' ? null : (float) $this->refundAmount;
+
+        try {
+            app(RefundService::class)->request(
+                $this->order,
+                RefundReason::from($this->refundReason),
+                $amount,
+                $this->refundNotes,
+                auth()->id(),
+            );
+        } catch (InvalidArgumentException $e) {
+            $this->addError('refundAmount', $e->getMessage());
+
+            return;
+        }
+
+        $this->showRefundForm = false;
+        $this->refundNotes = '';
+        $this->refundAmount = '';
+        $this->refundReason = RefundReason::SolicitudComprador->value;
+
+        $this->order->refresh();
+        $this->order->load('refunds.requestedBy', 'refunds.validatedBy');
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Devolución solicitada. Debe validarse en la sección Devoluciones antes de reembolsar.',
+        ]);
+    }
+
     public function render()
     {
-        return view('livewire.admin.orders.show');
+        return view('livewire.admin.orders.show', [
+            'refundable' => $this->refundableAmount(),
+        ]);
     }
 }

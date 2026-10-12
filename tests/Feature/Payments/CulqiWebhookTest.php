@@ -4,8 +4,10 @@ namespace Tests\Feature\Payments;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Refund;
 use App\Models\User;
 use App\Modules\Ordering\Events\OrderPaid;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -273,5 +275,70 @@ class CulqiWebhookTest extends TestCase
 
         $this->assertSame(PaymentStatus::PENDING, $payment->fresh()->status);
         $this->assertSame(PaymentStatus::PENDING, $order->fresh()->payment_status);
+    }
+
+    /**
+     * Culqi publica `refund.creation.succeeded` con el ID de la devolución
+     * (`ref_...`), no el del cargo: el pago se ubica por la devolución que
+     * registró Brevare.
+     */
+    public function test_confirma_una_devolucion_creada_en_brevare(): void
+    {
+        $order = $this->order();
+        $payment = $this->payment($order);
+        $payment->update(['status' => PaymentStatus::PAID]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'amount' => 51,
+            'currency' => 'PEN',
+            'reason' => 'solicitud_comprador',
+            'status' => RefundStatus::PROCESSING,
+            'gateway_refund_id' => 'ref_test_pendiente',
+            'requested_at' => now(),
+        ]);
+
+        Http::fake(['api.culqi.com/v2/charges/*' => Http::response(CulqiResponses::approvedCharge('chr_1'))]);
+
+        $this->postJson('/webhooks/culqi', [
+            'type' => 'refund.creation.succeeded',
+            'data' => ['id' => 'ref_test_pendiente'],
+        ])->assertOk();
+
+        $this->assertSame(RefundStatus::COMPLETED, $refund->fresh()->status);
+        $this->assertNotNull($refund->fresh()->completed_at);
+        $this->assertSame(PaymentStatus::REFUNDED, $payment->fresh()->status);
+        $this->assertSame(PaymentStatus::REFUNDED, $order->fresh()->payment_status);
+    }
+
+    public function test_una_devolucion_fallida_no_toca_el_pago(): void
+    {
+        $order = $this->order();
+        $payment = $this->payment($order);
+        $payment->update(['status' => PaymentStatus::PAID]);
+        $order->update(['payment_status' => PaymentStatus::PAID]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'amount' => 51,
+            'currency' => 'PEN',
+            'reason' => 'duplicado',
+            'status' => RefundStatus::PROCESSING,
+            'gateway_refund_id' => 'ref_test_rechazada',
+            'requested_at' => now(),
+        ]);
+
+        Http::fake();
+
+        $this->postJson('/webhooks/culqi', [
+            'type' => 'refund.creation.failed',
+            'data' => ['id' => 'ref_test_rechazada'],
+        ])->assertOk();
+
+        $this->assertSame(RefundStatus::FAILED, $refund->fresh()->status);
+        $this->assertSame(PaymentStatus::PAID, $payment->fresh()->status);
+        $this->assertSame(PaymentStatus::PAID, $order->fresh()->payment_status);
     }
 }

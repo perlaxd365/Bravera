@@ -14,12 +14,13 @@
         // galería, aunque tenga un sort_order posterior a las demás.
         $galleryUrls = $currentVariant?->images
             ->sortByDesc('is_primary')
-            ->map(fn ($image) => $image->secure_url ?? $image->url)
+            ->map(fn ($image) => $image->imageUrl())
+            ->filter(fn ($url) => filled($url))
             ->values()
             ->all() ?? [];
 
-        if ($currentVariant && count($galleryUrls) === 0 && $product->coverImage()) {
-            $galleryUrls = [$product->coverImage()];
+        if ($currentVariant && count($galleryUrls) === 0 && $product->coverImageModel()?->imageUrl()) {
+            $galleryUrls = [$product->coverImageModel()->imageUrl()];
         }
 
         $crumbs = collect();
@@ -106,15 +107,12 @@
                                 x-ref="stage"
                                 @mousemove="parallax($event)"
                                 @mouseleave="resetParallax()">
-                            <template x-for="(img, i) in images" :key="i">
-                                <div x-show="i === active"
-                                    x-transition.opacity.duration.300ms
-                                    class="absolute inset-0 p-8 transition-transform duration-700 ease-out"
-                                    :style="{ transform: 'translate3d(' + tx + 'px, ' + ty + 'px, 0)' }">
-                                    <img :src="img" alt="{{ $product->name }}"
-                                        class="h-full w-full animate-kenburns rounded-xl object-contain">
-                                </div>
-                            </template>
+                            <div class="absolute inset-0 p-8 transition-transform duration-700 ease-out"
+                                :style="{ transform: 'translate3d(' + tx + 'px, ' + ty + 'px, 0)' }">
+                                <img src="{{ $galleryUrls[0] }}" :src="images[active]" alt="{{ $product->name }}"
+                                    fetchpriority="high" decoding="async"
+                                    class="h-full w-full animate-kenburns rounded-xl object-contain">
+                            </div>
 
                             @if (count($galleryUrls) > 1)
                                 <button type="button" @click="prev()" aria-label="Foto anterior"

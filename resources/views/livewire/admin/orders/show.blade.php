@@ -341,6 +341,102 @@
                 </section>
 
                 <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="font-bold text-gray-900">
+                            <flux:icon name="arrow-uturn-left" class="mr-1.5 inline size-4 text-gray-400" /> Devoluciones
+                        </h2>
+                        <a href="{{ route('admin.refunds.index') }}"
+                            class="text-xs font-semibold text-gray-500 underline underline-offset-2 transition hover:text-gray-900">
+                            Validar en el panel
+                        </a>
+                    </div>
+
+                    @if ($order->refunds->isNotEmpty())
+                        <ul class="mt-3 space-y-2">
+                            @foreach ($order->refunds->sortByDesc('id') as $refund)
+                                <li wire:key="order-refund-{{ $refund->id }}" class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-sm font-semibold text-gray-900">S/ {{ number_format((float) $refund->amount, 2) }}</span>
+                                        <x-brevare.badge :color="$refund->status->badgeColor()">{{ $refund->statusLabel() }}</x-brevare.badge>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        {{ $refund->reasonLabel() }}
+                                        · {{ optional($refund->requested_at ?? $refund->created_at)->format('d/m/Y H:i') }}
+                                        @if ($refund->requestedBy)
+                                            · {{ $refund->requestedBy->name }}
+                                        @endif
+                                    </p>
+                                    @if ($refund->resolution_notes && ! $refund->isPending())
+                                        <p class="mt-1 text-xs text-gray-600">{{ $refund->resolution_notes }}</p>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if ($refundable > 0)
+                        @if (! $showRefundForm)
+                            <button type="button" wire:click="revealRefundForm"
+                                class="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="arrow-uturn-left" class="size-4" /> Solicitar devolución
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Disponible para devolver: S/ {{ number_format($refundable, 2) }}.
+                                La solicitud queda pendiente hasta que se valide en Devoluciones.
+                            </p>
+                        @else
+                            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                                <p class="text-sm font-semibold text-amber-900">Solicitar devolución</p>
+                                <p class="mt-1 text-xs text-amber-900/80">
+                                    Se enviará a {{ $order->payment?->gateway ?? 'la pasarela' }} solo cuando un administrador la apruebe.
+                                </p>
+
+                                <label for="refund-reason" class="mt-3 block text-xs font-semibold text-gray-700">Motivo</label>
+                                <select id="refund-reason" wire:model="refundReason"
+                                    class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/10">
+                                    @foreach (\App\Enums\RefundReason::options() as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('refundReason') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                                <label for="refund-amount" class="mt-3 block text-xs font-semibold text-gray-700">Monto a devolver (S/)</label>
+                                <input id="refund-amount" type="number" step="0.01" min="0.01" max="{{ number_format($refundable, 2, '.', '') }}"
+                                    wire:model="refundAmount"
+                                    class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/10">
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Déjalo en {{ number_format($refundable, 2) }} para devolver el saldo completo del pago.
+                                </p>
+                                @error('refundAmount') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                                <label for="refund-notes" class="mt-3 block text-xs font-semibold text-gray-700">Detalle (opcional)</label>
+                                <textarea id="refund-notes" rows="2" wire:model="refundNotes"
+                                    placeholder="Ej.: el cliente reportó un producto dañado."
+                                    class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/10"></textarea>
+                                @error('refundNotes') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                                <div class="mt-3 flex flex-wrap items-center gap-2">
+                                    <button type="button" wire:click="requestRefund"
+                                        wire:loading.attr="disabled" wire:target="requestRefund"
+                                        class="rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-wait disabled:opacity-60">
+                                        <span wire:loading.remove wire:target="requestRefund">Registrar solicitud</span>
+                                        <span wire:loading wire:target="requestRefund">Registrando…</span>
+                                    </button>
+                                    <button type="button" wire:click="$set('showRefundForm', false)"
+                                        class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @elseif ($order->refunds->isEmpty())
+                        <p class="mt-3 text-sm text-gray-500">
+                            Sin saldo reembolsable: el pedido no tiene un pago confirmado o ya fue devuelto por completo.
+                        </p>
+                    @endif
+                </section>
+
+                <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h2 class="font-bold text-gray-900">
                         <flux:icon name="chart-bar" class="mr-1.5 inline size-4 text-gray-400" /> Margen
                     </h2>

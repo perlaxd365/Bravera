@@ -5,10 +5,13 @@ namespace App\Livewire\Account;
 use App\Models\Order;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.account')]
 class Orders extends Component
 {
+    use WithPagination;
+
     public function render()
     {
         $orders = Order::query()

@@ -126,13 +126,23 @@ class MercadoPagoGateway implements PaymentGateway
         ];
     }
 
-    public function refund(Payment $payment, ?RefundReason $reason = null): array
+    public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
         $this->ensureConfigured();
         $paymentId = $payment->gateway_transaction_id;
 
         if (! is_string($paymentId) || ! ctype_digit($paymentId)) {
             return $this->failure('El pago no tiene un identificador reembolsable de Mercado Pago.', 'missing_payment_id');
+        }
+
+        // Este flujo solo devuelve el total: una devolución parcial exigiría
+        // el endpoint de reembolsos parciales de Mercado Pago, que aquí no se
+        // usa. Se falla en vez de devolver más de lo pedido.
+        if ($amount !== null && abs($amount - (float) $payment->amount) > 0.005) {
+            return $this->failure(
+                'Mercado Pago solo admite devoluciones totales en esta integración.',
+                'partial_refund_unsupported'
+            );
         }
 
         try {

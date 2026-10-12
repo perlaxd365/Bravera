@@ -102,6 +102,16 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function pendingRefunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->pending();
+    }
+
     public function supplierOrders(): HasMany
     {
         return $this->hasMany(SupplierOrder::class);

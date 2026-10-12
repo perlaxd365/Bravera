@@ -22,7 +22,11 @@ interface PaymentGateway
     /**
      * Reembolsa un pago.
      *
+     * `$amount` es el monto a devolver cuando la pasarela admite devoluciones
+     * parciales (Culqi sí: POST /v2/refunds acepta `amount` en céntimos). Con
+     * `null` se devuelve el total del pago.
+     *
      * @return array{success: bool, transaction_id: ?string, status: string, message: string, raw: array}
      */
-    public function refund(Payment $payment, ?RefundReason $reason = null): array;
+    public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array;
 }

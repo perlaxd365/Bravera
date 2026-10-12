@@ -37,6 +37,20 @@ class PaymentService
     }
 
     /**
+     * Instancia la pasarela por su nombre.
+     *
+     * Lo usan los flujos que operan sobre un pago ya existente (por ejemplo
+     * las devoluciones) para ejecutar contra la misma pasarela con la que se
+     * cobró, y no contra la configurada por defecto.
+     */
+    public function gatewayFor(string $gatewayName): PaymentGateway
+    {
+        [$gateway] = $this->resolveGateway($gatewayName);
+
+        return $gateway;
+    }
+
+    /**
      * Procesa el pago de un pedido a través de la pasarela configurada.
      *
      * El cobro se hace FUERA de cualquier transacción de base de datos, y a
