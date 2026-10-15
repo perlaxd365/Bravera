@@ -30,4 +30,24 @@ return [
         'country' => env('COMPANY_COUNTRY', 'PE'),
         'country_name' => env('COMPANY_COUNTRY_NAME', 'Perú'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cuenta de pruebas (validaciones de Culqi)
+    |--------------------------------------------------------------------------
+    |
+    | Publica en el login las credenciales de la cuenta de prueba que usan los
+    | revisores del procesador de pagos para completar el proceso de compra.
+    |
+    | Cuando terminen las validaciones, pon REVIEW_LOGIN_ENABLED=false en el
+    | .env (y ejecuta `php artisan config:clear`), y elimina o cambia la
+    | contraseña de la cuenta desde el panel.
+    |
+    */
+
+    'review_login' => [
+        'enabled' => env('REVIEW_LOGIN_ENABLED', true),
+        'email' => env('REVIEW_LOGIN_EMAIL', 'revision@brevare.com'),
+        'password' => env('REVIEW_LOGIN_PASSWORD', 'Brevare2026Culqi'),
+    ],
 ];
