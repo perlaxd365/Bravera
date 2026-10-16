@@ -1,4 +1,9 @@
 <div class="home-editorial">
+    {{-- Credenciales de la cuenta de prueba para las validaciones de Culqi. --}}
+    <div class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+        <x-brevare.review-credentials />
+    </div>
+
     {{-- Descubrimiento destacado: una pausa editorial entre navegación y campaña. --}}
     @if ($rotatingProducts->isNotEmpty())
         <section x-data="{ items: @js($rotatingProducts), active: 0, timer: null, paused: false, next() { this.active = (this.active + 1) % this.items.length }, start() { this.stop(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.items.length > 1) this.timer = setInterval(() => { if (!this.paused) this.next() }, 4800) }, stop() { clearInterval(this.timer); this.timer = null } }"

@@ -61,37 +61,7 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div class="mx-auto w-full min-w-0 max-w-md">
-    @php
-        $reviewLogin = config('brevare.review_login');
-    @endphp
-
-    @if ($reviewLogin['enabled'] ?? false)
-        <div class="auth-rise mb-5 w-full rounded-3xl border-2 border-amber-400 bg-amber-50 p-5 text-center shadow-xl shadow-amber-500/10 sm:p-6">
-            <p class="text-base font-extrabold uppercase tracking-wide text-amber-900 sm:text-lg">
-                ¿Vas a hacer pruebas de compra?
-            </p>
-
-            <p class="mt-2 text-sm leading-relaxed text-amber-900 sm:text-base">
-                Entra con esta cuenta de prueba para revisar el proceso de compra completo
-                <strong>sin restricciones</strong>.
-            </p>
-
-            <dl class="mt-4 space-y-2 rounded-2xl bg-white px-4 py-3 text-left shadow-sm sm:px-5 sm:py-4">
-                <div class="flex flex-wrap items-baseline gap-x-2">
-                    <dt class="text-xs font-bold uppercase tracking-wider text-gray-500">Usuario</dt>
-                    <dd class="select-all break-all font-mono text-base font-bold text-gray-900 sm:text-lg">
-                        {{ $reviewLogin['email'] }}
-                    </dd>
-                </div>
-                <div class="flex flex-wrap items-baseline gap-x-2">
-                    <dt class="text-xs font-bold uppercase tracking-wider text-gray-500">Contraseña</dt>
-                    <dd class="select-all break-all font-mono text-base font-bold text-gray-900 sm:text-lg">
-                        {{ $reviewLogin['password'] }}
-                    </dd>
-                </div>
-            </dl>
-        </div>
-    @endif
+    <x-brevare.review-credentials class="mb-5 w-full" />
 
     <x-brevare.auth-card
         title="¡Hola, bienvenido de nuevo!"
