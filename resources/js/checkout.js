@@ -54,7 +54,9 @@ export const loadCulqi = () => new Promise((resolve, reject) => {
         }, { once: true });
     };
 
-    const pendiente = Array.from(document.querySelectorAll('script[data-brevare-culqi]'))
+    const pendiente = Array.from(document.querySelectorAll(
+        'script[data-brevare-culqi], script[src*="js.culqi.com"]'
+    ))
         .find((script) => script.dataset.cargado !== '1');
 
     esperar(pendiente ?? inyectar());
@@ -107,15 +109,29 @@ export const openModal = async (rawSession, publicKey, state) => {
 
     console.debug('[Culqi] openModal llamado con:', session);
 
-    const methods = session.methods && typeof session.methods === 'object' && !Array.isArray(session.methods)
+    let methods = session.methods && typeof session.methods === 'object' && !Array.isArray(session.methods)
         ? session.methods
         : null;
 
-    if (methods === null) {
-        console.error('[Culqi] los métodos de pago no llegaron como objeto.', session);
-        notify('No pudimos abrir el formulario de Culqi. Revisa tu conexión e inténtalo de nuevo.');
-        return;
+    if (methods === null || Object.keys(methods).length === 0) {
+        // Respaldo: si la sesión llegara sin métodos, Culqi igual debe mostrar
+        // el formulario con los medios habilitados en la cuenta.
+        methods = {
+            tarjeta: true,
+            yape: true,
+            billetera: true,
+            bancaMovil: true,
+            agente: true,
+            cuotealo: true,
+        };
     }
+
+    console.debug('[Culqi] sesión del modal', {
+        amount: session.amount,
+        currency: session.currency,
+        hasOrder: Boolean(session.gatewayOrderId),
+        methods: Object.keys(methods),
+    });
 
     const checkoutRoot = document.querySelector('[data-culqi-public-key]');
     const statusUrlTemplate = checkoutRoot?.dataset.orderStatusUrlTemplate;

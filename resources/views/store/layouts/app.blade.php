@@ -57,6 +57,7 @@
     @fluxAppearance
     @livewireStyles
     @stack('styles')
+    @stack('head')
 </head>
 <body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
 
