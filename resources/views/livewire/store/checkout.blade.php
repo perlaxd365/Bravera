@@ -577,10 +577,13 @@
     @if ($showMercadoPagoModal && $mercadoPagoOrder)
         @php
             $mpModalTestMode = str_starts_with((string) config('payments.mercadopago.public_key'), 'TEST-');
+            $mpPayerEmail = (string) ($mercadoPagoOrder->user?->email
+                ?? data_get($mercadoPagoOrder->customer_snapshot, 'email', ''));
         @endphp
 
         <div id="mp-modal"
             data-amount="{{ number_format((float) $mercadoPagoOrder->total, 2, '.', '') }}"
+            data-payer-email="{{ $mpPayerEmail }}"
             class="mp-modal"
             role="dialog"
             aria-modal="true"
@@ -623,72 +626,15 @@
                 <div id="mp-modal-error" role="alert" aria-live="assertive" hidden wire:ignore
                     class="mp-modal__alert"></div>
 
-                <div class="mp-modal__form-card">
-                    <div class="mp-modal__form-heading">
-                        <span>Datos de la tarjeta</span>
-                        <span class="mp-modal__form-meta">
-                            <span class="mp-modal__brands">Visa · Mastercard · Amex</span>
-                            <flux:icon name="lock-closed" class="size-3.5" />
-                        </span>
+                <div class="mp-modal__form-card mp-modal__form-card--brick">
+                    <div id="mp-modal-brick-loading" class="mp-modal__brick-loading" aria-live="polite">
+                        <span class="mp-modal__brick-spinner" aria-hidden="true"></span>
+                        <span>Cargando formulario seguro…</span>
                     </div>
 
-                    <div wire:ignore>
-                        <form id="mp-modal-form-checkout"
-                            data-mp-public-key-source="runtime-endpoint"
-                            data-mp-payer-email-source="application"
-                            data-mp-payer-identification-source="form"
-                            data-mp-identification-type="DNI"
-                            class="mp-modal__form">
-                        <div class="mp-modal__field" data-mp-field="cardNumber"
-                            role="group" aria-labelledby="mp-modal-card-label">
-                            <label id="mp-modal-card-label" class="mp-modal__label">Número de tarjeta</label>
-                            <div id="mp-modal-cardNumber" data-mp-secure-field="cardNumber"
-                                class="mp-modal__secure" aria-labelledby="mp-modal-card-label"></div>
-                        </div>
-
-                        <div class="mp-modal__row">
-                            <div class="mp-modal__field" data-mp-field="expirationDate"
-                                role="group" aria-labelledby="mp-modal-exp-label">
-                                <label id="mp-modal-exp-label" class="mp-modal__label">Vencimiento (MM/AA)</label>
-                                <div id="mp-modal-expirationDate" data-mp-secure-field="expirationDate"
-                                    class="mp-modal__secure" aria-labelledby="mp-modal-exp-label"></div>
-                            </div>
-
-                            <div class="mp-modal__field" data-mp-field="securityCode"
-                                role="group" aria-labelledby="mp-modal-cvv-label">
-                                <label id="mp-modal-cvv-label" class="mp-modal__label">CVV</label>
-                                <div id="mp-modal-securityCode" data-mp-secure-field="securityCode"
-                                    class="mp-modal__secure" aria-labelledby="mp-modal-cvv-label"></div>
-                            </div>
-                        </div>
-
-                        <div class="mp-modal__field" data-mp-field="cardholderName">
-                            <label for="mp-modal-cardholderName" class="mp-modal__label">Nombre del titular</label>
-                            <input type="text" id="mp-modal-cardholderName" autocomplete="cc-name" required
-                                class="mp-modal__input">
-                        </div>
-
-                        <div class="mp-modal__field" data-mp-field="identificationNumber">
-                            <label for="mp-modal-identificationNumber" class="mp-modal__label">DNI del titular</label>
-                            <input type="text" id="mp-modal-identificationNumber" inputmode="numeric"
-                                autocomplete="off" maxlength="12" required class="mp-modal__input">
-                        </div>
-
-                        <select id="mp-modal-issuer" data-mp-sdk-required-field="issuer"
-                            hidden aria-hidden="true" tabindex="-1"></select>
-                        <select id="mp-modal-installments" data-mp-sdk-required-field="installments"
-                            hidden aria-hidden="true" tabindex="-1"></select>
-                        <select id="mp-modal-identificationType" data-mp-sdk-required-field="identificationType"
-                            hidden aria-hidden="true" tabindex="-1">
-                            <option value="DNI">DNI</option>
-                        </select>
-
-                        <button type="submit" id="mp-modal-submit"
-                            data-default-label="Pagar S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}"
-                            class="mp-modal__submit">
-                            Pagar S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}
-                        </button>
-                        </form>
+                    <div class="mp-modal__card-field">
+                        <div id="mp-modal-card-brick" wire:ignore class="mp-modal__brick"></div>
+                        <span id="mp-modal-brand" class="mp-modal__card-brand" aria-hidden="true" hidden></span>
                     </div>
                 </div>
 

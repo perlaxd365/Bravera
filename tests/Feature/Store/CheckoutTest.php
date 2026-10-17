@@ -244,7 +244,7 @@ class CheckoutTest extends TestCase
             ->assertSet('pendingOrderNumber', Order::firstOrFail()->order_number)
             ->assertDispatched('mercadopago:modal')
             ->assertSee('Pago verificado')
-            ->assertSee('mp-modal-form-checkout');
+            ->assertSee('mp-modal-card-brick');
 
         $order = Order::firstOrFail();
         $this->assertSame(OrderStatus::PENDING, $order->status);
@@ -284,6 +284,46 @@ class CheckoutTest extends TestCase
         $order = Order::firstOrFail();
         $this->assertSame(PaymentStatus::PAID, $order->payment_status);
         $this->assertSame('ORD-TEST-APPROVED', $order->payments()->latest('id')->firstOrFail()->gateway_transaction_id);
+    }
+
+    public function test_mercadopago_brick_confirms_the_order_with_the_generated_token(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.gateways.mercadopago' => \Tests\Support\FakeMercadoPagoGateway::class,
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+        \Tests\Support\FakeMercadoPagoGateway::approved('ORD-TEST-BRICK');
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true)
+            ->call('payMercadoPagoBrick', [
+                'token' => 'card-token',
+                'payment_method_id' => 'master',
+                'payer' => ['identification' => ['number' => '123456789']],
+            ])
+            ->assertSet('showMercadoPagoModal', false)
+            ->assertDispatched('mercadopago:result');
+
+        $order = Order::firstOrFail();
+        $this->assertSame(PaymentStatus::PAID, $order->payment_status);
+        $this->assertSame(
+            'ORD-TEST-BRICK',
+            $order->payments()->latest('id')->firstOrFail()->gateway_transaction_id
+        );
     }
 
     public function test_el_carrito_actual_no_se_reemplaza_por_una_orden_vieja_de_mercadopago(): void

@@ -1,6 +1,9 @@
 let sdkPromise = null;
-let cardForm = null;
-let formElement = null;
+let brickController = null;
+let brickContainer = null;
+let mountingBrick = false;
+let mountQueued = false;
+let readyTimeout = null;
 
 const byId = (id) => document.getElementById(id);
 
@@ -83,141 +86,289 @@ const setResult = (message = '', isError = false) => {
     region.classList.toggle('is-error', isError);
 };
 
-const setBusy = (isBusy) => {
-    const button = byId('mp-modal-submit');
+const setLoading = (isLoading) => {
+    const loading = byId('mp-modal-brick-loading');
 
-    if (!button) {
-        return;
+    if (loading) {
+        loading.hidden = !isLoading;
     }
-
-    button.disabled = isBusy;
-    button.textContent = isBusy
-        ? 'Procesando...'
-        : (button.dataset.defaultLabel || 'Pagar con Mercado Pago');
 };
 
-const secureFieldIds = [
-    'mp-modal-cardNumber',
-    'mp-modal-expirationDate',
-    'mp-modal-securityCode',
-];
-
-const assertSecureFields = () => {
-    const failures = [];
-
-    secureFieldIds.forEach((id) => {
-        const host = byId(id);
-        const frames = host ? host.querySelectorAll('iframe') : [];
-        const rect = host ? host.getBoundingClientRect() : { width: 0, height: 0 };
-        const label = id === 'mp-modal-cardNumber'
-            ? byId('mp-modal-card-label')
-            : (id === 'mp-modal-expirationDate' ? byId('mp-modal-exp-label') : byId('mp-modal-cvv-label'));
-
-        if (!host) failures.push(id + ': contenedor ausente');
-        else if (frames.length !== 1) failures.push(id + ': iframe no montado');
-        if (!label || label.getClientRects().length === 0) failures.push(id + ': etiqueta ausente');
-        if (!rect.width || !rect.height) failures.push(id + ': contenedor sin dimensiones');
-    });
-
-    if (failures.length) {
-        setError('No pudimos montar los campos seguros: ' + failures.join('; '));
-        return false;
-    }
-
-    setError('');
-    return true;
+const BRAND_MARKUP = {
+    visa: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><text x="20" y="17.4" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="800" font-style="italic" letter-spacing="0.3" fill="#1a1f71">VISA</text></svg>',
+    mastercard: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><circle cx="16" cy="13" r="7.4" fill="#eb001b"/><circle cx="24" cy="13" r="7.4" fill="#f79e1b"/><path d="M20 6.6a7.4 7.4 0 0 0 0 12.8 7.4 7.4 0 0 0 0-12.8Z" fill="#ff5f00"/></svg>',
+    amex: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#006fcf"/><text x="20" y="16.6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="800" letter-spacing="0.2" fill="#ffffff">AMEX</text></svg>',
+    diners: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><circle cx="20" cy="13" r="8" fill="#0079be"/><circle cx="20" cy="13" r="4.8" fill="#ffffff"/></svg>',
+    discover: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><text x="15" y="16.4" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7" font-weight="800" fill="#231f20">DISCOVER</text><circle cx="33" cy="17" r="4.4" fill="#f48120"/></svg>',
 };
 
-const mountForm = async () => {
-    const modal = byId('mp-modal');
-    const form = byId('mp-modal-form-checkout');
+let currentBrand = null;
 
-    if (!modal || !form) {
+const brandFromBin = (bin) => {
+    const digits = String(bin ?? '').replace(/\D+/g, '');
+
+    if (digits.length < 2) {
+        return null;
+    }
+
+    if (/^3[47]/.test(digits)) {
+        return 'amex';
+    }
+
+    if (digits.length < 4) {
+        return null;
+    }
+
+    if (/^4/.test(digits)) {
+        return 'visa';
+    }
+
+    if (/^(5[1-5]|2[2-7])/.test(digits)) {
+        return 'mastercard';
+    }
+
+    if (/^(30[0-5]|3[689])/.test(digits)) {
+        return 'diners';
+    }
+
+    if (/^(6011|65|64[4-9])/.test(digits)) {
+        return 'discover';
+    }
+
+    return null;
+};
+
+const hideBrandBadge = () => {
+    const badge = byId('mp-modal-brand');
+
+    currentBrand = null;
+
+    if (!badge) {
         return;
     }
 
-    if (cardForm && formElement === form && document.contains(form)) {
+    badge.hidden = true;
+    badge.replaceChildren();
+};
+
+const positionBrandBadge = () => {
+    const badge = byId('mp-modal-brand');
+    const container = byId('mp-modal-card-brick');
+    const field = container?.closest('.mp-modal__card-field');
+
+    if (!badge || !container || !field || badge.hidden) {
         return;
     }
 
-    cardForm = null;
-    formElement = form;
-    setError('');
+    const frame = container.querySelector('iframe[name="cardNumber"]');
+
+    if (!frame) {
+        return;
+    }
+
+    const fieldRect = field.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+
+    if (!frameRect.height) {
+        return;
+    }
+
+    badge.style.top = `${Math.round(frameRect.top - fieldRect.top + (frameRect.height - 26) / 2)}px`;
+    badge.style.right = `${Math.round(fieldRect.right - frameRect.right + 12)}px`;
+};
+
+const setBrandBadge = (brand) => {
+    const badge = byId('mp-modal-brand');
+
+    if (!badge || !brand || !BRAND_MARKUP[brand]) {
+        hideBrandBadge();
+        return;
+    }
+
+    if (currentBrand !== brand) {
+        badge.innerHTML = BRAND_MARKUP[brand];
+        currentBrand = brand;
+    }
+
+    badge.hidden = false;
+    requestAnimationFrame(positionBrandBadge);
+};
+
+const unmountBrick = async () => {
+    const controller = brickController;
+
+    brickController = null;
+    brickContainer = null;
+    hideBrandBadge();
+
+    if (readyTimeout) {
+        window.clearTimeout(readyTimeout);
+        readyTimeout = null;
+    }
+
+    if (!controller) {
+        return;
+    }
 
     try {
+        await controller.unmount();
+    } catch (error) {
+        console.warn('[Mercado Pago] no se pudo desmontar el formulario:', error);
+    }
+};
+
+const submitBrick = (formData) => new Promise((resolve) => {
+    const root = document.querySelector('[data-culqi-public-key]');
+    const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
+
+    if (!component) {
+        setError('No pudimos conectar el pago con el checkout. Recarga la página.');
+        resolve();
+        return;
+    }
+
+    setError('');
+    setResult('Procesando tu pago de forma segura…');
+
+    component.call('payMercadoPagoBrick', formData)
+        .catch((error) => {
+            console.error('[Mercado Pago] fallo al enviar el pago:', error);
+            setResult('No pudimos procesar el pago. Revisa tu conexión e inténtalo de nuevo.', true);
+        })
+        .finally(() => resolve());
+});
+
+const mountBrick = async () => {
+    const modal = byId('mp-modal');
+    const container = byId('mp-modal-card-brick');
+
+    if (!modal || !container) {
+        return;
+    }
+
+    if (brickController && brickContainer === container && document.contains(container)) {
+        return;
+    }
+
+    if (mountingBrick) {
+        mountQueued = true;
+        return;
+    }
+
+    mountingBrick = true;
+    setLoading(true);
+    setError('');
+    setResult('');
+
+    try {
+        await unmountBrick();
+        container.replaceChildren();
+
         const MercadoPagoCtor = await loadSdk();
         const publicKey = await loadPublicKey();
         const mp = new MercadoPagoCtor(publicKey);
+        const bricks = mp.bricks();
 
-        cardForm = mp.cardForm({
-            amount: modal.dataset.amount,
-            iframe: true,
-            form: {
-                id: 'mp-modal-form-checkout',
-                cardNumber: { id: 'mp-modal-cardNumber' },
-                expirationDate: { id: 'mp-modal-expirationDate' },
-                securityCode: { id: 'mp-modal-securityCode' },
-                cardholderName: { id: 'mp-modal-cardholderName' },
-                issuer: { id: 'mp-modal-issuer' },
-                installments: { id: 'mp-modal-installments' },
-                identificationType: { id: 'mp-modal-identificationType' },
-                identificationNumber: { id: 'mp-modal-identificationNumber' },
+        const initialization = {
+            amount: Number(modal.dataset.amount || 0),
+        };
+        const payerEmail = (modal.dataset.payerEmail || '').trim();
+
+        if (payerEmail) {
+            initialization.payer = { email: payerEmail };
+        }
+
+        brickContainer = container;
+        brickController = await bricks.create('cardPayment', 'mp-modal-card-brick', {
+            initialization,
+            customization: {
+                visual: {
+                    style: {
+                        theme: 'flat',
+                        customVariables: {
+                            baseColor: '#17130f',
+                            buttonTextColor: '#fffdf8',
+                            textPrimaryColor: '#17130f',
+                            textSecondaryColor: '#6f6558',
+                            inputBackgroundColor: '#fbf9f4',
+                            outlinePrimaryColor: '#ded7ca',
+                            inputFocusedBoxShadow: '0 0 0 3px rgba(246, 200, 75, 0.22)',
+                            borderRadiusMedium: '12px',
+                            borderRadiusLarge: '14px',
+                            fontSizeMedium: '14px',
+                            fontSizeLarge: '15px',
+                            formPadding: '0px',
+                        },
+                    },
+                    texts: {
+                        cardNumber: { label: 'Número de tarjeta' },
+                        expirationDate: { label: 'Vencimiento' },
+                        securityCode: { label: 'Código de seguridad' },
+                        cardholderName: { label: 'Nombre del titular' },
+                        cardholderIdentification: { label: 'DNI del titular' },
+                        formSubmit: `Pagar S/ ${Number(modal.dataset.amount || 0).toFixed(2)}`,
+                    },
+                },
+                paymentMethods: {
+                    minInstallments: 1,
+                    maxInstallments: 12,
+                },
             },
             callbacks: {
-                onFormMounted: (error) => {
-                    if (error) {
-                        setError(String(error));
-                        return;
+                onReady: () => {
+                    if (readyTimeout) {
+                        window.clearTimeout(readyTimeout);
+                        readyTimeout = null;
                     }
 
-                    setBusy(false);
-                    requestAnimationFrame(assertSecureFields);
+                    setLoading(false);
+                    setError('');
+                    window.setTimeout(positionBrandBadge, 250);
                 },
-                onSubmit: async (event) => {
-                    event.preventDefault();
-
-                    if (!cardForm) {
-                        setError('El formulario de pago no está listo. Recarga la página.');
-                        return;
-                    }
-
-                    const data = cardForm.getCardFormData();
-                    const root = document.querySelector('[data-culqi-public-key]');
-                    const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
-
-                    if (!component) {
-                        setError('No pudimos conectar el pago con el checkout. Recarga la página.');
-                        return;
-                    }
-
-                    setBusy(true);
-                    setResult('Procesando tu pago de forma segura...');
-
-                    try {
-                        await component.call(
-                            'payMercadoPago',
-                            data.token,
-                            data.paymentMethodId,
-                            data.identificationNumber ?? '',
-                            data.issuerId ?? null,
-                        );
-                    } catch (error) {
-                        console.error('[Mercado Pago] fallo al enviar el pago:', error);
-                        setBusy(false);
-                        setResult('No pudimos procesar el pago. Revisa tu conexión e inténtalo de nuevo.', true);
-                    }
+                onError: (error) => {
+                    setLoading(false);
+                    console.error('[Mercado Pago] error del formulario:', error);
+                    setError('No pudimos mostrar el formulario de tarjeta. Revisa tu conexión e inténtalo otra vez.');
                 },
+                onBinChange: (bin) => setBrandBadge(brandFromBin(bin)),
+                onSubmit: submitBrick,
             },
         });
 
-        window.setTimeout(() => {
-            if (!byId('mp-modal-expirationDate')?.querySelector('iframe')) {
-                setError('El campo de vencimiento no se montó. Revisa tu conexión o el bloqueador de anuncios.');
+        readyTimeout = window.setTimeout(() => {
+            const loading = byId('mp-modal-brick-loading');
+
+            if (loading && !loading.hidden) {
+                setLoading(false);
+                setError('El formulario de pago tardó demasiado en cargar. Cierra y vuelve a intentarlo.');
             }
-        }, 8000);
+        }, 15000);
     } catch (error) {
+        setLoading(false);
         setError(error.message || 'No pudimos iniciar el formulario de Mercado Pago.');
+    } finally {
+        mountingBrick = false;
+
+        if (mountQueued) {
+            mountQueued = false;
+            window.setTimeout(() => mountBrick(), 80);
+        }
     }
+};
+
+const remountBrick = () => {
+    void (async () => {
+        await unmountBrick();
+
+        const container = byId('mp-modal-card-brick');
+
+        if (container) {
+            container.replaceChildren();
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
+        await mountBrick();
+    })();
 };
 
 const openModal = () => {
@@ -229,51 +380,8 @@ const openModal = () => {
 
     document.body.style.overflow = 'hidden';
     document.body.dataset.mpModalOpen = '1';
-    mountForm();
+    mountBrick();
     modal.querySelector('.mp-modal__close')?.focus();
-};
-
-const resetForm = () => {
-    const form = byId('mp-modal-form-checkout');
-
-    if (!form) {
-        return;
-    }
-
-    const replacement = form.cloneNode(true);
-
-    replacement.querySelectorAll('[data-mp-secure-field]').forEach((host) => {
-        host.replaceChildren();
-    });
-
-    replacement.querySelectorAll('input[type="hidden"]').forEach((input) => {
-        input.remove();
-    });
-
-    ['issuer', 'installments', 'identificationType'].forEach((field) => {
-        const select = replacement.querySelector(`[data-mp-sdk-required-field="${field}"]`);
-
-        if (!select) {
-            return;
-        }
-
-        select.innerHTML = field === 'identificationType'
-            ? '<option value="DNI">DNI</option>'
-            : '';
-    });
-
-    const submit = replacement.querySelector('#mp-modal-submit');
-
-    if (submit) {
-        submit.disabled = true;
-        submit.textContent = 'Preparando...';
-    }
-
-    form.replaceWith(replacement);
-    cardForm = null;
-    formElement = null;
-
-    window.setTimeout(() => mountForm(), 120);
 };
 
 const waitForModal = (attempt = 0) => {
@@ -290,6 +398,7 @@ const waitForModal = (attempt = 0) => {
 const closeModal = () => {
     document.body.style.overflow = '';
     delete document.body.dataset.mpModalOpen;
+    void unmountBrick();
 };
 
 const init = () => {
@@ -298,8 +407,6 @@ const init = () => {
     }
 
     window.Livewire.on('mercadopago:modal', () => {
-        cardForm = null;
-        formElement = null;
         requestAnimationFrame(() => waitForModal());
     });
 
@@ -309,15 +416,15 @@ const init = () => {
         const payload = event?.detail ?? event ?? {};
 
         if (payload.status === 'paid' || payload.status === 'pending') {
-            setBusy(false);
             window.location.assign(payload.url || '/mi-cuenta/pedidos');
             return;
         }
 
-        setBusy(false);
         setResult(payload.message || 'No pudimos procesar el pago. Inténtalo de nuevo.', true);
-        resetForm();
+        remountBrick();
     });
+
+    window.addEventListener('resize', positionBrandBadge);
 
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape' || !byId('mp-modal')) {

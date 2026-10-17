@@ -776,6 +776,62 @@ class Checkout extends Component
     }
 
     /**
+     * Cobra el pedido con el token que genera el Card Payment Brick oficial.
+     *
+     * El Brick valida la tarjeta, detecta la marca y maneja el ciclo de vida
+     * del token. Aquí solo se toman el token y el documento del titular; el
+     * monto y el resto de datos siempre salen del pedido local.
+     *
+     * @param  array<string, mixed>  $formData
+     */
+    public function payMercadoPagoBrick(array $formData): void
+    {
+        $order = $this->sessionOrder();
+
+        if ($order === null) {
+            $this->dispatch(
+                'mercadopago:result',
+                status: 'error',
+                message: 'La sesión del pedido venció. Vuelve a intentarlo desde el checkout.',
+            );
+
+            return;
+        }
+
+        $token = (string) ($formData['token'] ?? '');
+        $identificationNumber = (string) (
+            data_get($formData, 'payer.identification.number')
+            ?? data_get($formData, 'payer.identification_number')
+            ?? data_get($formData, 'identificationNumber')
+            ?? ''
+        );
+
+        $result = $this->processMercadoPagoPayment(
+            $order,
+            $token,
+            $identificationNumber,
+        );
+
+        if (in_array($result['status'], ['paid', 'pending'], true)) {
+            $this->showMercadoPagoModal = false;
+            $this->dispatch(
+                'mercadopago:result',
+                status: $result['status'],
+                url: $result['url'],
+            );
+            $this->redirect($result['url']);
+
+            return;
+        }
+
+        $this->dispatch(
+            'mercadopago:result',
+            status: 'error',
+            message: $result['message'],
+        );
+    }
+
+    /**
      * Prepara el pedido que se va a pagar y abre el checkout del proveedor.
      *
      * El pedido y su orden en Culqi se crean ANTES de abrir el modal porque
