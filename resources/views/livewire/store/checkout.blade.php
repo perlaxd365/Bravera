@@ -517,12 +517,6 @@
                 @elseif (!$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
-                        @if ($selectedGateway === 'mercadopago')
-                            data-mp-checkout-cta="checkout-api"
-                            data-mp-checkout-destination="{{ route('payments.mercadopago.pay', ['order' => '__ORDER__']) }}"
-                            data-mp-checkout-fallback="{{ route('checkout') }}"
-                            onclick="startMercadoPagoCheckout(event)"
-                        @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                         <span wire:loading.remove>
                             {{ match ($selectedGateway) {
@@ -573,22 +567,128 @@
         </div>
     @endif
 
+    @if ($showMercadoPagoModal && $mercadoPagoOrder)
+        @php
+            $mpModalTestMode = str_starts_with((string) config('payments.mercadopago.public_key'), 'TEST-');
+        @endphp
+
+        <div id="mp-modal"
+            data-amount="{{ number_format((float) $mercadoPagoOrder->total, 2, '.', '') }}"
+            class="mp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mp-modal-title"
+            aria-describedby="mp-modal-description">
+            <div class="mp-modal__backdrop" wire:click="closeMercadoPagoModal"></div>
+
+            <section class="mp-modal__sheet" tabindex="-1">
+                <header class="mp-modal__head">
+                    <div class="mp-modal__brand">
+                        <span class="mp-modal__verified" aria-hidden="true">
+                            <flux:icon name="check" class="size-4" />
+                        </span>
+                        <div>
+                            <p class="mp-modal__eyebrow">Pago verificado</p>
+                            <h2 id="mp-modal-title">Mercado Pago</h2>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="closeMercadoPagoModal"
+                        class="mp-modal__close" aria-label="Cerrar pago">
+                        <flux:icon name="x-mark" class="size-4" />
+                    </button>
+                </header>
+
+                <p id="mp-modal-description" class="mp-modal__lede">
+                    Completa el pago de <strong>{{ $mercadoPagoOrder->order_number }}</strong>.
+                    Mercado Pago procesa los datos en un entorno seguro.
+                </p>
+
+                <div class="mp-modal__total">
+                    <span>Total a pagar</span>
+                    <strong>S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}</strong>
+                </div>
+
+                @if ($mpModalTestMode)
+                    <p class="mp-modal__test">
+                        Modo prueba: usa <strong>APRO</strong> como nombre y
+                        <strong>123456789</strong> como DNI. No se cobra dinero real.
+                    </p>
+                @endif
+
+                <div id="mp-modal-error" role="alert" aria-live="assertive" hidden wire:ignore
+                    class="mp-modal__alert"></div>
+
+                <div wire:ignore>
+                    <form id="mp-modal-form-checkout"
+                        data-mp-public-key-source="runtime-endpoint"
+                        data-mp-payer-email-source="application"
+                        data-mp-payer-identification-source="form"
+                        data-mp-identification-type="DNI"
+                        class="mp-modal__form">
+                        <div class="mp-modal__field" data-mp-field="cardNumber"
+                            role="group" aria-labelledby="mp-modal-card-label">
+                            <label id="mp-modal-card-label" class="mp-modal__label">Número de tarjeta</label>
+                            <div id="mp-modal-cardNumber" data-mp-secure-field="cardNumber"
+                                class="mp-modal__secure" aria-labelledby="mp-modal-card-label"></div>
+                        </div>
+
+                        <div class="mp-modal__row">
+                            <div class="mp-modal__field" data-mp-field="expirationDate"
+                                role="group" aria-labelledby="mp-modal-exp-label">
+                                <label id="mp-modal-exp-label" class="mp-modal__label">Vencimiento (MM/AA)</label>
+                                <div id="mp-modal-expirationDate" data-mp-secure-field="expirationDate"
+                                    class="mp-modal__secure" aria-labelledby="mp-modal-exp-label"></div>
+                            </div>
+
+                            <div class="mp-modal__field" data-mp-field="securityCode"
+                                role="group" aria-labelledby="mp-modal-cvv-label">
+                                <label id="mp-modal-cvv-label" class="mp-modal__label">CVV</label>
+                                <div id="mp-modal-securityCode" data-mp-secure-field="securityCode"
+                                    class="mp-modal__secure" aria-labelledby="mp-modal-cvv-label"></div>
+                            </div>
+                        </div>
+
+                        <div class="mp-modal__field" data-mp-field="cardholderName">
+                            <label for="mp-modal-cardholderName" class="mp-modal__label">Nombre del titular</label>
+                            <input type="text" id="mp-modal-cardholderName" autocomplete="cc-name" required
+                                class="mp-modal__input">
+                        </div>
+
+                        <div class="mp-modal__field" data-mp-field="identificationNumber">
+                            <label for="mp-modal-identificationNumber" class="mp-modal__label">DNI del titular</label>
+                            <input type="text" id="mp-modal-identificationNumber" inputmode="numeric"
+                                autocomplete="off" maxlength="12" required class="mp-modal__input">
+                        </div>
+
+                        <select id="mp-modal-issuer" data-mp-sdk-required-field="issuer"
+                            hidden aria-hidden="true" tabindex="-1"></select>
+                        <select id="mp-modal-installments" data-mp-sdk-required-field="installments"
+                            hidden aria-hidden="true" tabindex="-1"></select>
+                        <select id="mp-modal-identificationType" data-mp-sdk-required-field="identificationType"
+                            hidden aria-hidden="true" tabindex="-1">
+                            <option value="DNI">DNI</option>
+                        </select>
+
+                        <button type="submit" id="mp-modal-submit"
+                            data-default-label="Pagar S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}"
+                            class="mp-modal__submit">
+                            Pagar S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}
+                        </button>
+                    </form>
+                </div>
+
+                <div id="mp-modal-result" role="status" aria-live="polite" hidden wire:ignore
+                    class="mp-modal__result"></div>
+
+                <footer class="mp-modal__footer">
+                    <flux:icon name="lock-closed" class="size-3.5" />
+                    Pago protegido por Mercado Pago
+                </footer>
+            </section>
+        </div>
+    @endif
+
 </div>
 </div>
 </div>
 
-@push('scripts')
-    <script>
-        function startMercadoPagoCheckout(event) {
-            const button = event?.currentTarget;
-            const fallback = button?.dataset.mpCheckoutFallback || '/checkout';
-
-            const onRedirect = (payload) => {
-                const detail = payload?.detail ?? payload ?? {};
-                window.location.assign(detail.url || fallback);
-            };
-
-            window.addEventListener('mercadopago:redirect', onRedirect, { once: true });
-        }
-    </script>
-@endpush

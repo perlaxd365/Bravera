@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
 @import './variables.css';
+@import './mercadopago-modal.css';
 @import './pages/dashboard.css';
 @import 'sweetalert2/dist/sweetalert2.min.css';
 

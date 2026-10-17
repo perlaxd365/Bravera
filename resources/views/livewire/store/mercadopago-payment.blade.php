@@ -756,7 +756,8 @@
         .mp-input,
         .mp-secure-input {
             width: 100%;
-            min-height: 54px;
+            height: 52px;
+            min-height: 52px;
             border: 1px solid rgba(23, 19, 15, 0.14);
             border-radius: 16px;
             background: #fff;
@@ -787,7 +788,9 @@
         .mp-secure-input iframe {
             display: block !important;
             width: 100% !important;
-            height: 100% !important;
+            height: 52px !important;
+            min-height: 52px !important;
+            max-height: 52px !important;
             border: 0 !important;
         }
 

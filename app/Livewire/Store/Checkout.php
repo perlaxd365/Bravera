@@ -4,6 +4,7 @@ namespace App\Livewire\Store;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Livewire\Store\Concerns\ProcessesMercadoPagoPayment;
 use App\Models\Coupon;
 use App\Models\CustomerAddress;
 use App\Models\Order;
@@ -37,6 +38,8 @@ use Throwable;
 #[Layout('store.layouts.app')]
 class Checkout extends Component
 {
+    use ProcessesMercadoPagoPayment;
+
     public bool $authRequired = false;
 
     public ?int $selectedAddressId = null;
@@ -79,6 +82,8 @@ class Checkout extends Component
     public string $paymentMethod = 'card';
 
     public string $selectedGateway = 'culqi';
+
+    public bool $showMercadoPagoModal = false;
 
     /**
      * Fase del pago para la que está la pantalla: inactivo, procesando,
@@ -604,15 +609,14 @@ class Checkout extends Component
             $order->cart?->update(['status' => 'converted']);
             session(['mercadopago_pending_order' => $order->order_number]);
 
-            // Checkout API no redirige al sitio de Mercado Pago: el pago se
-            // completa en una pantalla propia con el formulario seguro.
-            $paymentUrl = route('payments.mercadopago.pay', ['order' => $order->order_number]);
-
+            // El pago se completa en el modal del checkout; no se abandona
+            // la pantalla ni se pierde el resumen del pedido.
+            $this->showMercadoPagoModal = true;
             $this->dispatch(
-                'mercadopago:redirect',
-                url: $paymentUrl,
+                'mercadopago:modal',
+                orderNumber: $order->order_number,
+                amount: number_format((float) $order->total, 2, '.', ''),
             );
-            $this->redirect($paymentUrl, navigate: false);
 
             return;
         }
@@ -702,6 +706,57 @@ class Checkout extends Component
                     : 'No se pudo procesar tu pedido. Inténtalo otra vez o contáctanos.',
             ]);
         }
+    }
+
+    public function closeMercadoPagoModal(): void
+    {
+        $this->showMercadoPagoModal = false;
+        $this->dispatch('mercadopago:modal-closed');
+    }
+
+    public function payMercadoPago(
+        string $token,
+        string $paymentMethodId,
+        string $identificationNumber,
+        ?string $issuerId = null,
+    ): void {
+        $order = $this->sessionOrder();
+
+        if ($order === null) {
+            $this->dispatch(
+                'mercadopago:result',
+                status: 'error',
+                message: 'La sesión del pedido venció. Vuelve a intentarlo desde el checkout.',
+            );
+
+            return;
+        }
+
+        $result = $this->processMercadoPagoPayment(
+            $order,
+            $token,
+            $paymentMethodId,
+            $identificationNumber,
+            $issuerId,
+        );
+
+        if (in_array($result['status'], ['paid', 'pending'], true)) {
+            $this->showMercadoPagoModal = false;
+            $this->dispatch(
+                'mercadopago:result',
+                status: $result['status'],
+                url: $result['url'],
+            );
+            $this->redirect($result['url']);
+
+            return;
+        }
+
+        $this->dispatch(
+            'mercadopago:result',
+            status: 'error',
+            message: $result['message'],
+        );
     }
 
     /**
@@ -1546,6 +1601,8 @@ class Checkout extends Component
             'paymentMethods' => $paymentMethods,
             'availableGateways' => $this->availableGateways(),
             'selectedGateway' => $this->selectedGateway,
+            'showMercadoPagoModal' => $this->showMercadoPagoModal,
+            'mercadoPagoOrder' => $this->showMercadoPagoModal ? $order : null,
             'usesProviderModal' => $usesModal,
             'culqiPublicKey' => $this->culqiPublicKey(),
 

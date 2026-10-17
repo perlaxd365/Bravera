@@ -218,7 +218,7 @@ class CheckoutTest extends TestCase
         $this->assertSame(12.00, (float) $order->items->first()->shipping_price);
     }
 
-    public function test_mercadopago_creates_the_order_and_redirects_to_checkout_api_screen(): void
+    public function test_mercadopago_creates_the_order_and_opens_the_payment_modal(): void
     {
         config([
             'payments.default_gateway' => 'mercadopago',
@@ -239,9 +239,11 @@ class CheckoutTest extends TestCase
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
             ->call('placeOrder')
-            ->assertRedirect(route('payments.mercadopago.pay', [
-                'order' => Order::firstOrFail()->order_number,
-            ]));
+            ->assertSet('showMercadoPagoModal', true)
+            ->assertSet('pendingOrderNumber', Order::firstOrFail()->order_number)
+            ->assertDispatched('mercadopago:modal')
+            ->assertSee('Pago verificado')
+            ->assertSee('mp-modal-form-checkout');
 
         $order = Order::firstOrFail();
         $this->assertSame(OrderStatus::PENDING, $order->status);
