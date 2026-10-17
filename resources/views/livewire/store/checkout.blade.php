@@ -599,8 +599,7 @@
                 </header>
 
                 <p id="mp-modal-description" class="mp-modal__lede">
-                    Completa el pago de <strong>{{ $mercadoPagoOrder->order_number }}</strong>.
-                    Mercado Pago procesa los datos en un entorno seguro.
+                    Pago seguro para tu pedido <strong>{{ $mercadoPagoOrder->order_number }}</strong>.
                 </p>
 
                 <div class="mp-modal__total">
@@ -610,21 +609,26 @@
 
                 @if ($mpModalTestMode)
                     <p class="mp-modal__test">
-                        Modo prueba: usa <strong>APRO</strong> como nombre y
-                        <strong>123456789</strong> como DNI. No se cobra dinero real.
+                        <strong>Modo prueba</strong> · Nombre APRO · DNI 123456789
                     </p>
                 @endif
 
                 <div id="mp-modal-error" role="alert" aria-live="assertive" hidden wire:ignore
                     class="mp-modal__alert"></div>
 
-                <div wire:ignore>
-                    <form id="mp-modal-form-checkout"
-                        data-mp-public-key-source="runtime-endpoint"
-                        data-mp-payer-email-source="application"
-                        data-mp-payer-identification-source="form"
-                        data-mp-identification-type="DNI"
-                        class="mp-modal__form">
+                <div class="mp-modal__form-card">
+                    <div class="mp-modal__form-heading">
+                        <span>Datos de la tarjeta</span>
+                        <flux:icon name="lock-closed" class="size-3.5" />
+                    </div>
+
+                    <div wire:ignore>
+                        <form id="mp-modal-form-checkout"
+                            data-mp-public-key-source="runtime-endpoint"
+                            data-mp-payer-email-source="application"
+                            data-mp-payer-identification-source="form"
+                            data-mp-identification-type="DNI"
+                            class="mp-modal__form">
                         <div class="mp-modal__field" data-mp-field="cardNumber"
                             role="group" aria-labelledby="mp-modal-card-label">
                             <label id="mp-modal-card-label" class="mp-modal__label">Número de tarjeta</label>
@@ -674,16 +678,13 @@
                             class="mp-modal__submit">
                             Pagar S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}
                         </button>
-                    </form>
+                        </form>
+                    </div>
                 </div>
 
                 <div id="mp-modal-result" role="status" aria-live="polite" hidden wire:ignore
                     class="mp-modal__result"></div>
 
-                <footer class="mp-modal__footer">
-                    <flux:icon name="lock-closed" class="size-3.5" />
-                    Pago protegido por Mercado Pago
-                </footer>
             </section>
         </div>
     @endif

@@ -149,24 +149,6 @@ class Checkout extends Component
             return;
         }
 
-        // Si el comprador abandonó la pantalla de Checkout API, el carrito ya
-        // está convertido y el pedido sigue reservado. Se retoma ese mismo
-        // pedido en vez de mandarlo a un carrito vacío.
-        $pendingMercadoPagoOrder = session()->get('mercadopago_pending_order');
-
-        if (is_string($pendingMercadoPagoOrder)
-            && $pendingMercadoPagoOrder !== ''
-            && $this->resumeModalOrder($pendingMercadoPagoOrder)) {
-            $this->addresses = app(CustomerAddressService::class)
-                ->addressesFor(auth()->user());
-
-            return;
-        }
-
-        if (is_string($pendingMercadoPagoOrder) && $pendingMercadoPagoOrder !== '') {
-            session()->forget('mercadopago_pending_order');
-        }
-
         // "Pagar ahora" desde la cuenta entra por query (?pagar=...), no por
         // parámetro de ruta. Livewire no garantiza que los pase a mount(), así
         // que se leen de la petición: si el monto llega recortado o vacío, no
@@ -177,17 +159,8 @@ class Checkout extends Component
 
         $pagar = is_string($pagar) ? trim($pagar) : '';
 
-        // Reanudar un pedido pendiente tiene prioridad sobre el carrito: al
-        // dejar el modal sin pagar, el carrito ya está convertido y está vacío,
-        // así que sin esto el cliente se quedaría en la página de carrito sin
-        // forma de pagar lo que ya dejó pedido.
-
-        $pagar = is_string($pagar) ? trim($pagar) : '';
-
-        /*
- * Si venimos desde "Pagar ahora" con un número de pedido,
- * intentamos recuperar exactamente ese pedido pendiente.
- */
+        // "Pagar ahora" es una acción explícita y puede reanudar un pedido
+        // aunque el comprador tenga otros artículos en el carrito.
         if ($pagar !== '' && $this->resumeModalOrder($pagar)) {
             $this->addresses = app(CustomerAddressService::class)
                 ->addressesFor(auth()->user());
@@ -195,27 +168,38 @@ class Checkout extends Component
             return;
         }
 
-        // Si el cliente vuelve al checkout después de cerrar Culqi, el carrito
-        // ya está convertido en el pedido pendiente. Recuperamos ese pedido y
-        // reabrimos la misma orden en vez de mandarlo al carrito vacío.
-        if ($cart->isEmpty() && $this->resumeLatestPendingModalOrder()) {
-            $this->addresses = app(CustomerAddressService::class)
-                ->addressesFor(auth()->user());
-
-            return;
-        }
-
+        // Solo se reanuda un pago abandonado cuando el carrito está vacío.
+        // Si el comprador agregó productos nuevos, el resumen debe salir del
+        // carrito actual y no de una orden vieja que quedó reservada.
         if ($cart->isEmpty()) {
+            $pendingMercadoPagoOrder = session()->get('mercadopago_pending_order');
+
+            if (is_string($pendingMercadoPagoOrder)
+                && $pendingMercadoPagoOrder !== ''
+                && $this->resumeModalOrder($pendingMercadoPagoOrder)) {
+                $this->addresses = app(CustomerAddressService::class)
+                    ->addressesFor(auth()->user());
+
+                return;
+            }
+
+            if (is_string($pendingMercadoPagoOrder) && $pendingMercadoPagoOrder !== '') {
+                session()->forget('mercadopago_pending_order');
+            }
+
+            if ($this->resumeLatestPendingModalOrder()) {
+                $this->addresses = app(CustomerAddressService::class)
+                    ->addressesFor(auth()->user());
+
+                return;
+            }
+
             return redirect()->route('store.cart');
         }
 
-        /*
- * Si realmente no hay carrito ni una orden pendiente que recuperar,
- * entonces sí volvemos al carrito.
- */
-        if ($cart->isEmpty()) {
-            return redirect()->route('store.cart');
-        }
+        // Hay artículos nuevos: no permitir que una intención de pago anterior
+        // reemplace el resumen del checkout actual.
+        session()->forget('mercadopago_pending_order');
 
         $supported = $this->supportedMethods();
 
@@ -735,9 +719,7 @@ class Checkout extends Component
         $result = $this->processMercadoPagoPayment(
             $order,
             $token,
-            $paymentMethodId,
             $identificationNumber,
-            $issuerId,
         );
 
         if (in_array($result['status'], ['paid', 'pending'], true)) {

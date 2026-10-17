@@ -13,6 +13,7 @@ use App\Models\Coupon;
 use App\Models\CustomerAddress;
 use App\Models\Location;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -283,6 +284,93 @@ class CheckoutTest extends TestCase
         $order = Order::firstOrFail();
         $this->assertSame(PaymentStatus::PAID, $order->payment_status);
         $this->assertSame('ORD-TEST-APPROVED', $order->payments()->latest('id')->firstOrFail()->gateway_transaction_id);
+    }
+
+    public function test_el_carrito_actual_no_se_reemplaza_por_una_orden_vieja_de_mercadopago(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $secondSupplier = Supplier::create([
+            'code' => 'SUP-CHK-2',
+            'business_name' => 'Distribuciones del Sur S.A.C.',
+            'email' => 'proveedor2@checkout.test',
+            'status' => 'active',
+        ]);
+        $secondCategory = Category::create([
+            'name' => 'Categoría Checkout 2',
+            'slug' => 'categoria-checkout-2',
+            'path' => 'categoria-checkout-2',
+            'status' => true,
+        ]);
+        $secondProduct = Product::create([
+            'category_id' => $secondCategory->id,
+            'name' => 'Casaca Urbana Mujer',
+            'slug' => 'casaca-urbana-mujer',
+            'status' => true,
+        ]);
+        $secondVariant = ProductVariant::create([
+            'product_id' => $secondProduct->id,
+            'sku' => 'PV-CHK-2',
+            'cost_price' => 20.00,
+            'sale_price' => 30.00,
+            'is_active' => true,
+        ]);
+        SupplierVariant::create([
+            'supplier_id' => $secondSupplier->id,
+            'product_variant_id' => $secondVariant->id,
+            'sku' => 'SV-CHK-2',
+            'supplier_sku' => 'SV-CASACA-M',
+            'cost_price' => 20.00,
+            'shipping_cost' => 5.00,
+            'stock' => 10,
+            'reserved_stock' => 0,
+            'is_active' => true,
+        ]);
+        $district = $this->districtWithZoneAndRate();
+        $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+        $this->cartWith($user, $secondVariant);
+
+        $oldOrder = Order::create([
+            'order_number' => 'BRV-OLD-MP-1',
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'payment_status' => PaymentStatus::PENDING,
+            'payment_intent' => 'mercadopago',
+            'subtotal' => 10,
+            'shipping_total' => 0,
+            'discount_total' => 0,
+            'total' => 10,
+            'cost_total' => 5,
+            'currency' => 'PEN',
+            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        ]);
+
+        OrderItem::create([
+            'order_id' => $oldOrder->id,
+            'product_name' => 'Producto viejo',
+            'quantity' => 1,
+            'unit_price' => 10,
+            'line_subtotal' => 10,
+        ]);
+
+        session(['mercadopago_pending_order' => $oldOrder->order_number]);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->assertSee($variant->product->name)
+            ->assertSee($secondProduct->name)
+            ->assertDontSee('Producto viejo')
+            ->assertSet('pendingOrderNumber', null);
     }
 
     public function test_retoma_un_pedido_de_izipay_sin_caer_en_culqi(): void

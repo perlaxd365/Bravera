@@ -84,10 +84,8 @@ class MercadoPagoCheckoutApiTest extends TestCase
             $payment,
             $order,
             'card-token',
-            'visa',
             '123456789',
             'comprador@brevare.test',
-            'issuer-123',
         );
 
         $this->assertSame(112.0, $payload['transaction_amount']);
@@ -98,11 +96,11 @@ class MercadoPagoCheckoutApiTest extends TestCase
         $this->assertSame('DNI', $payload['payer']['identification']['type']);
         $this->assertSame('123456789', $payload['payer']['identification']['number']);
         $this->assertSame('card-token', $payload['token']);
-        $this->assertSame('visa', $payload['payment_method_id']);
         $this->assertSame(1, $payload['installments']);
-        $this->assertSame('issuer-123', $payload['issuer_id']);
         $this->assertSame($order->order_number, $payload['metadata']['order_number']);
         $this->assertSame($payment->id, $payload['metadata']['local_payment_id']);
+        $this->assertArrayNotHasKey('payment_method_id', $payload);
+        $this->assertArrayNotHasKey('issuer_id', $payload);
         $this->assertArrayNotHasKey('transactions', $payload);
     }
 

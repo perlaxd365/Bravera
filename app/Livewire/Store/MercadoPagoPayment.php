@@ -67,9 +67,7 @@ class MercadoPagoPayment extends Component
             $result = $this->processMercadoPagoPayment(
                 $order,
                 $token,
-                $paymentMethodId,
                 $identificationNumber,
-                $issuerId,
             );
 
             if (in_array($result['status'], ['paid', 'pending'], true)) {

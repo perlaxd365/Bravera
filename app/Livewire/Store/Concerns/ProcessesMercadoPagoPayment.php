@@ -23,9 +23,7 @@ trait ProcessesMercadoPagoPayment
     protected function processMercadoPagoPayment(
         ?Order $order,
         string $token,
-        string $paymentMethodId,
         string $identificationNumber,
-        ?string $issuerId = null,
     ): array {
         $order = $order?->fresh(['items', 'user']);
 
@@ -49,11 +47,9 @@ trait ProcessesMercadoPagoPayment
 
         $validator = Validator::make([
             'token' => $token,
-            'payment_method_id' => $paymentMethodId,
             'identification_number' => preg_replace('/\D+/', '', $identificationNumber),
         ], [
             'token' => ['required', 'string', 'max:255'],
-            'payment_method_id' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9_]+$/i'],
             'identification_number' => ['required', 'string', 'regex:/^\d{8,12}$/'],
         ]);
 
@@ -81,9 +77,7 @@ trait ProcessesMercadoPagoPayment
                 gatewayName: 'mercadopago',
                 sourceId: $data['token'],
                 gatewayContext: [
-                    'payment_method_id' => $data['payment_method_id'],
                     'identification_number' => $data['identification_number'],
-                    'issuer_id' => $issuerId,
                 ],
             );
 

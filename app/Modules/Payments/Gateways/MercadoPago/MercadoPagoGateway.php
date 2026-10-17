@@ -68,11 +68,9 @@ class MercadoPagoGateway implements PaymentGateway
         }
 
         $token = trim((string) $payment->source_id);
-        $paymentMethodId = trim((string) data_get($payment->raw_response, 'payment_method_id', ''));
         $identification = preg_replace('/\D+/', '', (string) data_get($payment->raw_response, 'identification_number', ''));
-        $issuerId = trim((string) data_get($payment->raw_response, 'issuer_id', ''));
 
-        if ($token === '' || $paymentMethodId === '') {
+        if ($token === '') {
             return $this->failure(
                 'No recibimos los datos tokenizados de la tarjeta. Vuelve a intentarlo.',
                 'missing_card_token'
@@ -99,10 +97,8 @@ class MercadoPagoGateway implements PaymentGateway
             $payment,
             $order,
             $token,
-            $paymentMethodId,
             $identification,
             $payerEmail,
-            $issuerId,
         );
 
         try {
@@ -150,10 +146,8 @@ class MercadoPagoGateway implements PaymentGateway
         Payment $payment,
         Order $order,
         string $token,
-        string $paymentMethodId,
         string $identification,
         string $payerEmail,
-        string $issuerId = '',
     ): array {
         $amount = round((float) $payment->amount, 2);
         $payerName = trim((string) ($order->user?->name ?? data_get($order->customer_snapshot, 'name', '')));
@@ -169,7 +163,6 @@ class MercadoPagoGateway implements PaymentGateway
             'token' => $token,
             'description' => mb_substr('Pedido Brevare '.$order->order_number, 0, 256),
             'installments' => 1,
-            'payment_method_id' => $paymentMethodId,
             'payer' => array_filter([
                 'email' => $payerEmail,
                 'first_name' => $nameParts['first_name'],
@@ -187,10 +180,6 @@ class MercadoPagoGateway implements PaymentGateway
                 'local_payment_id' => (int) $payment->id,
             ],
         ];
-
-        if ($issuerId !== '') {
-            $payload['issuer_id'] = $issuerId;
-        }
 
         return $payload;
     }
