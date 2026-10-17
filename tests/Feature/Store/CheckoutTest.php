@@ -492,41 +492,60 @@ class CheckoutTest extends TestCase
             ->assertSee('Continuar a Izipay');
     }
 
-    public function test_no_permite_cambiar_un_pedido_de_mercadopago_a_culqi(): void
+    public function test_cambiar_de_mercadopago_a_culqi_libera_el_pedido_y_abre_culqi(): void
     {
         config([
+            'payments.default_gateway' => 'mercadopago',
             'payments.mercadopago.enabled' => true,
-            'payments.mercadopago.access_token' => 'APP_USR-test-access',
-            'payments.mercadopago.public_key' => 'APP_USR-test-public',
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
             'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
             'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
         ]);
 
         $user = $this->customer();
-        $order = Order::create([
-            'order_number' => 'BRV-MP-INTENT-1',
-            'user_id' => $user->id,
-            'status' => OrderStatus::PENDING,
-            'payment_status' => PaymentStatus::PENDING,
-            'payment_intent' => 'mercadopago',
-            'subtotal' => 100,
-            'shipping_total' => 0,
-            'discount_total' => 0,
-            'total' => 100,
-            'cost_total' => 60,
-            'currency' => 'PEN',
-            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true);
+
+        $order = Order::firstOrFail();
+        $cart = $order->cart;
+
+        // Al cambiar a Culqi el pedido anterior se cancela y el carrito vuelve
+        // a estar activo, sin bloquear la nueva pasarela.
+        $component->set('selectedGateway', 'culqi')
+            ->assertSet('showMercadoPagoModal', false)
+            ->assertSet('pendingOrderNumber', null);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::CANCELLED, $order->status);
+        $this->assertSame(PaymentStatus::EXPIRED, $order->payment_status);
+        $this->assertSame('active', $cart->fresh()->status);
+
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(
+                CulqiResponses::pendingOrder('ord_switch_1'),
+                201
+            ),
         ]);
 
-        Livewire::actingAs($user)
-            ->test(Checkout::class, ['pagar' => $order->order_number])
-            ->set('selectedGateway', 'culqi')
-            ->call('placeOrder')
-            ->assertDispatched('notify');
+        $component->call('startCulqiCheckout')
+            ->assertHasNoErrors()
+            ->assertDispatched('culqi:open');
 
-        $this->assertSame(0, Payment::count());
-        $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
-        $this->assertSame(1, Order::count());
+        $newOrder = Order::latest('id')->firstOrFail();
+        $this->assertSame(2, Order::count());
+        $this->assertSame(OrderStatus::PENDING, $newOrder->status);
+        $this->assertSame('ord_switch_1', $newOrder->gateway_order_id);
+        $this->assertSame('culqi', $newOrder->payment_intent);
     }
 
     /**
@@ -1717,7 +1736,8 @@ class CheckoutTest extends TestCase
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
             ->call('startCulqiCheckout')
-            ->assertSee('Completa tu pago');
+            ->assertSee('Pago verificado')
+            ->assertSee('pay-modal');
 
         // El pago entra por el webhook, no por esta pantalla: se simula el
         // estado final para comprobar que la vista deja de ofrecer el reintento.

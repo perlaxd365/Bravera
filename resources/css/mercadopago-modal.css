@@ -1,218 +1,285 @@
+/* ------------------------------------------------------------------
+   Pasarelas de pago — sistema visual tipo Apple (glass + profundidad)
+   Compartido por el modal de Mercado Pago y el de Culqi.
+   ------------------------------------------------------------------ */
+
+.mp-modal,
+.pay-modal {
+    --pay-ink: #0a0a0c;
+    --pay-ink-soft: #3a3a40;
+    --pay-muted: #70707a;
+    --pay-line: rgba(60, 60, 67, 0.14);
+    --pay-line-strong: rgba(60, 60, 67, 0.22);
+    --pay-accent: #0a84ff;
+    --pay-success: #1f9d63;
+    --pay-surface: rgba(255, 255, 255, 0.64);
+    --pay-surface-strong: rgba(255, 255, 255, 0.86);
+    --pay-radius: 30px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+        "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
 .mp-modal {
-    --mp-ink: #17130f;
-    --mp-muted: #6f6558;
-    --mp-line: rgba(23, 19, 15, 0.1);
     position: fixed;
     inset: 0;
     z-index: 130;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
+    padding: 12px;
 }
 
-.mp-modal__backdrop {
+.mp-modal__backdrop,
+.pay-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(23, 19, 15, 0.58);
-    backdrop-filter: blur(9px) saturate(1.1);
-    -webkit-backdrop-filter: blur(9px) saturate(1.1);
-    animation: mp-modal-fade 0.22s ease-out both;
+    background:
+        radial-gradient(120% 90% at 18% 8%, rgba(255, 208, 128, 0.26), transparent 56%),
+        radial-gradient(120% 90% at 86% 14%, rgba(120, 170, 255, 0.24), transparent 60%),
+        rgba(12, 12, 16, 0.54);
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    animation: pay-fade 0.24s ease-out both;
 }
 
-.mp-modal__sheet {
+.mp-modal__sheet,
+.pay-modal__sheet {
     position: relative;
-    width: min(100%, 470px);
-    max-height: calc(100dvh - 12px);
+    width: min(100%, 478px);
+    max-height: calc(100dvh - 16px);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: rgba(23, 19, 15, 0.2) transparent;
-    padding: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.95);
-    border-radius: 28px;
-    background: #fffdf8;
+    scrollbar-color: rgba(10, 10, 12, 0.18) transparent;
+    padding: 18px 20px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: var(--pay-radius);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(252, 251, 249, 0.89) 52%,
+            rgba(248, 247, 245, 0.92) 100%);
+    backdrop-filter: blur(40px) saturate(1.7);
+    -webkit-backdrop-filter: blur(40px) saturate(1.7);
     box-shadow:
-        0 36px 90px rgba(23, 19, 15, 0.3),
-        inset 0 1px 0 #ffffff;
-    animation: mp-modal-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+        0 44px 110px rgba(10, 10, 14, 0.42),
+        0 2px 10px rgba(10, 10, 14, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    animation: pay-rise 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.mp-modal__sheet::-webkit-scrollbar {
-    width: 6px;
+.mp-modal__sheet::-webkit-scrollbar,
+.pay-modal__sheet::-webkit-scrollbar {
+    width: 5px;
 }
 
-.mp-modal__sheet::-webkit-scrollbar-track {
+.mp-modal__sheet::-webkit-scrollbar-track,
+.pay-modal__sheet::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.mp-modal__sheet::-webkit-scrollbar-thumb {
+.mp-modal__sheet::-webkit-scrollbar-thumb,
+.pay-modal__sheet::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: rgba(23, 19, 15, 0.18);
+    background: rgba(10, 10, 12, 0.16);
 }
 
-.mp-modal__head {
+.mp-modal__grabber,
+.pay-modal__grabber {
+    display: block;
+    width: 38px;
+    height: 5px;
+    margin: -4px auto 14px;
+    border-radius: 999px;
+    background: rgba(10, 10, 12, 0.16);
+}
+
+/* ----- Cabecera ----- */
+
+.mp-modal__head,
+.pay-modal__head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 14px;
 }
 
-.mp-modal__brand {
+.mp-modal__brand,
+.pay-modal__brand {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     min-width: 0;
 }
 
-.mp-modal__verified {
+.mp-modal__verified,
+.pay-modal__badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
     border-radius: 999px;
-    background: #e7f5ec;
-    color: #1f7a4d;
-    box-shadow: inset 0 0 0 1px rgba(31, 122, 77, 0.12);
+    background: linear-gradient(180deg, rgba(48, 209, 88, 0.16), rgba(48, 209, 88, 0.10));
+    color: #157a4b;
+    box-shadow:
+        inset 0 0 0 1px rgba(31, 157, 99, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-.mp-modal__eyebrow {
+.mp-modal__titles {
+    min-width: 0;
+}
+
+.mp-modal__eyebrow,
+.pay-modal__eyebrow {
     margin: 0;
-    color: #1f7a4d;
-    font-size: 9px;
+    color: var(--pay-success);
+    font-size: 9.5px;
     font-weight: 800;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
 }
 
-.mp-modal__brand h2 {
-    margin: 2px 0 0;
-    color: var(--mp-ink);
-    font-size: 19px;
-    font-weight: 740;
-    letter-spacing: -0.04em;
+.mp-modal__brand h2,
+.pay-modal__brand h2 {
+    margin: 3px 0 0;
+    color: var(--pay-ink);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
     line-height: 1.1;
 }
 
-.mp-modal__close {
+.mp-modal__close,
+.pay-modal__close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
-    border: 1px solid var(--mp-line);
+    border: 1px solid rgba(60, 60, 67, 0.14);
     border-radius: 999px;
-    background: rgba(23, 19, 15, 0.04);
-    color: #6f6558;
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--pay-muted);
     cursor: pointer;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.mp-modal__close:hover {
-    background: rgba(23, 19, 15, 0.08);
-    color: var(--mp-ink);
-    transform: translateY(-1px);
+.mp-modal__close:hover,
+.pay-modal__close:hover {
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--pay-ink);
+    transform: scale(1.04);
 }
 
-.mp-modal__close:focus-visible {
-    outline: 3px solid rgba(246, 200, 75, 0.5);
+.mp-modal__close:focus-visible,
+.pay-modal__close:focus-visible {
+    outline: 3px solid rgba(10, 132, 255, 0.35);
     outline-offset: 2px;
 }
 
-.mp-modal__lede {
-    margin: 8px 0 0;
-    color: var(--mp-muted);
-    font-size: 11px;
-    line-height: 1.45;
+/* ----- Pedido y total ----- */
+
+.mp-modal__order {
+    margin-top: 18px;
+    padding: 0 2px 16px;
+    border-bottom: 1px solid var(--pay-line);
 }
 
-.mp-modal__lede strong {
-    color: var(--mp-ink);
-    font-weight: 700;
-}
-
-.mp-modal__total {
+.mp-modal__order-meta {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    margin-top: 10px;
-    padding: 9px 12px;
-    border: 1px solid rgba(246, 200, 75, 0.42);
-    border-radius: 15px;
-    background: linear-gradient(135deg, rgba(246, 200, 75, 0.24), rgba(255, 252, 246, 0.7));
 }
 
-.mp-modal__total span {
-    color: #796b55;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.13em;
+.mp-modal__order-label {
+    color: var(--pay-muted);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
 }
 
-.mp-modal__total strong {
-    color: var(--mp-ink);
-    font-size: 17px;
-    font-weight: 740;
-    letter-spacing: -0.035em;
+.mp-modal__order-number {
+    color: var(--pay-ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.mp-modal__amount {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.mp-modal__amount span {
+    color: var(--pay-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.mp-modal__amount strong {
+    color: var(--pay-ink);
+    font-size: 32px;
+    font-weight: 720;
+    letter-spacing: -0.05em;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
 }
 
 .mp-modal__test {
-    margin: 8px 0 0;
-    padding: 7px 10px;
-    border: 1px solid rgba(246, 200, 75, 0.45);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 14px 0 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(201, 151, 31, 0.22);
     border-radius: 12px;
-    background: rgba(246, 200, 75, 0.15);
-    color: #6d5520;
-    font-size: 9px;
+    background: rgba(255, 199, 74, 0.13);
+    color: #6f5514;
+    font-size: 10.5px;
     line-height: 1.4;
 }
 
 .mp-modal__test strong {
-    color: #4d3b11;
-    font-weight: 750;
+    color: #58430d;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
+
+/* ----- Formulario del Brick ----- */
 
 .mp-modal__form-card {
-    margin-top: 10px;
-    padding: 12px;
-    border: 1px solid #ebe4d8;
-    border-radius: 18px;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgba(70, 49, 18, 0.045);
+    margin-top: 14px;
+    padding: 16px 14px 14px;
+    border: 1px solid rgba(60, 60, 67, 0.10);
+    border-radius: 22px;
+    background: var(--pay-surface);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.86),
+        0 12px 34px rgba(20, 20, 25, 0.05);
 }
 
-.mp-modal__form-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 9px;
-    color: var(--mp-ink);
-    font-size: 11px;
+.mp-modal__form-label {
+    margin: 0 0 10px 2px;
+    color: var(--pay-muted);
+    font-size: 10px;
     font-weight: 750;
-    letter-spacing: -0.01em;
-}
-
-.mp-modal__form-heading svg {
-    color: #8a8175;
-}
-
-.mp-modal__form-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.mp-modal__form-card--brick {
-    padding: 12px 12px 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
 }
 
 .mp-modal__card-field {
@@ -223,12 +290,11 @@
     position: relative;
     width: 100%;
     min-height: 250px;
-    color: var(--mp-ink);
+    color: var(--pay-ink);
 }
 
 .mp-modal__brick iframe {
     display: block;
-    width: 100% !important;
     border: 0 !important;
 }
 
@@ -238,25 +304,33 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 26px;
+    width: 46px;
+    height: 32px;
     padding: 0 3px;
-    border-radius: 6px;
+    border-radius: 7px;
     background: #ffffff;
     box-shadow:
-        0 1px 2px rgba(23, 19, 15, 0.16),
-        0 0 0 1px rgba(23, 19, 15, 0.08);
+        0 2px 6px rgba(10, 10, 12, 0.14),
+        0 0 0 1px rgba(60, 60, 67, 0.12);
     pointer-events: none;
-    animation: mp-modal-brand-in 0.18s ease-out both;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .mp-modal__card-brand[hidden] {
     display: none;
 }
 
+.mp-modal__card-brand.is-detected {
+    box-shadow:
+        0 3px 10px rgba(10, 10, 12, 0.18),
+        0 0 0 1px rgba(60, 60, 67, 0.14);
+    animation: pay-brand-pop 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .mp-modal__card-brand svg {
     display: block;
-    width: 32px;
-    height: 20px;
+    width: 40px;
+    height: 26px;
 }
 
 .mp-modal__brick-loading {
@@ -265,7 +339,7 @@
     justify-content: center;
     gap: 9px;
     min-height: 250px;
-    color: var(--mp-muted);
+    color: var(--pay-muted);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -278,225 +352,205 @@
 .mp-modal__brick-spinner {
     width: 15px;
     height: 15px;
-    border: 2px solid rgba(23, 19, 15, 0.14);
-    border-top-color: #c9971f;
+    border: 2px solid rgba(10, 10, 12, 0.12);
+    border-top-color: var(--pay-accent);
     border-radius: 50%;
-    animation: mp-modal-spin 0.7s linear infinite;
+    animation: pay-spin 0.7s linear infinite;
 }
 
-.mp-modal__brands {
-    color: #a39a8c;
-    font-size: 8px;
-    font-weight: 750;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
+/* ----- Pie ----- */
 
-.mp-modal__form {
-    display: grid;
-    gap: 8px;
-    margin-top: 0;
-}
-
-.mp-modal__field {
-    min-width: 0;
-}
-
-.mp-modal__label {
-    display: block;
-    margin-bottom: 4px;
-    color: #7c7264;
-    font-size: 9px;
-    font-weight: 750;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-}
-
-.mp-modal__input,
-.mp-modal__secure {
-    width: 100%;
-    height: 48px !important;
-    min-height: 48px !important;
-    border: 1px solid #ded7ca;
-    border-radius: 12px;
-    background: #fbf9f4;
-    color: var(--mp-ink);
-    font: inherit;
-    font-size: 14px;
-    box-shadow: inset 0 1px 2px rgba(23, 19, 15, 0.035);
-    transition: border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.mp-modal__input {
-    padding: 0 12px;
-}
-
-.mp-modal__input:focus,
-.mp-modal__secure:focus-within {
-    outline: none;
-    border-color: rgba(172, 126, 25, 0.55);
-    box-shadow: 0 0 0 3px rgba(246, 200, 75, 0.2);
-}
-
-.mp-modal__secure {
-    position: relative;
-    overflow: hidden;
-}
-
-.mp-modal__secure iframe {
-    display: block !important;
-    width: 100% !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
-    border: 0 !important;
-}
-
-.mp-modal__row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.mp-modal__submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 50px;
-    margin-top: 2px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--mp-ink);
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 55%);
-    color: #fffdf8;
-    box-shadow: 0 14px 26px rgba(23, 19, 15, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    font: inherit;
-    font-size: 13.5px;
-    font-weight: 720;
-    letter-spacing: -0.015em;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-}
-
-.mp-modal__submit:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 18px 32px rgba(23, 19, 15, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.mp-modal__submit:active:not(:disabled) {
-    transform: scale(0.992);
-}
-
-.mp-modal__submit:focus-visible {
-    outline: 3px solid rgba(246, 200, 75, 0.55);
-    outline-offset: 3px;
-}
-
-.mp-modal__submit:disabled {
-    cursor: wait;
-    opacity: 0.64;
-}
-
-.mp-modal__alert,
-.mp-modal__result {
-    margin-top: 8px;
-    padding: 8px 10px;
-    border: 1px solid var(--mp-line);
-    border-radius: 12px;
-    background: #f8f5ef;
-    color: #5f574c;
-    font-size: 10px;
-    line-height: 1.45;
-}
-
-.mp-modal__alert {
-    border-color: rgba(190, 62, 62, 0.2);
-    background: #fef2f2;
-    color: #8f2f2f;
-}
-
-.mp-modal__switch-row {
+.mp-modal__footer,
+.pay-modal__footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-top: 8px;
-    color: #8a8175;
-    font-size: 10px;
+    margin-top: 14px;
+}
+
+.mp-modal__secure-note,
+.pay-modal__secure-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--pay-muted);
+    font-size: 10.5px;
+    font-weight: 550;
+}
+
+.mp-modal__secure-note svg,
+.pay-modal__secure-note svg {
+    color: var(--pay-success);
 }
 
 .mp-modal__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 13px;
     border: 0;
-    background: transparent;
-    color: #5f574c;
+    border-radius: 999px;
+    background: rgba(10, 10, 12, 0.06);
+    color: var(--pay-ink);
     cursor: pointer;
     font: inherit;
-    font-size: 10px;
-    font-weight: 750;
-    text-decoration: underline;
-    text-decoration-color: rgba(23, 19, 15, 0.2);
-    text-underline-offset: 3px;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .mp-modal__switch:hover {
-    color: var(--mp-ink);
+    background: rgba(10, 10, 12, 0.10);
+    transform: translateX(1px);
 }
 
 .mp-modal__switch:focus-visible {
-    outline: 2px solid rgba(246, 200, 75, 0.55);
+    outline: 3px solid rgba(10, 132, 255, 0.35);
     outline-offset: 2px;
 }
 
-.mp-modal__result.is-error {
-    border-color: rgba(190, 62, 62, 0.2);
-    background: #fef2f2;
-    color: #8f2f2f;
+.mp-modal__switch:disabled {
+    cursor: wait;
+    opacity: 0.55;
 }
 
-@keyframes mp-modal-fade {
+/* ----- Estados ----- */
+
+.mp-modal__alert,
+.mp-modal__result {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--pay-line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--pay-ink-soft);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.mp-modal__alert {
+    border-color: rgba(190, 62, 62, 0.24);
+    background: rgba(255, 235, 235, 0.82);
+    color: #8f2727;
+}
+
+.mp-modal__result.is-error {
+    border-color: rgba(190, 62, 62, 0.24);
+    background: rgba(255, 235, 235, 0.82);
+    color: #8f2727;
+}
+
+.mp-modal__alert[hidden],
+.mp-modal__result[hidden] {
+    display: none !important;
+}
+
+/* ----- Modal de Culqi ----- */
+
+.pay-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.pay-modal.hidden {
+    display: none;
+}
+
+.pay-modal__sheet {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 560px);
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+}
+
+.pay-modal__lede {
+    margin: 10px 2px 0;
+    color: var(--pay-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.pay-modal__body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 14px;
+    padding: 10px;
+    border: 1px solid var(--pay-line);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.pay-modal__ghost {
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--pay-ink-soft);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 620;
+    transition: background 0.2s ease;
+}
+
+.pay-modal__ghost:hover {
+    background: rgba(10, 10, 12, 0.06);
+}
+
+/* ----- Animaciones ----- */
+
+@keyframes pay-fade {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-@keyframes mp-modal-rise {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+@keyframes pay-rise {
+    from { opacity: 0; transform: translateY(16px) scale(0.975); }
     to { opacity: 1; transform: none; }
 }
 
-@keyframes mp-modal-spin {
+@keyframes pay-spin {
     to { transform: rotate(360deg); }
 }
 
-@keyframes mp-modal-brand-in {
-    from { opacity: 0; transform: scale(0.9); }
+@keyframes pay-brand-pop {
+    from { opacity: 0.4; transform: scale(0.88); }
     to { opacity: 1; transform: none; }
 }
 
 @media (max-width: 520px) {
-    .mp-modal {
-        padding: 8px;
+    .mp-modal,
+    .pay-modal {
+        padding: 6px;
     }
 
-    .mp-modal__sheet {
-        border-radius: 22px;
-        padding: 14px;
+    .mp-modal__sheet,
+    .pay-modal__sheet {
+        border-radius: 26px;
+        padding: 16px;
     }
 
-    .mp-modal__form-card {
-        padding: 10px;
-    }
-}
-
-@media (max-width: 400px) {
-    .mp-modal__row {
-        grid-template-columns: 1fr;
+    .mp-modal__amount strong {
+        font-size: 28px;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .mp-modal__backdrop,
-    .mp-modal__sheet {
+    .pay-modal__backdrop,
+    .mp-modal__sheet,
+    .pay-modal__sheet,
+    .mp-modal__card-brand {
         animation: none;
     }
 
@@ -505,9 +559,8 @@
     }
 
     .mp-modal__close,
-    .mp-modal__input,
-    .mp-modal__secure,
-    .mp-modal__submit {
+    .pay-modal__close,
+    .mp-modal__switch {
         transition: none;
     }
 }

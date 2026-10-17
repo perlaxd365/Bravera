@@ -157,12 +157,12 @@ export const openModal = async (rawSession, publicKey, state) => {
             theme: 'default',
             menuType: 'sidebar',
             defaultStyle: {
-                bannerColor: '#111827',
-                buttonBackground: '#111827',
-                menuColor: '#111827',
-                linksColor: '#047857',
+                bannerColor: '#0a0a0c',
+                buttonBackground: '#0a0a0c',
+                menuColor: '#0a0a0c',
+                linksColor: '#0a84ff',
                 buttonTextColor: '#ffffff',
-                priceColor: '#111827',
+                priceColor: '#0a0a0c',
             },
         },
     });

@@ -545,17 +545,9 @@ class Checkout extends Component
             return;
         }
 
-        $pendingOrder = $this->sessionOrder();
-        if ($pendingOrder?->isPayable()) {
-            $previousGateway = $pendingOrder->payments()->latest('id')->value('gateway');
-            $intentGateway = $pendingOrder->payment_intent ?: $previousGateway;
-
-            if ($intentGateway && $intentGateway !== $this->selectedGateway) {
-                $this->dispatch('notify', ['type' => 'error', 'message' => 'Continúa el pago de este pedido con la pasarela que seleccionaste al iniciarlo.']);
-
-                return;
-            }
-        }
+        // Cambiar de pasarela es válido: se libera la reserva anterior y el
+        // carrito vuelve a quedar editable antes de crear el nuevo intento.
+        $this->releaseOrderForGatewaySwitch();
 
         if ($this->selectedGateway === 'mercadopago') {
             $this->paymentMethod = 'card';
@@ -843,6 +835,8 @@ class Checkout extends Component
      */
     public function startCulqiCheckout(): void
     {
+        $this->releaseOrderForGatewaySwitch();
+
         if (! $this->usesProviderModal()) {
             $this->placeOrder();
 
@@ -1490,7 +1484,57 @@ class Checkout extends Component
             $this->selectedGateway = 'culqi';
         }
 
+        $this->releaseOrderForGatewaySwitch();
         $this->syncPaymentMethodToGateway();
+    }
+
+    /**
+     * Libera el pedido reservado cuando el comprador cambia de pasarela.
+     *
+     * El pedido anterior se cancela, su stock se libera y el carrito vuelve a
+     * quedar activo. Así puede pagar con cualquier pasarela disponible sin
+     * quedar atado a la primera que eligió.
+     */
+    private function releaseOrderForGatewaySwitch(): void
+    {
+        $order = $this->sessionOrder();
+
+        if ($order === null) {
+            return;
+        }
+
+        $intentGateway = $order->payment_intent
+            ?: $order->payments()->latest('id')->value('gateway');
+
+        if ($intentGateway === null
+            || $intentGateway === $this->selectedGateway
+            || $order->payment_status === PaymentStatus::PAID) {
+            return;
+        }
+
+        if ($order->status === OrderStatus::PENDING
+            && $order->payment_status === PaymentStatus::PENDING) {
+            app(OrderService::class)->abandonPendingOrder(
+                $order,
+                'El comprador cambió la pasarela de pago.'
+            );
+        }
+
+        if ($order->fresh()?->payment_status !== PaymentStatus::PAID) {
+            $order->cart?->update(['status' => 'active']);
+        }
+
+        $this->showMercadoPagoModal = false;
+        $this->culqiOrderId = null;
+        $this->pendingOrderNumber = null;
+        $this->culqiSession = [];
+        $this->culqiFormOpened = false;
+        $this->paymentStage = 'idle';
+
+        session()->forget('mercadopago_pending_order');
+
+        $this->dispatch('culqi:cancelled');
+        $this->dispatch('mercadopago:modal-closed');
     }
 
     private function syncPaymentMethodToGateway(): void

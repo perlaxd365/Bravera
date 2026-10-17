@@ -4,6 +4,7 @@ let brickContainer = null;
 let mountingBrick = false;
 let mountQueued = false;
 let readyTimeout = null;
+let brickLayoutObserver = null;
 
 const byId = (id) => document.getElementById(id);
 
@@ -94,6 +95,8 @@ const setLoading = (isLoading) => {
     }
 };
 
+const NEUTRAL_CARD_MARKUP = '<svg viewBox="0 0 40 26" aria-hidden="true"><defs><clipPath id="mp-card-clip"><rect width="40" height="26" rx="4"/></clipPath></defs><g clip-path="url(#mp-card-clip)"><rect width="40" height="26" fill="#ffffff"/><rect y="5" width="40" height="4.2" fill="#ece8e1"/><rect x="6" y="15.5" width="9" height="3" rx="1.5" fill="#d7d2ca"/></g><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#ded8ce"/></svg>';
+
 const BRAND_MARKUP = {
     visa: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><text x="20" y="17.4" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="800" font-style="italic" letter-spacing="0.3" fill="#1a1f71">VISA</text></svg>',
     mastercard: '<svg viewBox="0 0 40 26" aria-hidden="true"><rect width="40" height="26" rx="4" fill="#ffffff"/><rect x="0.5" y="0.5" width="39" height="25" rx="3.5" fill="none" stroke="#e3ddd2"/><circle cx="16" cy="13" r="7.4" fill="#eb001b"/><circle cx="24" cy="13" r="7.4" fill="#f79e1b"/><path d="M20 6.6a7.4 7.4 0 0 0 0 12.8 7.4 7.4 0 0 0 0-12.8Z" fill="#ff5f00"/></svg>',
@@ -123,7 +126,7 @@ const brandFromBin = (bin) => {
         return 'visa';
     }
 
-    if (/^(5[1-5]|2[2-7])/.test(digits)) {
+    if (/^(5[0-5]|2[2-7])/.test(digits)) {
         return 'mastercard';
     }
 
@@ -138,17 +141,18 @@ const brandFromBin = (bin) => {
     return null;
 };
 
-const hideBrandBadge = () => {
+const resetBrandBadge = () => {
     const badge = byId('mp-modal-brand');
 
-    currentBrand = null;
+    currentBrand = 'neutral';
 
     if (!badge) {
         return;
     }
 
-    badge.hidden = true;
-    badge.replaceChildren();
+    badge.innerHTML = NEUTRAL_CARD_MARKUP;
+    badge.classList.remove('is-detected');
+    badge.hidden = false;
 };
 
 const positionBrandBadge = () => {
@@ -156,38 +160,55 @@ const positionBrandBadge = () => {
     const container = byId('mp-modal-card-brick');
     const field = container?.closest('.mp-modal__card-field');
 
-    if (!badge || !container || !field || badge.hidden) {
+    if (!badge || !container || !field) {
         return;
     }
 
     const frame = container.querySelector('iframe[name="cardNumber"]');
+    const box = frame?.parentElement;
 
-    if (!frame) {
+    if (!frame || !box) {
         return;
     }
 
     const fieldRect = field.getBoundingClientRect();
-    const frameRect = frame.getBoundingClientRect();
+    const boxRect = box.getBoundingClientRect();
 
-    if (!frameRect.height) {
+    if (!boxRect.height) {
         return;
     }
 
-    badge.style.top = `${Math.round(frameRect.top - fieldRect.top + (frameRect.height - 26) / 2)}px`;
-    badge.style.right = `${Math.round(fieldRect.right - frameRect.right + 12)}px`;
+    // Deja el hueco de la tarjeta dentro del propio campo, delante del número.
+    if (box.style.paddingLeft !== '58px') {
+        box.style.paddingLeft = '58px';
+    }
+
+    if (!badge.hidden) {
+        badge.style.top = `${Math.round(boxRect.top - fieldRect.top + (boxRect.height - 32) / 2)}px`;
+        badge.style.left = `${Math.round(boxRect.left - fieldRect.left + 8)}px`;
+    }
 };
 
 const setBrandBadge = (brand) => {
     const badge = byId('mp-modal-brand');
 
-    if (!badge || !brand || !BRAND_MARKUP[brand]) {
-        hideBrandBadge();
+    if (!badge) {
+        return;
+    }
+
+    if (!brand || !BRAND_MARKUP[brand]) {
+        if (currentBrand !== 'neutral') {
+            resetBrandBadge();
+            requestAnimationFrame(positionBrandBadge);
+        }
+
         return;
     }
 
     if (currentBrand !== brand) {
         badge.innerHTML = BRAND_MARKUP[brand];
         currentBrand = brand;
+        badge.classList.add('is-detected');
     }
 
     badge.hidden = false;
@@ -199,7 +220,12 @@ const unmountBrick = async () => {
 
     brickController = null;
     brickContainer = null;
-    hideBrandBadge();
+    currentBrand = null;
+
+    if (brickLayoutObserver) {
+        brickLayoutObserver.disconnect();
+        brickLayoutObserver = null;
+    }
 
     if (readyTimeout) {
         window.clearTimeout(readyTimeout);
@@ -214,6 +240,26 @@ const unmountBrick = async () => {
         await controller.unmount();
     } catch (error) {
         console.warn('[Mercado Pago] no se pudo desmontar el formulario:', error);
+    }
+};
+
+/**
+ * El Brick inserta su título y sus banderas después de montar el iframe, así
+ * que la tarjeta debe recalcular su posición cuando cambia la altura.
+ */
+const observeBrickLayout = (container) => {
+    if (!('ResizeObserver' in window)) {
+        return;
+    }
+
+    brickLayoutObserver?.disconnect();
+    brickLayoutObserver = new ResizeObserver(() => positionBrandBadge());
+    brickLayoutObserver.observe(container);
+
+    const inputBox = container.querySelector('iframe[name="cardNumber"]')?.parentElement;
+
+    if (inputBox) {
+        brickLayoutObserver.observe(inputBox);
     }
 };
 
@@ -260,6 +306,11 @@ const mountBrick = async () => {
     setError('');
     setResult('');
 
+    const brandBadge = byId('mp-modal-brand');
+    if (brandBadge) {
+        brandBadge.hidden = true;
+    }
+
     try {
         await unmountBrick();
         container.replaceChildren();
@@ -283,29 +334,37 @@ const mountBrick = async () => {
             initialization,
             customization: {
                 visual: {
+                        hideFormTitle: true,
                     style: {
                         theme: 'flat',
                         customVariables: {
-                            baseColor: '#17130f',
-                            buttonTextColor: '#fffdf8',
-                            textPrimaryColor: '#17130f',
-                            textSecondaryColor: '#6f6558',
-                            inputBackgroundColor: '#fbf9f4',
-                            outlinePrimaryColor: '#ded7ca',
-                            inputFocusedBoxShadow: '0 0 0 3px rgba(246, 200, 75, 0.22)',
-                            borderRadiusMedium: '12px',
-                            borderRadiusLarge: '14px',
+                            baseColor: '#0a0a0c',
+                            buttonTextColor: '#ffffff',
+                            textPrimaryColor: '#0a0a0c',
+                            textSecondaryColor: '#70707a',
+                            inputBackgroundColor: '#ffffff',
+                            formBackgroundColor: 'transparent',
+                            outlinePrimaryColor: 'rgba(60, 60, 67, 0.18)',
+                            inputFocusedBoxShadow: '0 0 0 4px rgba(10, 132, 255, 0.16)',
+                            borderRadiusMedium: '14px',
+                            borderRadiusLarge: '18px',
                             fontSizeMedium: '14px',
                             fontSizeLarge: '15px',
+                            inputVerticalPadding: '13px',
+                            inputHorizontalPadding: '14px',
                             formPadding: '0px',
                         },
                     },
                     texts: {
+                        formTitle: 'Datos de la tarjeta',
                         cardNumber: { label: 'Número de tarjeta' },
                         expirationDate: { label: 'Vencimiento' },
                         securityCode: { label: 'Código de seguridad' },
                         cardholderName: { label: 'Nombre del titular' },
                         cardholderIdentification: { label: 'DNI del titular' },
+                        installmentsSectionTitle: 'Cuotas',
+                        selectInstallments: 'Número de cuotas',
+                        selectIssuerBank: 'Banco emisor',
                         formSubmit: `Pagar S/ ${Number(modal.dataset.amount || 0).toFixed(2)}`,
                     },
                 },
@@ -323,7 +382,9 @@ const mountBrick = async () => {
 
                     setLoading(false);
                     setError('');
-                    window.setTimeout(positionBrandBadge, 250);
+                    resetBrandBadge();
+                    window.setTimeout(positionBrandBadge, 120);
+                    window.setTimeout(positionBrandBadge, 500);
                 },
                 onError: (error) => {
                     setLoading(false);
@@ -334,6 +395,8 @@ const mountBrick = async () => {
                 onSubmit: submitBrick,
             },
         });
+
+        observeBrickLayout(container);
 
         readyTimeout = window.setTimeout(() => {
             const loading = byId('mp-modal-brick-loading');

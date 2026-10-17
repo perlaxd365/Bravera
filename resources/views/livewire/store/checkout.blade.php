@@ -297,10 +297,10 @@
                     <div class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pasarela de pago">
                         @foreach ($availableGateways as $gatewayKey => $gateway)
                             <label for="gateway-{{ $gatewayKey }}"
-                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $selectedGateway === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }} {{ $awaitingPayment ? 'cursor-not-allowed opacity-70' : '' }}">
+                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $selectedGateway === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }}">
                                 <input id="gateway-{{ $gatewayKey }}" type="radio" name="payment_gateway"
                                     value="{{ $gatewayKey }}" wire:model.live="selectedGateway"
-                                    @disabled($awaitingPayment)
+                                    @disabled(in_array($paymentStage, ['processing', 'pending', 'paid'], true))
                                     class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
                                 <span>
                                     <span class="block text-sm font-semibold text-gray-900">{{ $gateway['title'] }}</span>
@@ -315,8 +315,8 @@
 
                 @if ($awaitingPayment)
                     <p class="mb-3 text-xs leading-5 text-gray-500">
-                        El pedido ya está reservado con la pasarela elegida. Para cambiar, usa
-                        “Pagar con Culqi” dentro del pago de Mercado Pago o vuelve al carrito.
+                        Tu pedido está reservado esperando el pago. Si eliges otra pasarela, liberamos
+                        esa reserva y tus productos vuelven al carrito automáticamente.
                     </p>
                 @endif
 
@@ -475,7 +475,8 @@
                                 'izipay' => 'abrir el formulario de Izipay',
                                 default => 'abrir el formulario de Culqi',
                             } }} para completarlo. Lo dejamos reservado un tiempo;
-                            si no lo pagas, se libera automáticamente.
+                            si no lo pagas, se libera automáticamente. También puedes cambiar de
+                            pasarela arriba sin perder tus productos.
                         </p>
                     </div>
                 @endif
@@ -544,28 +545,43 @@
     </div>
 
     @if ($usesProviderModal && $culqiSession !== [])
-        <div id="culqi-payment-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-950/60 p-2 backdrop-blur-sm sm:p-4"
+        <div id="culqi-payment-modal" class="pay-modal hidden"
             role="dialog" aria-modal="true" aria-labelledby="culqi-payment-title">
-            <div class="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 sm:max-h-[calc(100dvh-2rem)]">
-                <header class="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-7">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Pago seguro</p>
-                        <h2 id="culqi-payment-title" class="mt-1 text-xl font-bold tracking-tight text-gray-950">Completa tu pago</h2>
-                        <p class="mt-1 text-sm text-gray-500">Elige tarjeta, Yape u otro medio disponible.</p>
+            <div class="pay-modal__backdrop"></div>
+
+            <div class="pay-modal__sheet">
+                <span class="pay-modal__grabber" aria-hidden="true"></span>
+
+                <header class="pay-modal__head">
+                    <div class="pay-modal__brand">
+                        <span class="pay-modal__badge" aria-hidden="true">
+                            <flux:icon name="shield-check" class="size-4" />
+                        </span>
+                        <div>
+                            <p class="pay-modal__eyebrow">Pago verificado</p>
+                            <h2 id="culqi-payment-title">Culqi</h2>
+                        </div>
                     </div>
                     <button type="button" wire:click="cancelCulqiCheckout" aria-label="Cerrar y conservar el carrito"
-                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20">
-                        <flux:icon name="x-mark" class="size-5" />
+                        class="pay-modal__close">
+                        <flux:icon name="x-mark" class="size-4" />
                     </button>
                 </header>
-                <div class="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:overflow-hidden sm:px-6 sm:py-5">
+
+                <p class="pay-modal__lede">Elige tarjeta, Yape o el medio que prefieras. Tu pago se procesa dentro de Culqi.</p>
+
+                <div class="pay-modal__body">
                     <div id="culqi-container" wire:ignore class="w-full"></div>
                 </div>
-                <footer class="flex flex-col-reverse items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/80 px-5 py-3 sm:flex-row sm:px-7">
-                    <p class="flex items-center gap-2 text-xs text-gray-500"><flux:icon name="lock-closed" class="size-4" />Pago protegido por Culqi</p>
+
+                <footer class="pay-modal__footer">
+                    <span class="pay-modal__secure-note">
+                        <flux:icon name="lock-closed" class="size-3.5" />
+                        Pago cifrado y protegido
+                    </span>
                     @if ($paymentStage === 'idle')
                         <button type="button" wire:click="cancelCulqiCheckout" wire:loading.attr="disabled"
-                            class="rounded-full px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200/70">
+                            class="pay-modal__ghost">
                             Cancelar y conservar mi carrito
                         </button>
                     @endif
@@ -592,12 +608,14 @@
             <div class="mp-modal__backdrop" wire:click="closeMercadoPagoModal"></div>
 
             <section class="mp-modal__sheet" tabindex="-1">
+                <span class="mp-modal__grabber" aria-hidden="true"></span>
+
                 <header class="mp-modal__head">
                     <div class="mp-modal__brand">
                         <span class="mp-modal__verified" aria-hidden="true">
                             <flux:icon name="check" class="size-4" />
                         </span>
-                        <div>
+                        <div class="mp-modal__titles">
                             <p class="mp-modal__eyebrow">Pago verificado</p>
                             <h2 id="mp-modal-title">Mercado Pago</h2>
                         </div>
@@ -608,25 +626,30 @@
                     </button>
                 </header>
 
-                <p id="mp-modal-description" class="mp-modal__lede">
-                    Pago seguro para tu pedido <strong>{{ $mercadoPagoOrder->order_number }}</strong>.
-                </p>
-
-                <div class="mp-modal__total">
-                    <span>Total a pagar</span>
-                    <strong>S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}</strong>
+                <div id="mp-modal-description" class="mp-modal__order">
+                    <div class="mp-modal__order-meta">
+                        <span class="mp-modal__order-label">Pedido</span>
+                        <span class="mp-modal__order-number">{{ $mercadoPagoOrder->order_number }}</span>
+                    </div>
+                    <div class="mp-modal__amount">
+                        <span>Total a pagar</span>
+                        <strong>S/ {{ number_format((float) $mercadoPagoOrder->total, 2) }}</strong>
+                    </div>
                 </div>
 
                 @if ($mpModalTestMode)
                     <p class="mp-modal__test">
-                        <strong>Modo prueba</strong> · Nombre APRO · DNI 123456789
+                        <strong>Modo prueba</strong>
+                        <span>Nombre APRO · DNI 123456789</span>
                     </p>
                 @endif
 
                 <div id="mp-modal-error" role="alert" aria-live="assertive" hidden wire:ignore
                     class="mp-modal__alert"></div>
 
-                <div class="mp-modal__form-card mp-modal__form-card--brick">
+                <div class="mp-modal__form-card">
+                    <p class="mp-modal__form-label">Datos de la tarjeta</p>
+
                     <div id="mp-modal-brick-loading" class="mp-modal__brick-loading" aria-live="polite">
                         <span class="mp-modal__brick-spinner" aria-hidden="true"></span>
                         <span>Cargando formulario seguro…</span>
@@ -638,14 +661,18 @@
                     </div>
                 </div>
 
-                <div class="mp-modal__switch-row">
-                    <span>¿Prefieres otro medio?</span>
+                <footer class="mp-modal__footer">
+                    <span class="mp-modal__secure-note">
+                        <flux:icon name="lock-closed" class="size-3.5" />
+                        Pago cifrado y protegido
+                    </span>
                     <button type="button" wire:click="switchToCulqi"
                         wire:loading.attr="disabled" wire:target="switchToCulqi"
                         class="mp-modal__switch">
                         Pagar con Culqi
+                        <span aria-hidden="true">→</span>
                     </button>
-                </div>
+                </footer>
 
                 <div id="mp-modal-result" role="status" aria-live="polite" hidden wire:ignore
                     class="mp-modal__result"></div>
