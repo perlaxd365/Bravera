@@ -126,6 +126,29 @@ class CulqiGatewayTest extends TestCase
         });
     }
 
+    public function test_envia_el_dni_valido_en_los_detalles_antifraude(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge(), 201),
+        ]);
+
+        $order = $this->order(51.00);
+        $order->update([
+            'customer_snapshot' => array_merge($order->customer_snapshot, [
+                'identification_type' => 'DNI',
+                'identification_number' => '12345678',
+            ]),
+        ]);
+
+        app(CulqiGateway::class)->charge($this->payment($order));
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.culqi.com/v2/charges'
+                && data_get($request->data(), 'antifraud_details.identification_type') === 'DNI'
+                && data_get($request->data(), 'antifraud_details.identification_number') === '12345678';
+        });
+    }
+
     public function test_usa_la_clave_secreta_en_el_servidor(): void
     {
         Http::fake([

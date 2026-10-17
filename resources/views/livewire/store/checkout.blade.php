@@ -341,6 +341,18 @@
                             </p>
                         </div>
                         <x-brevare.payment-methods compact class="mt-4" />
+
+                        <div class="mt-4">
+                            <label for="culqi-identification"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700">DNI del titular</label>
+                            <input id="culqi-identification" type="text" wire:model="culqiIdentification"
+                                inputmode="numeric" maxlength="8" placeholder="8 dígitos (ej. 12345678)"
+                                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                Culqi valida el DNI de 8 dígitos para autorizar el pago.
+                            </p>
+                        </div>
+
                         <p class="mt-3 flex items-start gap-2 text-xs text-gray-500">
                             <flux:icon name="lock-closed" class="size-4 shrink-0" />
                             Tu tarjeta se procesa dentro del formulario de Culqi. No almacenamos el número completo.

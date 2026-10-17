@@ -171,7 +171,12 @@ export const openModal = async (rawSession, publicKey, state) => {
             amount: session.amount,
             order: session.gatewayOrderId,
         },
-        client: { email: session.email },
+        client: {
+            email: session.email,
+            ...(session.identification
+                ? { identification: { type: 'DNI', number: String(session.identification) } }
+                : {}),
+        },
         options: {
             lang: 'es',
             modal: false,

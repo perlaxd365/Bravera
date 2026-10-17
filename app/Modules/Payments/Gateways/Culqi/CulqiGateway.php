@@ -612,9 +612,11 @@ class CulqiGateway implements PaymentGateway
             'first_name' => $parts[0] ?? '',
             'last_name' => $parts[1] ?? '',
             'address' => (string) data_get($address, 'address', ''),
-            'city' => 'Lima',
+            'address_city' => 'Lima',
             'country_code' => 'PE',
-            'phone_number' => (string) data_get($address, 'phone', ''),
+            'phone' => (string) data_get($address, 'phone', ''),
+            'identification_type' => (string) data_get($order?->customer_snapshot, 'identification_type', ''),
+            'identification_number' => (string) data_get($order?->customer_snapshot, 'identification_number', ''),
         ], fn ($value) => $value !== '');
     }
 

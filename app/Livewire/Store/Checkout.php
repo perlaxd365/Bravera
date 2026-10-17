@@ -89,6 +89,12 @@ class Checkout extends Component
      */
     public string $gatewayChoice = '';
 
+    /**
+     * DNI del titular para el cargo de Culqi. En modo prueba se usa un DNI
+     * válido por defecto para que las tarjetas de prueba no fallen.
+     */
+    public string $culqiIdentification = '';
+
     public bool $showMercadoPagoModal = false;
 
     /**
@@ -868,10 +874,42 @@ class Checkout extends Component
             return;
         }
 
+        $identification = $this->culqiIdentificationNumber();
+
+        if ($identification === '') {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Ingresa un DNI válido de 8 dígitos para pagar con Culqi.',
+            ]);
+
+            return;
+        }
+
         // Reintento dentro de la misma sesión: el pedido y su orden ya existen,
         // así que se vuelve a abrir el modal en vez de crear un segundo pedido.
         // (El carrito ya está convertido, así que no se puede cobrar dos veces.)
         $existing = $this->payableModalOrder(announce: false);
+
+        if ($existing !== null) {
+            $existing->update([
+                'customer_snapshot' => array_merge((array) $existing->customer_snapshot, [
+                    'identification_type' => 'DNI',
+                    'identification_number' => $identification,
+                ]),
+            ]);
+            $existing->refresh();
+
+            if ($this->culqiSession !== [] && $existing->gateway_order_id) {
+                $this->culqiSession = $this->buildCulqiSession(
+                    $existing,
+                    (string) $existing->gateway_order_id,
+                    $existing->payments()
+                        ->where('gateway', 'culqi')
+                        ->latest('id')
+                        ->value('checkout_url')
+                );
+            }
+        }
 
         if ($existing !== null && $this->culqiSession !== []) {
             $this->culqiFormOpened = true;
@@ -885,6 +923,14 @@ class Checkout extends Component
         if ($order === null) {
             return;
         }
+
+        $order->update([
+            'customer_snapshot' => array_merge((array) $order->customer_snapshot, [
+                'identification_type' => 'DNI',
+                'identification_number' => $identification,
+            ]),
+        ]);
+        $order->refresh();
 
         $session = $this->openCulqiModal($order);
 
@@ -1183,6 +1229,7 @@ class Checkout extends Component
             'amount' => (int) round((float) $order->total * 100),
             'currency' => (string) ($order->currency ?: 'PEN'),
             'email' => $order->user?->email ?? data_get($order->customer_snapshot, 'email'),
+            'identification' => (string) data_get($order->customer_snapshot, 'identification_number', ''),
             'methods' => $this->culqiModalMethods(),
             'checkoutUrl' => $checkoutUrl,
         ];
@@ -1426,6 +1473,28 @@ class Checkout extends Component
         }
 
         return $methods;
+    }
+
+    /**
+     * DNI que viaja al cargo de Culqi. Culqi rechaza el pago con
+     * `invalid_identification` si el documento no tiene el formato correcto;
+     * en modo prueba se usa uno válido para no bloquear las tarjetas de test.
+     */
+    private function culqiIdentificationNumber(): string
+    {
+        $dni = preg_replace('/\D+/', '', $this->culqiIdentification) ?? '';
+
+        if (strlen($dni) === 8) {
+            return $dni;
+        }
+
+        $publicKey = (string) config('payments.culqi.public_key');
+
+        if (str_starts_with($publicKey, 'pk_test_') || str_starts_with($publicKey, 'TEST-')) {
+            return '12345678';
+        }
+
+        return '';
     }
 
     private function isPending(Payment $payment): bool
