@@ -1,4 +1,24 @@
-@props(['compact' => false])
+@props(['compact' => false, 'provider' => 'culqi'])
+
+@php
+    $isMercadoPago = $provider === 'mercadopago';
+    $providerName = $isMercadoPago ? 'Mercado Pago' : 'Culqi';
+    $methods = $isMercadoPago
+        ? [
+            ['Visa', 'visa.svg'],
+            ['Mastercard', 'masterCard.svg'],
+            ['Diners Club', 'diners.svg'],
+            ['American Express', 'amex.svg'],
+        ]
+        : [
+            ['Visa', 'visa.svg'],
+            ['Mastercard', 'masterCard.svg'],
+            ['Diners Club', 'diners.svg'],
+            ['American Express', 'amex.svg'],
+            ['Yape', 'yape.svg'],
+            ['Plin', 'plin.svg'],
+        ];
+@endphp
 
 <div {{ $attributes->merge(['class' => 'rounded-2xl border border-gray-200 bg-white p-4']) }}>
     <div class="flex items-center gap-2">
@@ -11,31 +31,31 @@
 
     <div class="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500">
         <span>Powered by</span>
-        <img
-            src="https://culqi.com/assets/images/shared/logos/culqiConNombre.svg"
-            alt="Culqi"
-            width="82"
-            height="24"
-            loading="lazy"
-            decoding="async"
-            referrerpolicy="no-referrer"
-            style="display:block;width:auto!important;height:22px!important;max-width:82px!important;object-fit:contain"
-        >
+        @if ($isMercadoPago)
+            <span class="text-[15px] font-bold tracking-tight">
+                <span class="text-[#009ee3]">Mercado</span>
+                <span class="text-[#f5a623]">Pago</span>
+            </span>
+        @else
+            <img
+                src="https://culqi.com/assets/images/shared/logos/culqiConNombre.svg"
+                alt="Culqi"
+                width="82"
+                height="24"
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                style="display:block;width:auto!important;height:22px!important;max-width:82px!important;object-fit:contain"
+            >
+        @endif
     </div>
 
     <ul
         class="mx-auto mt-4 w-full {{ $compact ? 'max-w-[480px]' : 'max-w-[560px]' }}"
-        aria-label="Medios de pago disponibles con Culqi"
+        aria-label="Medios de pago disponibles con {{ $providerName }}"
         style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px"
     >
-        @foreach ([
-            ['Visa', 'visa.svg'],
-            ['Mastercard', 'masterCard.svg'],
-            ['Diners Club', 'diners.svg'],
-            ['American Express', 'amex.svg'],
-            ['Yape', 'yape.svg'],
-            ['Plin', 'plin.svg'],
-        ] as [$name, $logo])
+        @foreach ($methods as [$name, $logo])
             <li class="flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white px-2"
                 style="width:72px;height:48px;flex:0 0 72px">
                 <img

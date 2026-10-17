@@ -83,6 +83,12 @@ class Checkout extends Component
 
     public string $selectedGateway = 'culqi';
 
+    /**
+     * Selección visible en el checkout. Nace vacía para que ninguna pasarela
+     * aparezca preseleccionada; al reanudar un pedido toma la pasarela real.
+     */
+    public string $gatewayChoice = '';
+
     public bool $showMercadoPagoModal = false;
 
     /**
@@ -146,6 +152,7 @@ class Checkout extends Component
         if (is_string($requestedGateway)
             && in_array($requestedGateway, $this->availableGatewayNames(), true)) {
             $this->selectedGateway = $requestedGateway;
+            $this->gatewayChoice = $requestedGateway;
             $this->syncPaymentMethodToGateway();
         }
 
@@ -170,6 +177,7 @@ class Checkout extends Component
         // "Pagar ahora" es una acción explícita y puede reanudar un pedido
         // aunque el comprador tenga otros artículos en el carrito.
         if ($pagar !== '' && $this->resumeModalOrder($pagar)) {
+            $this->gatewayChoice = $this->selectedGateway;
             $this->addresses = app(CustomerAddressService::class)
                 ->addressesFor(auth()->user());
 
@@ -185,6 +193,7 @@ class Checkout extends Component
             if (is_string($pendingMercadoPagoOrder)
                 && $pendingMercadoPagoOrder !== ''
                 && $this->resumeModalOrder($pendingMercadoPagoOrder)) {
+                $this->gatewayChoice = $this->selectedGateway;
                 $this->addresses = app(CustomerAddressService::class)
                     ->addressesFor(auth()->user());
 
@@ -196,6 +205,7 @@ class Checkout extends Component
             }
 
             if ($this->resumeLatestPendingModalOrder()) {
+                $this->gatewayChoice = $this->selectedGateway;
                 $this->addresses = app(CustomerAddressService::class)
                     ->addressesFor(auth()->user());
 
@@ -1504,6 +1514,20 @@ class Checkout extends Component
             $this->selectedGateway = 'culqi';
         }
 
+        $this->gatewayChoice = $this->selectedGateway;
+        $this->releaseOrderForGatewaySwitch();
+        $this->syncPaymentMethodToGateway();
+    }
+
+    public function updatedGatewayChoice(string $value): void
+    {
+        if (! in_array($value, $this->availableGatewayNames(), true)) {
+            $this->gatewayChoice = '';
+
+            return;
+        }
+
+        $this->selectedGateway = $value;
         $this->releaseOrderForGatewaySwitch();
         $this->syncPaymentMethodToGateway();
     }

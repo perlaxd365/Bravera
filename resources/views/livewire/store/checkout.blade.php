@@ -293,13 +293,13 @@
                     Método de pago
                 </h2>
 
-                @if (count($availableGateways) > 1)
+                @if (count($availableGateways) > 0)
                     <div class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pasarela de pago">
                         @foreach ($availableGateways as $gatewayKey => $gateway)
                             <label for="gateway-{{ $gatewayKey }}"
-                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $selectedGateway === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }}">
+                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $gatewayChoice === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }}">
                                 <input id="gateway-{{ $gatewayKey }}" type="radio" name="payment_gateway"
-                                    value="{{ $gatewayKey }}" wire:model.live="selectedGateway"
+                                    value="{{ $gatewayKey }}" wire:model.live="gatewayChoice"
                                     @disabled(in_array($paymentStage, ['processing', 'pending', 'paid'], true))
                                     class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
                                 <span>
@@ -320,7 +320,14 @@
                     </p>
                 @endif
 
-                @if ($usesProviderModal)
+                @if ($gatewayChoice === '')
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50/70 px-4 py-4">
+                        <p class="flex items-start gap-3 text-sm text-gray-600">
+                            <flux:icon name="cursor-arrow-rays" class="mt-0.5 size-5 shrink-0 text-gray-500" />
+                            <span>Selecciona una pasarela de pago para ver los medios disponibles y continuar.</span>
+                        </p>
+                    </div>
+                @elseif ($usesProviderModal)
                     {{-- Culqi muestra aquí sus medios habilitados, sin salir
                          del checkout de Brevare. --}}
                     @if ($culqiPublicKey)
@@ -347,12 +354,11 @@
                         </div>
                     @endif
                 @elseif ($selectedGateway === 'mercadopago')
-                    <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-4">
-                        <p class="flex items-start gap-3 text-sm text-gray-900">
-                            <flux:icon name="lock-closed" class="mt-0.5 size-5 shrink-0" />
-                            <span>Al continuar, completarás el pago con tarjeta en el formulario seguro de Mercado Pago, sin salir de Brevare.</span>
-                        </p>
-                    </div>
+                    <x-brevare.payment-methods provider="mercadopago" compact class="mt-0" />
+                    <p class="mt-3 flex items-start gap-2 text-xs text-gray-500">
+                        <flux:icon name="lock-closed" class="size-4 shrink-0" />
+                        Al continuar, completarás el pago en el formulario seguro de Mercado Pago, sin salir de Brevare.
+                    </p>
                 @elseif ($selectedGateway === 'izipay')
                     <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-4">
                         <p class="flex items-start gap-3 text-sm text-gray-900">
@@ -502,7 +508,7 @@
                     </div>
                 @endif
 
-                @if ($usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
+                @if ($gatewayChoice !== '' && $usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
                     @if ($culqiSession === [])
                         <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
                             wire:target="startCulqiCheckout" @if (!$selectedAddressId) disabled @endif
@@ -522,7 +528,7 @@
                             <span wire:loading wire:target="startCulqiCheckout">Cargando Culqi...</span>
                         </button>
                     @endif
-                @elseif (!$usesProviderModal && !$settledOrderNumber)
+                @elseif ($gatewayChoice !== '' && !$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">

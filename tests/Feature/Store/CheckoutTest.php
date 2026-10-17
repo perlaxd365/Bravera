@@ -1327,6 +1327,7 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
+            ->set('gatewayChoice', 'culqi')
             ->assertDontSee('type="radio" name="payment_method"', false)
             ->assertDontSee('Tarjeta de débito/crédito')
             // El pago se completa dentro del modal de Culqi, no con un botón
@@ -1614,6 +1615,7 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
+            ->set('gatewayChoice', 'manual')
             ->assertSee('name="payment_method"', false)
             ->assertSee('Tarjeta de débito/crédito')
             ->assertSee('Transferencia bancaria');
@@ -1655,7 +1657,43 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
+            ->set('gatewayChoice', 'manual')
             ->assertSee('Modo demostración')
+            ->assertDontSee('Pagar con Culqi');
+    }
+
+    /**
+     * Ninguna pasarela nace seleccionada. Al elegir Mercado Pago se muestra su
+     * bloque de confianza y los medios que acepta.
+     */
+    public function test_mercadopago_solo_se_muestra_al_elegirlo_y_con_sus_medios(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('Selecciona una pasarela de pago')
+            ->assertDontSee('Continuar a Mercado Pago')
+            ->set('gatewayChoice', 'mercadopago')
+            ->assertSet('gatewayChoice', 'mercadopago')
+            ->assertSee('Pago 100% seguro')
+            ->assertSee('Mercado')
+            ->assertSee('Continuar a Mercado Pago')
+            ->assertSee('American Express')
             ->assertDontSee('Pagar con Culqi');
     }
 
