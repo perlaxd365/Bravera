@@ -1036,7 +1036,12 @@ class Checkout extends Component
         $this->paymentStage = 'processing';
 
         try {
-            $payment = app(PaymentService::class)->charge($order, 'card', sourceId: $token);
+            $payment = app(PaymentService::class)->charge(
+                $order,
+                'card',
+                gatewayName: 'culqi',
+                sourceId: $token,
+            );
             \Log::info('[Culqi] PaymentService::charge completado', [
                 'payment_id' => $payment->id,
                 'payment_status' => $payment->status->value,
@@ -1947,6 +1952,7 @@ class Checkout extends Component
             $payment = app(PaymentService::class)->charge(
                 $order,
                 'yape',
+                gatewayName: 'culqi',
                 sourceId: $token,
             );
 

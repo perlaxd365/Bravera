@@ -1865,10 +1865,52 @@ class CheckoutTest extends TestCase
         $payment = Payment::firstOrFail();
 
         $this->assertSame($order->id, $payment->order_id);
+        $this->assertSame('culqi', $payment->gateway);
         $this->assertSame('tkn_test_modal', $payment->source_id);
         $this->assertSame('chr_modal_1', $payment->gateway_transaction_id);
         $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
         $this->assertSame(OrderStatus::CONFIRMED->value, $order->fresh()->status->value);
+    }
+
+    /**
+     * El gateway por defecto de producción es Mercado Pago. El modal de Culqi
+     * debe cobrar explícitamente con Culqi y no enviar su token a MP.
+     */
+    public function test_el_modal_cobra_con_culqi_aunque_el_default_sea_mercadopago(): void
+    {
+        $this->useCulqi();
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_modal_mp_default'), 201),
+            'api.culqi.com/v2/charges' => Http::response(CulqiResponses::approvedCharge('chr_modal_mp_default', 11200), 201),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('selectedGateway', 'culqi')
+            ->call('startCulqiCheckout');
+
+        $component->call('completeCulqiCard', 'tkn_test_modal_default_mp')
+            ->assertSet('paymentStage', 'paid');
+
+        $payment = Payment::firstOrFail();
+        $this->assertSame('culqi', $payment->gateway);
+        $this->assertSame('chr_modal_mp_default', $payment->gateway_transaction_id);
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.culqi.com/v2/charges');
     }
 
     public function test_un_cargo_rechazado_en_el_modal_se_puede_reintentar_sobre_el_mismo_pedido(): void
