@@ -505,6 +505,11 @@ export const handleCulqiSettled = (payload) => {
 
     if (kind === 'idle') {
         hidePaymentProcessing();
+
+        if (payload.message) {
+            notify(payload.message);
+        }
+
         return;
     }
 

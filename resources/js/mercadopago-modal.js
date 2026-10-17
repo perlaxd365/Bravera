@@ -341,8 +341,6 @@ const mountBrick = async () => {
 
     mountingBrick = true;
     setLoading(true);
-    setError('');
-    setResult('');
 
     const brandBadge = byId('mp-modal-brand');
     if (brandBadge) {
@@ -419,7 +417,6 @@ const mountBrick = async () => {
                     }
 
                     setLoading(false);
-                    setError('');
                     resetBrandBadge();
                     restrictIdentificationTypes();
 
@@ -487,6 +484,8 @@ const openModal = () => {
 
     document.body.style.overflow = 'hidden';
     document.body.dataset.mpModalOpen = '1';
+    setError('');
+    setResult('');
     mountBrick();
     modal.querySelector('.mp-modal__close')?.focus();
 };
@@ -527,8 +526,11 @@ const init = () => {
             return;
         }
 
-        setResult(payload.message || 'No pudimos procesar el pago. Inténtalo de nuevo.', true);
+        setError(payload.message || 'No pudimos procesar el pago. Inténtalo de nuevo.');
+        setResult('');
         remountBrick();
+
+        byId('mp-modal-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
     window.addEventListener('resize', positionBrandBadge);
