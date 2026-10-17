@@ -1760,6 +1760,7 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
+            ->set('selectedGateway', 'culqi')
             ->call('startCulqiCheckout');
 
         $order = Order::firstOrFail();
@@ -2371,6 +2372,51 @@ class CheckoutTest extends TestCase
 
         // El pedido se muestra con su importe real, no como un carrito en cero.
         $response->assertDontSee('S/ 0.00');
+    }
+
+    /**
+     * En producción el gateway por defecto es Mercado Pago. Al reanudar un
+     * pedido de Culqi, el checkout debe volver con Culqi seleccionado; si no,
+     * el modal ni siquiera se renderiza y el comprador ve solo una recarga.
+     */
+    public function test_reanudar_un_pedido_de_culqi_selecciona_culqi_aunque_el_default_sea_mercadopago(): void
+    {
+        $this->useCulqi();
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(
+                CulqiResponses::pendingOrder('ord_resume_mp_default'),
+                201
+            ),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('selectedGateway', 'culqi')
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertSet('selectedGateway', 'culqi')
+            ->assertSet('culqiFormOpened', true)
+            ->assertSee('data-culqi-session', false)
+            ->assertDontSee('pay-modal hidden', false);
     }
 
     public function test_la_cuenta_ofrece_pagar_ahora_solo_a_los_pedidos_pendientes(): void

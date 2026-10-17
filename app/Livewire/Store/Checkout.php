@@ -272,6 +272,9 @@ class Checkout extends Component
             return false;
         }
 
+        $this->selectedGateway = 'culqi';
+        $this->syncPaymentMethodToGateway();
+
         $this->culqiSession = $this->buildCulqiSession(
             $order,
             (string) $order->gateway_order_id,
@@ -348,6 +351,9 @@ class Checkout extends Component
         if ($lastGateway !== null && $lastGateway !== 'culqi') {
             return false;
         }
+
+        $this->selectedGateway = 'culqi';
+        $this->syncPaymentMethodToGateway();
 
         // Sin orden en Culqi (un pedido que no llegó a abrir el modal) se crea
         // aquí; con ella, se reutiliza para no dejar órdenes huérfanas.
