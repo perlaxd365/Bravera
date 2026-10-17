@@ -1359,7 +1359,11 @@ class CheckoutTest extends TestCase
             ->set('selectedAddressId', $address->id)
             ->call('startCulqiCheckout')
             ->assertHasNoErrors()
-            ->assertDispatched('culqi:open');
+            ->assertDispatched('culqi:open')
+            // El modal llega visible desde el servidor: no depende de que el
+            // evento del navegador llegue antes que el DOM.
+            ->assertSee('data-culqi-session', false)
+            ->assertDontSee('pay-modal hidden', false);
 
         $order = Order::firstOrFail();
 
