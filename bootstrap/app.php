@@ -32,8 +32,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Webhooks de pasarela: peticiones server-to-server sin sesión ni token.
+        // El retorno de Izipay entra por aquí: es un POST del navegador que
+        // llega sin cookie de sesión, así que tampoco puede traer token CSRF.
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
+            'pagos/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

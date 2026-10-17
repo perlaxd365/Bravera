@@ -294,8 +294,8 @@
                 </h2>
 
                 @if (count($availableGateways) > 1)
-                    <div class="mb-4 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Pasarela de pago">
-                        @foreach ($availableGateways as $gatewayKey => $gatewayLabel)
+                    <div class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pasarela de pago">
+                        @foreach ($availableGateways as $gatewayKey => $gateway)
                             <label for="gateway-{{ $gatewayKey }}"
                                 class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $selectedGateway === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }} {{ $awaitingPayment ? 'cursor-not-allowed opacity-70' : '' }}">
                                 <input id="gateway-{{ $gatewayKey }}" type="radio" name="payment_gateway"
@@ -303,9 +303,9 @@
                                     @disabled($awaitingPayment)
                                     class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
                                 <span>
-                                    <span class="block text-sm font-semibold text-gray-900">{{ $gatewayKey === 'culqi' ? 'Culqi' : 'Mercado Pago' }}</span>
+                                    <span class="block text-sm font-semibold text-gray-900">{{ $gateway['title'] }}</span>
                                     <span class="mt-0.5 block text-xs leading-5 text-gray-500">
-                                        {{ $gatewayKey === 'culqi' ? 'Tarjetas, Yape y otros medios disponibles.' : 'Temporalmente en mantenimiento.' }}
+                                        {{ $gateway['description'] }}
                                     </span>
                                 </span>
                             </label>
@@ -344,6 +344,13 @@
                         <p class="flex items-start gap-3 text-sm text-gray-900">
                             <flux:icon name="lock-closed" class="mt-0.5 size-5 shrink-0" />
                             <span>Al continuar, te llevaremos al checkout seguro de Mercado Pago. Podrás elegir los medios habilitados para tu cuenta.</span>
+                        </p>
+                    </div>
+                @elseif ($selectedGateway === 'izipay')
+                    <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-4">
+                        <p class="flex items-start gap-3 text-sm text-gray-900">
+                            <flux:icon name="shield-check" class="mt-0.5 size-5 shrink-0" />
+                            <span>Al continuar, te llevaremos al formulario seguro de Izipay. Ahí podrás pagar con tarjeta, Yape o el medio que tengas habilitado.</span>
                         </p>
                     </div>
                 @elseif ($paymentMethods === [])
@@ -456,7 +463,11 @@
                         <p class="font-semibold">Tu pedido {{ $pendingOrderNumber }} está reservado y esperando el
                             pago.</p>
                         <p class="mt-1 text-amber-800">
-                            Vuelve a {{ $selectedGateway === 'mercadopago' ? 'continuar a Mercado Pago' : 'abrir el formulario de Culqi' }} para completarlo. Lo dejamos reservado un tiempo;
+                            Vuelve a {{ match ($selectedGateway) {
+                                'mercadopago' => 'continuar a Mercado Pago',
+                                'izipay' => 'abrir el formulario de Izipay',
+                                default => 'abrir el formulario de Culqi',
+                            } }} para completarlo. Lo dejamos reservado un tiempo;
                             si no lo pagas, se libera automáticamente.
                         </p>
                     </div>
@@ -507,7 +518,13 @@
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        <span wire:loading.remove>{{ $selectedGateway === 'mercadopago' ? 'Continuar a Mercado Pago' : 'Realizar pedido y pagar' }}</span>
+                        <span wire:loading.remove>
+                            {{ match ($selectedGateway) {
+                                'mercadopago' => 'Continuar a Mercado Pago',
+                                'izipay' => 'Continuar a Izipay',
+                                default => 'Realizar pedido y pagar',
+                            } }}
+                        </span>
                         <span wire:loading>Procesando...</span>
                     </button>
                 @endif

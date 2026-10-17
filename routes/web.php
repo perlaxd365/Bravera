@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Webhooks\CulqiWebhookController;
+use App\Http\Controllers\Izipay\IzipayReturnController;
+use App\Http\Controllers\Webhooks\IzipayWebhookController;
 use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
 use App\Http\Controllers\MercadoPagoReturnController;
 use App\Http\Controllers\Seo\SitemapController;
@@ -32,11 +34,21 @@ use Illuminate\Support\Facades\Route;
 Route::post('webhooks/culqi', CulqiWebhookController::class)
     ->name('webhooks.culqi');
 
+Route::post('webhooks/izipay', IzipayWebhookController::class)
+    ->name('webhooks.izipay');
+
 Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)
     ->name('webhooks.mercadopago');
 
 Route::get('pagos/mercadopago/retorno', MercadoPagoReturnController::class)
     ->name('payments.mercadopago.return');
+
+/*
+ * Retorno del navegador desde el formulario de Izipay: llega por POST, sin
+ * cookie de sesión y sin token CSRF (ver bootstrap/app.php).
+ */
+Route::post('pagos/izipay/retorno', IzipayReturnController::class)
+    ->name('payments.izipay.return');
 
 Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('feeds/google-shopping.xml', GoogleMerchantFeedController::class)->name('google.merchant-feed');
@@ -70,6 +82,10 @@ Route::get('checkout', Checkout::class)
 Route::get('pedido/{order:order_number}/confirmado', OrderPlaced::class)
     ->middleware('verified.if.authenticated')
     ->name('store.order.placed');
+
+Route::get('pago/izipay/{order:order_number}', \App\Livewire\Store\IzipayPayment::class)
+    ->middleware(['auth', 'verified'])
+    ->name('payments.izipay.pay');
 
 /*
 |--------------------------------------------------------------------------

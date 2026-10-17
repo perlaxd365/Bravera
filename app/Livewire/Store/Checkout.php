@@ -16,6 +16,7 @@ use App\Modules\Payments\Exceptions\CulqiApiException;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\Culqi\CulqiStatus;
+use App\Modules\Payments\Gateways\Izipay\IzipayGateway;
 use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
 use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Shipping\Services\ShippingQuoteService;
@@ -531,7 +532,9 @@ class Checkout extends Component
             }
         }
 
-        $order = $this->selectedGateway === 'mercadopago'
+        // Mercado Pago e Izipay reutilizan el pedido que ya está esperando
+        // pago; las demás pasarelas crean uno nuevo al cobrar.
+        $order = in_array($this->selectedGateway, ['mercadopago', 'izipay'], true)
             ? $this->payablePendingOrder()
             : null;
 
@@ -547,16 +550,29 @@ class Checkout extends Component
             $this->culqiOrderId = $order->id;
             $this->pendingOrderNumber = $order->order_number;
             $order->cart?->update(['status' => 'converted']);
+        } elseif ($this->selectedGateway === 'izipay') {
+            // Izipay no usa la maquinaria del modal de Culqi, así que no se
+            // toca culqiOrderId; solo se marca el pedido en curso y se cierra
+            // el carrito para que no se pueda cobrar dos veces.
+            $this->pendingOrderNumber = $order->order_number;
+            $order->cart?->update(['status' => 'converted']);
         }
 
         try {
             // El cobro va FUERA de toda transacción. Culqi no tiene
             // idempotency key: si la transacción envolviera el cobro y luego
             // revirtiera, el cliente habría pagado sin pedido registrado.
-            if ($this->selectedGateway === 'mercadopago') {
-                $attempt = Cache::lock('mercadopago:checkout:order:'.$order->id, 45)->block(20, function () use ($order) {
+            if (in_array($this->selectedGateway, ['mercadopago', 'izipay'], true)) {
+                // Las pasarelas que siguen en su propia página se cobran con
+                // el mismo cerrojo: si el comprador hace doble clic, se
+                // reutiliza la sesión de pago ya creada en vez de abrir una
+                // segunda orden en el proveedor.
+                $hostedGateway = $this->selectedGateway;
+                $hostedMethod = $hostedGateway === 'mercadopago' ? 'mercadopago' : $this->paymentMethod;
+
+                $attempt = Cache::lock($hostedGateway.':checkout:order:'.$order->id, 45)->block(20, function () use ($order, $hostedGateway, $hostedMethod) {
                     $existingCheckoutUrl = $order->payments()
-                        ->where('gateway', 'mercadopago')
+                        ->where('gateway', $hostedGateway)
                         ->where('status', PaymentStatus::PENDING)
                         ->latest('id')
                         ->value('checkout_url');
@@ -567,8 +583,8 @@ class Checkout extends Component
 
                     $payment = app(PaymentService::class)->charge(
                         $order,
-                        'mercadopago',
-                        gatewayName: 'mercadopago',
+                        $hostedMethod,
+                        gatewayName: $hostedGateway,
                     );
 
                     return ['checkout_url' => $payment->checkout_url, 'payment' => $payment];
@@ -598,7 +614,8 @@ class Checkout extends Component
                 return;
             }
 
-            if ($payment->status === PaymentStatus::FAILED && $this->selectedGateway === 'mercadopago') {
+            if ($payment->status === PaymentStatus::FAILED
+                && in_array($this->selectedGateway, ['mercadopago', 'izipay'], true)) {
                 $this->dispatch('notify', [
                     'type' => 'error',
                     'message' => 'No se pudo iniciar el pago. Tu pedido sigue reservado; vuelve a intentarlo.',
@@ -1312,11 +1329,39 @@ class Checkout extends Component
     private function availableGatewayNames(): array
     {
         $names = ['culqi'];
+
+        if (app(IzipayGateway::class)->isAvailable()) {
+            $names[] = 'izipay';
+        }
+
         if (app(MercadoPagoGateway::class)->isAvailable()) {
             $names[] = 'mercadopago';
         }
 
         return $names;
+    }
+
+    /**
+     * Tarjetas de pasarela que ve el comprador, en orden.
+     *
+     * El orden lo fija availableGatewayNames() (Culqi, Izipay, Mercado Pago) y
+     * los textos salen de config/payments.php para no repetirlos en la vista.
+     *
+     * @return array<string, array{title: string, description: string}>
+     */
+    private function availableGateways(): array
+    {
+        $labels = (array) config('payments.gateway_labels', []);
+        $options = [];
+
+        foreach ($this->availableGatewayNames() as $name) {
+            $options[$name] = [
+                'title' => (string) data_get($labels, $name.'.title', ucfirst($name)),
+                'description' => (string) data_get($labels, $name.'.description', ''),
+            ];
+        }
+
+        return $options;
     }
 
     private function payablePendingOrder(): ?Order
@@ -1421,10 +1466,7 @@ class Checkout extends Component
             'total' => $totals['total'],
 
             'paymentMethods' => $paymentMethods,
-            'availableGateways' => array_intersect_key([
-                'culqi' => 'Culqi · tarjeta, Yape y otros medios',
-                'mercadopago' => 'Mercado Pago · Checkout Pro',
-            ], array_flip($this->availableGatewayNames())),
+            'availableGateways' => $this->availableGateways(),
             'selectedGateway' => $this->selectedGateway,
             'usesProviderModal' => $usesModal,
             'culqiPublicKey' => $this->culqiPublicKey(),

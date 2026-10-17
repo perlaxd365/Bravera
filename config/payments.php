@@ -2,6 +2,7 @@
 
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\DemoGateway;
+use App\Modules\Payments\Gateways\Izipay\IzipayGateway;
 use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
 
 return [
@@ -33,6 +34,7 @@ return [
 
     'gateways' => [
         'culqi' => CulqiGateway::class,
+        'izipay' => IzipayGateway::class,
         'mercadopago' => MercadoPagoGateway::class,
         'demo' => DemoGateway::class,
         'manual' => DemoGateway::class,
@@ -140,6 +142,54 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Izipay (Mi Cuenta Web / PayZen V4)
+    |--------------------------------------------------------------------------
+    |
+    | Flujo de formulario alojado: la tienda pide un formToken con la API REST
+    | (Charge/CreatePayment) y el comprador paga en el SmartForm de Izipay.
+    | El resultado se confirma por IPN y por el retorno del navegador, siempre
+    | verificando la firma kr-hash.
+    |
+    | Las cuatro claves se copian del Back Office Vendedor:
+    | Configuración -> Tienda -> Claves de API REST.
+    |
+    */
+
+    'izipay' => [
+        'enabled' => env('IZIPAY_ENABLED', true),
+
+        // Usuario (número de comercio) y contraseña de la API REST.
+        'shop_id' => env('IZIPAY_SHOP_ID'),
+        'rest_password' => env('IZIPAY_REST_PASSWORD'),
+
+        // Clave pública del navegador, con el formato "shopId:publicKey".
+        'public_key' => env('IZIPAY_PUBLIC_KEY'),
+
+        // Clave HMAC con la que Izipay firma el kr-hash del IPN.
+        'hmac_key' => env('IZIPAY_HMAC_KEY'),
+
+        'endpoint' => env('IZIPAY_ENDPOINT', 'https://api.micuentaweb.pe'),
+
+        'js_url' => env(
+            'IZIPAY_JS_URL',
+            'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js'
+        ),
+
+        'css_url' => env(
+            'IZIPAY_CSS_URL',
+            'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic-reset.min.css'
+        ),
+
+        'theme_url' => env(
+            'IZIPAY_THEME_URL',
+            'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.min.js'
+        ),
+
+        'timeout' => env('IZIPAY_TIMEOUT', 20),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Horas que un pedido espera el pago antes de cancelarse
     |--------------------------------------------------------------------------
     |
@@ -186,9 +236,52 @@ return [
 
     'gateway_methods' => [
         'culqi' => ['card', 'yape'],
+        'izipay' => ['card'],
         'mercadopago' => ['mercadopago'],
         'demo' => ['card', 'yape', 'transferencia'],
         'manual' => ['card', 'yape', 'transferencia'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pasarelas alojadas (formulario del proveedor en su propia página)
+    |--------------------------------------------------------------------------
+    |
+    | El comprador completa el pago dentro del formulario del proveedor, así
+    | que la tienda no dibuja su propio selector de métodos ni su formulario
+    | de tarjeta: solo crea el pedido, pide el token de formulario y lo lleva
+    | a la página de pago. Izipay entra por aquí.
+    |
+    | A diferencia de 'modal_gateways' (Culqi), no reutilizan la maquinaria
+    | del modal: cada una tiene su propia página y su propio retorno.
+    |
+    */
+
+    'hosted_gateways' => ['izipay'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Presentación del selector de pasarelas
+    |--------------------------------------------------------------------------
+    |
+    | Orden y textos de las tarjetas del checkout. El orden de este arreglo es
+    | el que ve el comprador: Culqi, Izipay y luego Mercado Pago.
+    |
+    */
+
+    'gateway_labels' => [
+        'culqi' => [
+            'title' => 'Culqi',
+            'description' => 'Tarjetas, Yape y otros medios disponibles.',
+        ],
+        'izipay' => [
+            'title' => 'Izipay',
+            'description' => 'Tarjetas, Yape, QR y cuotas, en el formulario seguro de Izipay.',
+        ],
+        'mercadopago' => [
+            'title' => 'Mercado Pago',
+            'description' => 'Temporalmente en mantenimiento.',
+        ],
     ],
 
     /*
