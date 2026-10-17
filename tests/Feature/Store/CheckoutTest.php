@@ -1359,13 +1359,19 @@ class CheckoutTest extends TestCase
             ->set('selectedAddressId', $address->id)
             ->call('startCulqiCheckout')
             ->assertHasNoErrors()
-            ->assertDispatched('culqi:open')
-            // El modal llega visible desde el servidor: no depende de que el
-            // evento del navegador llegue antes que el DOM.
-            ->assertSee('data-culqi-session', false)
-            ->assertDontSee('pay-modal hidden', false);
+            ->assertDispatched('culqi:open');
 
         $order = Order::firstOrFail();
+
+        $component->assertRedirect(route('checkout', ['pagar' => $order->order_number]));
+
+        // La recarga deja el modal visible desde el servidor y el SDK se monta
+        // en una carga limpia, sin depender del orden de los eventos.
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertSet('culqiFormOpened', true)
+            ->assertSee('data-culqi-session', false)
+            ->assertDontSee('pay-modal hidden', false);
 
         // El pedido existe y guarda su orden para poder conciliarlo.
         $this->assertSame('ord_modal_1', $order->gateway_order_id);
@@ -1691,7 +1697,8 @@ class CheckoutTest extends TestCase
             ->assertSee('esperando')
             ->assertSee('pago')
             ->assertSee($order->order_number)
-            ->assertSee('Continuar al pago');
+            ->assertSet('culqiFormOpened', true)
+            ->assertSee('data-culqi-session', false);
 
         $this->assertSame(1, Order::count());
     }
@@ -1750,12 +1757,17 @@ class CheckoutTest extends TestCase
         $address = $this->addressFor($user, $district);
         $this->cartWith($user, $variant);
 
-        $component = Livewire::actingAs($user)
+        Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->call('startCulqiCheckout')
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
             ->assertSee('Pago verificado')
-            ->assertSee('pay-modal');
+            ->assertSee('data-culqi-session', false);
 
         // El pago entra por el webhook, no por esta pantalla: se simula el
         // estado final para comprobar que la vista deja de ofrecer el reintento.
@@ -1764,9 +1776,8 @@ class CheckoutTest extends TestCase
             'payment_status' => PaymentStatus::PAID->value,
         ]);
 
-        $component->call('$refresh');
-
-        $component
+        $component->call('$refresh')
+            ->assertDontSee('data-culqi-session', false)
             ->assertDontSee('wire:click="startCulqiCheckout"')
             ->assertSee('ya está cerrado');
     }
@@ -2353,14 +2364,13 @@ class CheckoutTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($order->order_number);
-        $response->assertSee('Continuar al pago');
+        // El modal se abre solo al reanudar el pedido: la página ya trae la
+        // sesión de Culqi y el SDK se monta en la carga inicial.
+        $response->assertSee('data-culqi-session', false);
+        $response->assertSee('pay-modal', false);
 
         // El pedido se muestra con su importe real, no como un carrito en cero.
         $response->assertDontSee('S/ 0.00');
-
-        // El modal no se abre solo: se abre al pulsar el botón de pago, tanto en
-        // un checkout normal como al reanudar un pedido pendiente.
-        $response->assertDontSee('const autoOpen', false);
     }
 
     public function test_la_cuenta_ofrece_pagar_ahora_solo_a_los_pedidos_pendientes(): void

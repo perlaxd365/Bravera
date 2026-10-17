@@ -281,6 +281,8 @@ class Checkout extends Component
                 ->value('checkout_url')
         );
 
+        $this->culqiFormOpened = $this->culqiSession !== [];
+
         return $this->culqiSession !== [];
     }
 
@@ -356,6 +358,8 @@ class Checkout extends Component
         if ($this->culqiSession === []) {
             return false;
         }
+
+        $this->culqiFormOpened = true;
 
         return true;
     }
@@ -882,6 +886,11 @@ class Checkout extends Component
         $order->cart?->update(['status' => 'converted']);
 
         $this->dispatch('culqi:open', session: $session);
+
+        // Recarga con el modal ya renderizado desde el servidor: el SDK se
+        // monta en una carga limpia y no depende del orden de los eventos
+        // Livewire ni de que el contenedor exista antes del montaje.
+        $this->redirect(route('checkout', ['pagar' => $order->order_number]));
     }
 
     public function returnToCart(CartService $cart, OrderService $orders): void

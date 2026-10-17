@@ -544,7 +544,7 @@
         </aside>
     </div>
 
-    @if ($usesProviderModal && $culqiSession !== [])
+    @if ($usesProviderModal && $culqiSession !== [] && ! $settledOrderNumber)
         <div id="culqi-payment-modal" class="pay-modal {{ $culqiFormOpened ? '' : 'hidden' }}"
             data-culqi-session="{{ json_encode($culqiSession) }}"
             role="dialog" aria-modal="true" aria-labelledby="culqi-payment-title">
