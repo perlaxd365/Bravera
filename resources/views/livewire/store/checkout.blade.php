@@ -1,11 +1,3 @@
-@push('head')
-    @if (! empty($culqiPublicKey))
-        {{-- Se carga desde el inicio: el modal no depende de inyectar el
-             script justo al pulsar pagar. --}}
-        <script src="https://js.culqi.com/checkout-js" async></script>
-    @endif
-@endpush
-
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
     data-culqi-public-key="{{ $culqiPublicKey ?? '' }}"
     data-order-status-url-template="{{ route('store.order.placed', ['order' => '__ORDER__']) }}"

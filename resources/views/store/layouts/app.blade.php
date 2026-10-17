@@ -53,6 +53,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    @if (request()->routeIs('checkout'))
+        {{-- Culqi se carga con la página para que su modal no dependa de
+             inyectar el SDK justo al pulsar pagar. --}}
+        <script src="https://js.culqi.com/checkout-js" async></script>
+    @endif
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
     @livewireStyles

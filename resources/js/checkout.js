@@ -17,6 +17,13 @@ export const notify = (message, type = 'error') => {
     Livewire.dispatch('notify', { type, message });
 };
 
+const hideCulqiModal = () => {
+    const modal = document.querySelector('#culqi-payment-modal');
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
+    document.body.style.overflow = '';
+};
+
 export const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
     '&': '&',
     '<': '<',
@@ -145,6 +152,7 @@ export const openModal = async (rawSession, publicKey, state) => {
     } catch (e) {
         console.error('[Culqi] Error cargando Culqi:', e);
         notify('No pudimos cargar el formulario seguro de Culqi. Revisa tu conexión e inténtalo de nuevo.');
+        hideCulqiModal();
         const root = document.querySelector('[data-culqi-public-key]');
         const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
         component?.call('culqiFormFailed');
@@ -188,6 +196,7 @@ export const openModal = async (rawSession, publicKey, state) => {
     } catch (error) {
         console.error('[Culqi] no se pudo crear la instancia del checkout:', error);
         notify('No pudimos iniciar el formulario de Culqi. Inténtalo otra vez.');
+        hideCulqiModal();
         const root = document.querySelector('[data-culqi-public-key]');
         window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
         return;
@@ -413,6 +422,7 @@ export const openModal = async (rawSession, publicKey, state) => {
         console.error('[Culqi] no se pudo montar el checkout integrado:', error);
         state.checkout = null;
         notify('No pudimos abrir el formulario de Culqi. Inténtalo otra vez.');
+        hideCulqiModal();
         const root = document.querySelector('[data-culqi-public-key]');
         window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
         return;
@@ -570,7 +580,23 @@ export const initCheckout = (publicKey, wireId) => {
         void openModal(session, publicKey, state).catch((error) => {
             console.error('[Culqi] no se pudo montar el checkout:', error);
             notify('No pudimos cargar el formulario de Culqi. Revisa tu conexión e inténtalo otra vez.');
+            hideCulqiModal();
         });
+
+        // Si el SDK no llega a insertar su iframe, no dejamos un modal vacío.
+        window.setTimeout(() => {
+            const frame = document.querySelector('#culqi-container iframe');
+
+            if (frame) {
+                return;
+            }
+
+            console.error('[Culqi] el checkout no montó el iframe.');
+            hideCulqiModal();
+            notify('No pudimos mostrar el formulario de Culqi. Revisa tu conexión o el bloqueador de anuncios e inténtalo de nuevo.');
+            const root = document.querySelector('[data-culqi-public-key]');
+            window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
+        }, 9000);
     };
 
     Livewire.on('culqi:open', (event) => {
