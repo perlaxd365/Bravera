@@ -373,6 +373,42 @@ class CheckoutTest extends TestCase
             ->assertSet('pendingOrderNumber', null);
     }
 
+    public function test_el_modal_de_mercadopago_permite_cambiar_a_culqi(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $order = Order::create([
+            'order_number' => 'BRV-MP-SWITCH-1',
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'payment_status' => PaymentStatus::PENDING,
+            'payment_intent' => 'mercadopago',
+            'subtotal' => 10,
+            'shipping_total' => 0,
+            'discount_total' => 0,
+            'total' => 10,
+            'cost_total' => 5,
+            'currency' => 'PEN',
+            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->call('switchToCulqi')
+            ->assertRedirect(route('checkout', ['gateway' => 'culqi']));
+
+        $this->assertSame(OrderStatus::CANCELLED, $order->fresh()->status);
+        $this->assertSame(PaymentStatus::EXPIRED, $order->fresh()->payment_status);
+    }
+
     public function test_retoma_un_pedido_de_izipay_sin_caer_en_culqi(): void
     {
         config([

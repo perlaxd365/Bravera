@@ -141,6 +141,14 @@ class Checkout extends Component
             : 'culqi';
         $this->syncPaymentMethodToGateway();
 
+        $requestedGateway = request()->query('gateway');
+
+        if (is_string($requestedGateway)
+            && in_array($requestedGateway, $this->availableGatewayNames(), true)) {
+            $this->selectedGateway = $requestedGateway;
+            $this->syncPaymentMethodToGateway();
+        }
+
         $this->authRequired = ! auth()->check();
 
         if ($this->authRequired) {
@@ -696,6 +704,32 @@ class Checkout extends Component
     {
         $this->showMercadoPagoModal = false;
         $this->dispatch('mercadopago:modal-closed');
+    }
+
+    public function switchToCulqi(CartService $cart, OrderService $orders): void
+    {
+        $order = $this->sessionOrder()?->fresh();
+
+        if ($order !== null
+            && $order->status === OrderStatus::PENDING
+            && $order->payment_status === PaymentStatus::PENDING) {
+            $orders->abandonPendingOrder(
+                $order,
+                'El comprador cambió el intento de pago a Culqi.'
+            );
+        }
+
+        // Si el carrito de la sesión quedó convertido, vuelve a quedar editable.
+        $cart->restorePendingCartForEditing($orders);
+
+        $this->showMercadoPagoModal = false;
+        $this->culqiOrderId = null;
+        $this->pendingOrderNumber = null;
+        $this->selectedGateway = 'culqi';
+        $this->syncPaymentMethodToGateway();
+        session()->forget('mercadopago_pending_order');
+
+        $this->redirect(route('checkout', ['gateway' => 'culqi']));
     }
 
     public function payMercadoPago(

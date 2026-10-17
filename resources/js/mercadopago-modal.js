@@ -170,6 +170,7 @@ const mountForm = async () => {
                         return;
                     }
 
+                    setBusy(false);
                     requestAnimationFrame(assertSecureFields);
                 },
                 onSubmit: async (event) => {
@@ -232,6 +233,49 @@ const openModal = () => {
     modal.querySelector('.mp-modal__close')?.focus();
 };
 
+const resetForm = () => {
+    const form = byId('mp-modal-form-checkout');
+
+    if (!form) {
+        return;
+    }
+
+    const replacement = form.cloneNode(true);
+
+    replacement.querySelectorAll('[data-mp-secure-field]').forEach((host) => {
+        host.replaceChildren();
+    });
+
+    replacement.querySelectorAll('input[type="hidden"]').forEach((input) => {
+        input.remove();
+    });
+
+    ['issuer', 'installments', 'identificationType'].forEach((field) => {
+        const select = replacement.querySelector(`[data-mp-sdk-required-field="${field}"]`);
+
+        if (!select) {
+            return;
+        }
+
+        select.innerHTML = field === 'identificationType'
+            ? '<option value="DNI">DNI</option>'
+            : '';
+    });
+
+    const submit = replacement.querySelector('#mp-modal-submit');
+
+    if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Preparando...';
+    }
+
+    form.replaceWith(replacement);
+    cardForm = null;
+    formElement = null;
+
+    window.setTimeout(() => mountForm(), 120);
+};
+
 const waitForModal = (attempt = 0) => {
     if (byId('mp-modal')) {
         openModal();
@@ -272,6 +316,7 @@ const init = () => {
 
         setBusy(false);
         setResult(payload.message || 'No pudimos procesar el pago. Inténtalo de nuevo.', true);
+        resetForm();
     });
 
     document.addEventListener('keydown', (event) => {

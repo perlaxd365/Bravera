@@ -313,6 +313,13 @@
                     </div>
                 @endif
 
+                @if ($awaitingPayment)
+                    <p class="mb-3 text-xs leading-5 text-gray-500">
+                        El pedido ya está reservado con la pasarela elegida. Para cambiar, usa
+                        “Pagar con Culqi” dentro del pago de Mercado Pago o vuelve al carrito.
+                    </p>
+                @endif
+
                 @if ($usesProviderModal)
                     {{-- Culqi muestra aquí sus medios habilitados, sin salir
                          del checkout de Brevare. --}}
@@ -619,7 +626,10 @@
                 <div class="mp-modal__form-card">
                     <div class="mp-modal__form-heading">
                         <span>Datos de la tarjeta</span>
-                        <flux:icon name="lock-closed" class="size-3.5" />
+                        <span class="mp-modal__form-meta">
+                            <span class="mp-modal__brands">Visa · Mastercard · Amex</span>
+                            <flux:icon name="lock-closed" class="size-3.5" />
+                        </span>
                     </div>
 
                     <div wire:ignore>
@@ -680,6 +690,15 @@
                         </button>
                         </form>
                     </div>
+                </div>
+
+                <div class="mp-modal__switch-row">
+                    <span>¿Prefieres otro medio?</span>
+                    <button type="button" wire:click="switchToCulqi"
+                        wire:loading.attr="disabled" wire:target="switchToCulqi"
+                        class="mp-modal__switch">
+                        Pagar con Culqi
+                    </button>
                 </div>
 
                 <div id="mp-modal-result" role="status" aria-live="polite" hidden wire:ignore
