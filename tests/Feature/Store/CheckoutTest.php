@@ -252,6 +252,39 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, $order->payments()->count());
     }
 
+    public function test_mercadopago_modal_confirms_the_order_with_the_token(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.gateways.mercadopago' => \Tests\Support\FakeMercadoPagoGateway::class,
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+        \Tests\Support\FakeMercadoPagoGateway::approved();
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true)
+            ->call('payMercadoPago', 'card-token', 'visa', '123456789')
+            ->assertSet('showMercadoPagoModal', false)
+            ->assertDispatched('mercadopago:result');
+
+        $order = Order::firstOrFail();
+        $this->assertSame(PaymentStatus::PAID, $order->payment_status);
+        $this->assertSame('ORD-TEST-APPROVED', $order->payments()->latest('id')->firstOrFail()->gateway_transaction_id);
+    }
+
     public function test_retoma_un_pedido_de_izipay_sin_caer_en_culqi(): void
     {
         config([
