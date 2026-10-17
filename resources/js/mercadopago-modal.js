@@ -5,6 +5,7 @@ let mountingBrick = false;
 let mountQueued = false;
 let readyTimeout = null;
 let brickLayoutObserver = null;
+let brickDomObserver = null;
 
 const byId = (id) => document.getElementById(id);
 
@@ -227,6 +228,11 @@ const unmountBrick = async () => {
         brickLayoutObserver = null;
     }
 
+    if (brickDomObserver) {
+        brickDomObserver.disconnect();
+        brickDomObserver = null;
+    }
+
     if (readyTimeout) {
         window.clearTimeout(readyTimeout);
         readyTimeout = null;
@@ -241,6 +247,38 @@ const unmountBrick = async () => {
     } catch (error) {
         console.warn('[Mercado Pago] no se pudo desmontar el formulario:', error);
     }
+};
+
+/**
+ * El Brick de Mercado Pago ofrece DNI, C.E, RUC y "Otro". En Brevare solo se
+ * acepta DNI, así que se elimina "Otro" del selector nativo del Brick.
+ */
+const restrictIdentificationTypes = () => {
+    const container = byId('mp-modal-card-brick');
+
+    if (!container) {
+        return;
+    }
+
+    container.querySelectorAll('select').forEach((select) => {
+        let removed = false;
+
+        Array.from(select.options).forEach((option) => {
+            if (/^\s*otro\s*$/i.test(option.textContent || '')) {
+                option.remove();
+                removed = true;
+            }
+        });
+
+        if (removed && !select.value) {
+            const dni = Array.from(select.options).find((option) => /^\s*dni\b/i.test(option.textContent || ''));
+
+            if (dni) {
+                select.value = dni.value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
 };
 
 /**
@@ -370,7 +408,7 @@ const mountBrick = async () => {
                 },
                 paymentMethods: {
                     minInstallments: 1,
-                    maxInstallments: 12,
+                    maxInstallments: 1,
                 },
             },
             callbacks: {
@@ -383,6 +421,12 @@ const mountBrick = async () => {
                     setLoading(false);
                     setError('');
                     resetBrandBadge();
+                    restrictIdentificationTypes();
+
+                    brickDomObserver?.disconnect();
+                    brickDomObserver = new MutationObserver(restrictIdentificationTypes);
+                    brickDomObserver.observe(container, { childList: true, subtree: true });
+
                     window.setTimeout(positionBrandBadge, 120);
                     window.setTimeout(positionBrandBadge, 500);
                 },

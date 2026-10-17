@@ -298,6 +298,28 @@
     border: 0 !important;
 }
 
+.mp-modal__brick select {
+    min-width: 92px;
+    min-height: 44px;
+    padding: 0 32px 0 12px !important;
+    border: 1px solid rgba(60, 60, 67, 0.18) !important;
+    border-radius: 12px !important;
+    background-color: #ffffff !important;
+    color: var(--pay-ink) !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+}
+
+.mp-modal__brick input:-webkit-autofill,
+.mp-modal__brick input:-webkit-autofill:hover,
+.mp-modal__brick input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    -webkit-text-fill-color: var(--pay-ink) !important;
+    caret-color: var(--pay-ink);
+    transition: background-color 9999s ease-out 0s;
+}
+
 .mp-modal__card-brand {
     position: absolute;
     z-index: 5;
