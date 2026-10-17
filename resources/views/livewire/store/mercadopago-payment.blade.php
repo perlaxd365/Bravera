@@ -269,6 +269,18 @@
                         <flux:icon name="lock-closed" class="mp-form-lock" />
                     </div>
 
+                    @php
+                        $mpTestMode = str_starts_with((string) config('payments.mercadopago.public_key'), 'TEST-');
+                    @endphp
+
+                    @if ($mpTestMode)
+                        <div class="mp-test-note">
+                            <strong>Modo prueba.</strong>
+                            Usa el nombre <strong>APRO</strong> y el DNI <strong>123456789</strong>
+                            con las tarjetas de prueba. No se cobra dinero real.
+                        </div>
+                    @endif
+
                     <div wire:ignore>
                         <form id="form-checkout"
                             data-mp-public-key-source="runtime-endpoint"
@@ -662,6 +674,22 @@
             border-radius: 24px;
             background: #fffdf8;
             box-shadow: 0 14px 30px rgba(70, 49, 18, 0.055), inset 0 1px 0 #fff;
+        }
+
+        .mp-test-note {
+            margin-bottom: 16px;
+            padding: 11px 13px;
+            border: 1px solid rgba(246, 200, 75, 0.46);
+            border-radius: 14px;
+            background: rgba(246, 200, 75, 0.16);
+            color: #6d5520;
+            font-size: 11px;
+            line-height: 1.55;
+        }
+
+        .mp-test-note strong {
+            color: #4d3b11;
+            font-weight: 750;
         }
 
         .mp-form-title {

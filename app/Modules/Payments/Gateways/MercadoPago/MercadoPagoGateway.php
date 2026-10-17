@@ -8,9 +8,11 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
+use Illuminate\Support\Facades\Log;
 use MercadoPago\Client\Common\RequestOptions;
 use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Client\Payment\PaymentRefundClient;
+use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\Resources\Payment as MercadoPagoPayment;
 use Throwable;
 
@@ -107,6 +109,23 @@ class MercadoPagoGateway implements PaymentGateway
             $remote = (new PaymentClient)->create(
                 $payload,
                 $this->requestOptions('brevare-payment-'.$payment->id)
+            );
+        } catch (MPApiException $e) {
+            $body = $e->getApiResponse()->getContent();
+            $json = is_array($body) ? $body : json_decode((string) $body, true);
+            $cause = data_get($json, 'cause.0.description')
+                ?? data_get($json, 'message')
+                ?? 'api_error';
+
+            Log::warning('Mercado Pago rechazó el pago.', [
+                'local_payment_id' => $payment->id,
+                'http_status' => $e->getStatusCode(),
+                'cause' => is_scalar($cause) ? $cause : json_encode($cause),
+            ]);
+
+            return $this->failure(
+                'Mercado Pago no pudo procesar el pago. Revisa los datos de la tarjeta e inténtalo otra vez.',
+                'payment_rejected'
             );
         } catch (Throwable $e) {
             report($e);

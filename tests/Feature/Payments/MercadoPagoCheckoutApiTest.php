@@ -24,7 +24,7 @@ class MercadoPagoCheckoutApiTest extends TestCase
         config([
             'payments.mercadopago.enabled' => true,
             'payments.mercadopago.access_token' => 'APP_USR-test-access',
-            'payments.mercadopago.public_key' => 'APP_USR-test-public',
+            'payments.mercadopago.public_key' => 'TEST-test-public',
             'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
             'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
         ]);
@@ -149,6 +149,7 @@ class MercadoPagoCheckoutApiTest extends TestCase
         Livewire::actingAs($user)
             ->test(MercadoPagoPayment::class, ['order' => $order])
             ->assertSee('Finaliza tu compra')
+            ->assertSee('Modo prueba')
             ->assertSee('form-checkout')
             ->assertSee('DNI del titular');
 
