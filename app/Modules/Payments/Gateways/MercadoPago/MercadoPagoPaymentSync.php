@@ -17,7 +17,7 @@ class MercadoPagoPaymentSync
 {
     public function sync(string $remoteId): ?LocalPayment
     {
-        if (! ctype_digit($remoteId) || ! (new MercadoPagoGateway)->isAvailable()) {
+        if (! ctype_digit($remoteId) || ! (new MercadoPagoGateway)->hasApiCredentials()) {
             return null;
         }
 

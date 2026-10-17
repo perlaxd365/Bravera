@@ -440,7 +440,7 @@ class RefundService
             $payment->order?->update(['payment_status' => PaymentStatus::REFUNDED]);
         });
 
-        Log::info('Devolución completa de Culqi registrada.', [
+        Log::info('Devolución completa registrada.', [
             'payment_id' => $payment->id,
             'order_id' => $payment->order_id,
             'amount' => (float) $payment->amount,

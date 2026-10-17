@@ -134,10 +134,12 @@ return [
     'mercadopago' => [
         'enabled' => env('MP_ENABLED', false),
         'access_token' => env('MP_ACCESS_TOKEN'),
+        'public_key' => env('MP_PUBLIC_KEY'),
         'webhook_secret' => env('MP_WEBHOOK_SECRET'),
         'webhook_url' => env('MP_WEBHOOK_URL'),
         'timeout' => env('MP_TIMEOUT', 15),
         'statement_descriptor' => env('MP_STATEMENT_DESCRIPTOR', 'BREVARE'),
+        'identification_type' => env('MP_IDENTIFICATION_TYPE', 'DNI'),
     ],
 
     /*
@@ -237,7 +239,7 @@ return [
     'gateway_methods' => [
         'culqi' => ['card', 'yape'],
         'izipay' => ['card'],
-        'mercadopago' => ['mercadopago'],
+        'mercadopago' => ['card'],
         'demo' => ['card', 'yape', 'transferencia'],
         'manual' => ['card', 'yape', 'transferencia'],
     ],
@@ -280,7 +282,7 @@ return [
         ],
         'mercadopago' => [
             'title' => 'Mercado Pago',
-            'description' => 'Temporalmente en mantenimiento.',
+            'description' => 'Tarjeta de crédito o débito en el formulario seguro de Mercado Pago.',
         ],
     ],
 

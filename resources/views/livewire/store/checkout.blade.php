@@ -343,7 +343,7 @@
                     <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-4">
                         <p class="flex items-start gap-3 text-sm text-gray-900">
                             <flux:icon name="lock-closed" class="mt-0.5 size-5 shrink-0" />
-                            <span>Al continuar, te llevaremos al checkout seguro de Mercado Pago. Podrás elegir los medios habilitados para tu cuenta.</span>
+                            <span>Al continuar, completarás el pago con tarjeta en el formulario seguro de Mercado Pago, sin salir de Brevare.</span>
                         </p>
                     </div>
                 @elseif ($selectedGateway === 'izipay')
@@ -517,6 +517,12 @@
                 @elseif (!$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
                         @if (!$selectedAddressId) disabled @endif
+                        @if ($selectedGateway === 'mercadopago')
+                            data-mp-checkout-cta="checkout-api"
+                            data-mp-checkout-destination="{{ route('payments.mercadopago.pay', ['order' => '__ORDER__']) }}"
+                            data-mp-checkout-fallback="{{ route('checkout') }}"
+                            onclick="startMercadoPagoCheckout(event)"
+                        @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                         <span wire:loading.remove>
                             {{ match ($selectedGateway) {
@@ -567,47 +573,22 @@
         </div>
     @endif
 
-    @if ($showMercadoPagoMaintenance)
-        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm"
-            role="dialog" aria-modal="true" aria-labelledby="mercadopago-maintenance-title"
-            aria-describedby="mercadopago-maintenance-description" tabindex="-1"
-            wire:click.self="dismissMercadoPagoMaintenance"
-            wire:keydown.escape.window="dismissMercadoPagoMaintenance">
-            <section class="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
-                <div class="h-1.5 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500"></div>
-                <button type="button" wire:click="dismissMercadoPagoMaintenance"
-                    aria-label="Cerrar aviso"
-                    class="absolute right-4 top-4 inline-flex size-10 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/20">
-                    <flux:icon name="x-mark" class="size-5" />
-                </button>
-
-                <div class="px-6 pb-6 pt-8 sm:px-8 sm:pb-8">
-                    <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
-                        <flux:icon name="clock" class="size-7" />
-                    </span>
-                    <p class="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Medio de pago</p>
-                    <h2 id="mercadopago-maintenance-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-950">
-                        Mercado Pago está en mantenimiento
-                    </h2>
-                    <p id="mercadopago-maintenance-description" class="mt-3 text-sm leading-6 text-gray-600">
-                        Estamos realizando mejoras para ofrecerte una experiencia de pago segura. Por ahora puedes completar tu compra con Culqi, usando tarjeta, Yape y otros medios disponibles.
-                    </p>
-
-                    <div class="mt-6 flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                        <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm">
-                            <flux:icon name="shield-check" class="size-5" />
-                        </span>
-                        <span class="text-xs leading-5 text-gray-600">Tu carrito y los datos de tu compra se mantienen intactos.</span>
-                    </div>
-
-                    <button type="button" wire:click="dismissMercadoPagoMaintenance"
-                        class="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-950/30 focus:ring-offset-2">
-                        Continuar con Culqi
-                    </button>
-                </div>
-            </section>
-        </div>
-    @endif
 </div>
 </div>
 </div>
+
+@push('scripts')
+    <script>
+        function startMercadoPagoCheckout(event) {
+            const button = event?.currentTarget;
+            const fallback = button?.dataset.mpCheckoutFallback || '/checkout';
+
+            const onRedirect = (payload) => {
+                const detail = payload?.detail ?? payload ?? {};
+                window.location.assign(detail.url || fallback);
+            };
+
+            window.addEventListener('mercadopago:redirect', onRedirect, { once: true });
+        }
+    </script>
+@endpush

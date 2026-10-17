@@ -4,6 +4,7 @@ use App\Http\Controllers\Webhooks\CulqiWebhookController;
 use App\Http\Controllers\Izipay\IzipayReturnController;
 use App\Http\Controllers\Webhooks\IzipayWebhookController;
 use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
+use App\Http\Controllers\MercadoPagoConfigController;
 use App\Http\Controllers\MercadoPagoReturnController;
 use App\Http\Controllers\Seo\SitemapController;
 use App\Http\Controllers\Seo\GoogleMerchantFeedController;
@@ -16,6 +17,7 @@ use App\Livewire\Store\Cart\Index as CartIndex;
 use App\Livewire\Store\Catalog;
 use App\Livewire\Store\Checkout;
 use App\Livewire\Store\Home;
+use App\Livewire\Store\MercadoPagoPayment;
 use App\Livewire\Store\OrderPlaced;
 use App\Livewire\Store\ProductDetail;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +41,9 @@ Route::post('webhooks/izipay', IzipayWebhookController::class)
 
 Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)
     ->name('webhooks.mercadopago');
+
+Route::get('pagos/mercadopago/configuracion', MercadoPagoConfigController::class)
+    ->name('payments.mercadopago.config');
 
 Route::get('pagos/mercadopago/retorno', MercadoPagoReturnController::class)
     ->name('payments.mercadopago.return');
@@ -86,6 +91,10 @@ Route::get('pedido/{order:order_number}/confirmado', OrderPlaced::class)
 Route::get('pago/izipay/{order:order_number}', \App\Livewire\Store\IzipayPayment::class)
     ->middleware(['auth', 'verified'])
     ->name('payments.izipay.pay');
+
+Route::get('pago/mercadopago/{order:order_number}', MercadoPagoPayment::class)
+    ->middleware(['auth', 'verified'])
+    ->name('payments.mercadopago.pay');
 
 /*
 |--------------------------------------------------------------------------

@@ -62,12 +62,19 @@ class PaymentService
      * El orden es: registrar el intento, cobrar, y solo después persistir el
      * resultado. Si el cobro sale pero el registro falla, el log crítico deja
      * el transaction_id para conciliar.
+     *
+     * `$gatewayContext` guarda datos operativos del intento antes de llamar a
+     * la pasarela (por ejemplo, el método de tarjeta y el documento de
+     * Checkout API). No se usa como fuente de montos ni de identidad.
+     *
+     * @param  array<string, mixed>|null  $gatewayContext
      */
     public function charge(
         Order $order,
         string $method = 'card',
         ?string $gatewayName = null,
         ?string $sourceId = null,
+        ?array $gatewayContext = null,
     ): Payment {
         [$gateway, $gatewayName] = $this->resolveGateway($gatewayName);
 
@@ -81,6 +88,7 @@ class PaymentService
             'amount' => (float) $order->total,
             'currency' => $order->currency,
             'status' => PaymentStatus::PENDING,
+            'raw_response' => $gatewayContext,
         ]));
 
         // 2. Movimiento de dinero real. Sin transacción abierta.
@@ -88,10 +96,25 @@ class PaymentService
 
         // 3. Resultado y confirmación.
         return DB::transaction(function () use ($payment, $result, $order, $gatewayName) {
+            // El webhook puede confirmar el pago mientras la respuesta HTTP de
+            // la pasarela todavía está en vuelo. Bajo lock, un pedido ya pagado
+            // nunca se degrada por un resultado tardío de ese mismo intento.
+            $lockedOrder = Order::query()->lockForUpdate()->find($order->id);
+            $lockedPayment = Payment::query()->lockForUpdate()->find($payment->id);
+
+            if ($lockedOrder === null || $lockedPayment === null) {
+                return $payment->fresh();
+            }
+
+            if ($lockedOrder->payment_status === PaymentStatus::PAID) {
+                return $lockedPayment;
+            }
+
+            $order = $lockedOrder;
+            $payment = $lockedPayment;
+
             // El gateway puede persistir metadatos (p. ej. la clave idempotente
             // de una preferencia) antes de consultar al proveedor.
-            $payment->refresh();
-
             $payment->update([
                 'status' => $result['status'],
                 'raw_response' => $result['raw'],

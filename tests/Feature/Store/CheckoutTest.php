@@ -218,6 +218,118 @@ class CheckoutTest extends TestCase
         $this->assertSame(12.00, (float) $order->items->first()->shipping_price);
     }
 
+    public function test_mercadopago_creates_the_order_and_redirects_to_checkout_api_screen(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'APP_USR-test-access',
+            'payments.mercadopago.public_key' => 'APP_USR-test-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertRedirect(route('payments.mercadopago.pay', [
+                'order' => Order::firstOrFail()->order_number,
+            ]));
+
+        $order = Order::firstOrFail();
+        $this->assertSame(OrderStatus::PENDING, $order->status);
+        $this->assertSame(PaymentStatus::PENDING, $order->payment_status);
+        $this->assertSame('mercadopago', $order->payment_intent);
+        $this->assertSame(0, $order->payments()->count());
+    }
+
+    public function test_retoma_un_pedido_de_izipay_sin_caer_en_culqi(): void
+    {
+        config([
+            'payments.izipay.enabled' => true,
+            'payments.izipay.shop_id' => '123456',
+            'payments.izipay.rest_password' => 'test-password',
+            'payments.izipay.public_key' => '123456:test-public',
+            'payments.izipay.endpoint' => 'https://api.micuentaweb.pe',
+        ]);
+
+        $user = $this->customer();
+        $order = Order::create([
+            'order_number' => 'BRV-IZI-RESUME-1',
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'payment_status' => PaymentStatus::PENDING,
+            'payment_intent' => 'izipay',
+            'subtotal' => 100,
+            'shipping_total' => 0,
+            'discount_total' => 0,
+            'total' => 100,
+            'cost_total' => 60,
+            'currency' => 'PEN',
+            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        ]);
+
+        Payment::create([
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'gateway' => 'izipay',
+            'method' => 'card',
+            'amount' => 100,
+            'currency' => 'PEN',
+            'status' => PaymentStatus::PENDING,
+            'checkout_url' => 'https://pay.example/izipay',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->assertSet('selectedGateway', 'izipay')
+            ->assertSee('Continuar a Izipay');
+    }
+
+    public function test_no_permite_cambiar_un_pedido_de_mercadopago_a_culqi(): void
+    {
+        config([
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'APP_USR-test-access',
+            'payments.mercadopago.public_key' => 'APP_USR-test-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $order = Order::create([
+            'order_number' => 'BRV-MP-INTENT-1',
+            'user_id' => $user->id,
+            'status' => OrderStatus::PENDING,
+            'payment_status' => PaymentStatus::PENDING,
+            'payment_intent' => 'mercadopago',
+            'subtotal' => 100,
+            'shipping_total' => 0,
+            'discount_total' => 0,
+            'total' => 100,
+            'cost_total' => 60,
+            'currency' => 'PEN',
+            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class, ['pagar' => $order->order_number])
+            ->set('selectedGateway', 'culqi')
+            ->call('placeOrder')
+            ->assertDispatched('notify');
+
+        $this->assertSame(0, Payment::count());
+        $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
+        $this->assertSame(1, Order::count());
+    }
+
     /**
      * El navegador no puede escribir el descuento: se recalcula contra la BD.
      */

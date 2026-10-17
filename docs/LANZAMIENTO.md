@@ -2,7 +2,7 @@
 
 Guía operativa para pasar el proyecto a producción en hosting **GoDaddy** y
 dejarlo listo para indexar productos en Google, operar WhatsApp con clientes y
-cobrar con Culqi.
+cobrar con Culqi y Mercado Pago.
 
 ---
 
@@ -155,6 +155,16 @@ CULQI_WEBHOOK_URL=https://brevare.com/webhooks/culqi
 CULQI_CAPTURE=true
 CULQI_TIMEOUT=20
 CULQI_YAPE_EXPIRATION_MINUTES=30
+
+# Mercado Pago Checkout API (tarjeta dentro de Brevare)
+MP_ENABLED=true
+MP_ACCESS_TOKEN=APP_USR-...
+MP_PUBLIC_KEY=APP_USR-...
+MP_WEBHOOK_SECRET=...
+MP_WEBHOOK_URL=https://brevare.com/webhooks/mercadopago
+MP_TIMEOUT=15
+MP_STATEMENT_DESCRIPTOR=BREVARE
+MP_IDENTIFICATION_TYPE=DNI
 ```
 
 ---
@@ -225,6 +235,40 @@ Prueba envíos a Gmail/Outlook y revisa que no caigan en spam.
 5. **Haz una compra de prueba real de bajo monto** y confirma que el pedido pasa a
    `paid` y que llegan los correos.
 
+### 9.1 Mercado Pago Checkout API
+
+La integración usa **Checkout API**: el comprador ingresa la tarjeta dentro de
+Brevare y Mercado Pago la tokeniza con sus campos seguros. El servidor crea la
+orden con la **Orders API** (`POST /v1/orders`) y recibe las notificaciones del
+tópico `orders`.
+
+1. En Mercado Pago, usa una aplicación de tipo **Checkout API** (la app actual
+   `App-Checkout-API-Brevare` ya corresponde a ese producto).
+2. En **Credenciales → Producción**, activa las credenciales y completa industria,
+   sitio web (`https://brevare.com`), términos y privacidad. El dominio debe tener
+   SSL válido.
+3. Copia en el `.env` de producción:
+   - `MP_ENABLED=true`
+   - `MP_ACCESS_TOKEN` (credencial de producción)
+   - `MP_PUBLIC_KEY` (Public Key de producción; es pública)
+   - `MP_WEBHOOK_SECRET` (Webhooks → Secret)
+   - `MP_WEBHOOK_URL=https://brevare.com/webhooks/mercadopago`
+4. Registra el webhook en Mercado Pago con el tópico **`order`** y la URL
+   `https://brevare.com/webhooks/mercadopago`. La aplicación valida la firma
+   `x-signature` antes de consultar la order.
+5. Para probar con la Orders API necesitas un **usuario de prueba comprador** de
+   Mercado Pago. El correo del comprador debe ser el de ese usuario; no uses el
+   correo de la cuenta vendedora (Mercado Pago responde `4390`).
+6. Tarjetas de prueba Perú: Visa `4009 1753 3280 6176` o Mastercard
+   `5031 7557 3453 0604`, CVV `123`, vencimiento `11/30`, documento `123456789`.
+7. Haz una compra de prueba y confirma que el pedido pasa a `paid`, que el webhook
+   llega y que los correos se envían. Después repite con una compra real de bajo
+   monto usando credenciales de producción.
+
+`PAYMENT_GATEWAY` puede seguir apuntando a `culqi`; Mercado Pago aparecerá como
+opción adicional cuando `MP_ENABLED=true` y las tres credenciales estén completas.
+Si quieres que sea la pasarela preseleccionada, usa `PAYMENT_GATEWAY=mercadopago`.
+
 ---
 
 ## 10. Después de limpiar el catálogo (ya ejecutado)
@@ -245,10 +289,12 @@ hazlo en este orden:
 
 ## 11. Pendientes conocidos (antes de cobrar de verdad)
 
-- **3 tests de checkout/Culqi fallan** (`tests/Feature/Store/CheckoutTest.php`,
-  líneas 1316, 1391, 1979): flujo de "retomar pago" / modal Culqi. No bloquean el
-  despliegue, pero **hay que validar una compra real de punta a punta** antes de
-  aceptar pagos con tarjeta/Yape. Decidido dejar para después.
+- La suite de checkout y pagos pasa completa (`CheckoutTest` 62/62 y
+  `tests/Feature/Payments` 70/70). Quedan 3 fallos no relacionados con pagos en
+  `RegistrationTest` y `ProductDetailTest`; conviene revisarlos antes de un
+  despliegue general.
+- **Validar una compra real de bajo monto** con Culqi y con Mercado Pago antes de
+  aceptar volumen. En Mercado Pago, usar primero un usuario de prueba comprador.
 - Revisar en Culqi la variante de **Yape** (orden pendiente vs. fallida).
 
 ---

@@ -131,7 +131,11 @@
                                     </button>
                                 @endif
 
-                                @if ($refund->status === \App\Enums\RefundStatus::PROCESSING)
+                                @php
+                                    $isCulqiPayment = $refund->payment?->gateway === 'culqi';
+                                @endphp
+
+                                @if ($refund->status === \App\Enums\RefundStatus::PROCESSING && $isCulqiPayment)
                                     <button type="button" wire:click="refresh({{ $refund->id }})"
                                         wire:loading.attr="disabled" wire:target="refresh({{ $refund->id }})"
                                         class="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60">
@@ -139,13 +143,20 @@
                                         <span wire:loading.remove wire:target="refresh({{ $refund->id }})">Verificar en Culqi</span>
                                         <span wire:loading wire:target="refresh({{ $refund->id }})">Consultando…</span>
                                     </button>
+                                @elseif ($refund->status === \App\Enums\RefundStatus::PROCESSING)
+                                    <span class="text-xs text-gray-500">
+                                        Mercado Pago confirmará la devolución en su panel.
+                                    </span>
                                 @endif
                             </div>
                         </div>
 
                         @php
                             $chargeReference = (string) ($refund->payment->gateway_charge_id ?: $refund->payment->gateway_transaction_id);
-                            $needsCharge = $refund->isPending() && $refund->payment !== null && ! str_starts_with($chargeReference, 'chr_');
+                            $needsCharge = $refund->isPending()
+                                && $refund->payment !== null
+                                && $refund->payment->gateway === 'culqi'
+                                && ! str_starts_with($chargeReference, 'chr_');
                         @endphp
 
                         @if ($needsCharge)

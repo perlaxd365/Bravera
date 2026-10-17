@@ -21,15 +21,16 @@ class OrderService
      * Crea el pedido a partir del carrito confirmado,
      * reserva stock y registra el uso del cupón.
      */
-    public function createFromCheckout(CheckoutData $data): Order
+    public function createFromCheckout(CheckoutData $data, ?string $paymentIntent = null): Order
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $paymentIntent) {
             $order = Order::create([
                 'cart_id' => $data->cart->id,
                 'order_number' => $this->orderNumberGenerator->next(),
                 'user_id' => $data->user->id,
                 'status' => OrderStatus::PENDING,
                 'payment_status' => PaymentStatus::PENDING,
+                'payment_intent' => $paymentIntent,
                 'subtotal' => $data->subtotal,
                 'shipping_total' => $data->shippingTotal,
                 'discount_total' => $data->discountTotal,
