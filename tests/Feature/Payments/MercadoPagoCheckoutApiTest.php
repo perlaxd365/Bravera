@@ -11,8 +11,7 @@ use App\Models\User;
 use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use MercadoPago\Resources\Order as MercadoPagoOrder;
-use MercadoPago\Resources\Order\Payment as MercadoPagoOrderPayment;
+use MercadoPago\Resources\Payment as MercadoPagoApiPayment;
 use Tests\Support\FakeMercadoPagoGateway;
 use Tests\TestCase;
 
@@ -61,7 +60,7 @@ class MercadoPagoCheckoutApiTest extends TestCase
         ]);
     }
 
-    public function test_builds_orders_api_payload_with_server_amount_and_dni(): void
+    public function test_builds_payments_api_payload_with_server_amount_and_dni(): void
     {
         $this->configureMercadoPago();
         $user = $this->customer();
@@ -81,66 +80,64 @@ class MercadoPagoCheckoutApiTest extends TestCase
             ],
         ]);
 
-        $payload = (new MercadoPagoGateway)->buildOrderPayload(
+        $payload = (new MercadoPagoGateway)->buildPaymentPayload(
             $payment,
             $order,
             'card-token',
             'visa',
             '123456789',
             'comprador@brevare.test',
+            'issuer-123',
         );
 
-        $this->assertSame('online', $payload['type']);
-        $this->assertSame('automatic', $payload['processing_mode']);
-        $this->assertSame('112.00', $payload['total_amount']);
+        $this->assertSame(112.0, $payload['transaction_amount']);
         $this->assertSame($order->order_number, $payload['external_reference']);
         $this->assertSame('comprador@brevare.test', $payload['payer']['email']);
         $this->assertSame('Ana', $payload['payer']['first_name']);
         $this->assertSame('María Torres', $payload['payer']['last_name']);
         $this->assertSame('DNI', $payload['payer']['identification']['type']);
         $this->assertSame('123456789', $payload['payer']['identification']['number']);
-        $this->assertSame('card-token', $payload['transactions']['payments'][0]['payment_method']['token']);
-        $this->assertSame(1, $payload['transactions']['payments'][0]['payment_method']['installments']);
-        $this->assertSame('credit_card', $payload['transactions']['payments'][0]['payment_method']['type']);
-        $this->assertArrayNotHasKey('issuer_id', $payload['transactions']['payments'][0]['payment_method']);
+        $this->assertSame('card-token', $payload['token']);
+        $this->assertSame('visa', $payload['payment_method_id']);
+        $this->assertSame(1, $payload['installments']);
+        $this->assertSame('issuer-123', $payload['issuer_id']);
+        $this->assertSame($order->order_number, $payload['metadata']['order_number']);
+        $this->assertSame($payment->id, $payload['metadata']['local_payment_id']);
+        $this->assertArrayNotHasKey('transactions', $payload);
     }
 
-    public function test_maps_orders_api_statuses(): void
+    public function test_maps_payments_api_statuses(): void
     {
         $gateway = new MercadoPagoGateway;
 
-        $this->assertTrue($this->remoteOrder('processed', 'accredited', $gateway)['success']);
+        $this->assertTrue($this->remotePayment('approved', 'accredited', $gateway)['success']);
         $this->assertSame(
             PaymentStatus::PAID->value,
-            $this->remoteOrder('processed', 'accredited', $gateway)['status']
+            $this->remotePayment('approved', 'accredited', $gateway)['status']
         );
         $this->assertSame(
             PaymentStatus::PENDING->value,
-            $this->remoteOrder('processing', 'in_process', $gateway)['status']
+            $this->remotePayment('in_process', 'pending_contingency', $gateway)['status']
         );
         $this->assertSame(
             PaymentStatus::FAILED->value,
-            $this->remoteOrder('failed', 'rejected_by_issuer', $gateway)['status']
+            $this->remotePayment('rejected', 'cc_rejected_insufficient_amount', $gateway)['status']
         );
     }
 
-    private function remoteOrder(string $status, string $detail, MercadoPagoGateway $gateway): array
+    private function remotePayment(string $status, string $detail, MercadoPagoGateway $gateway): array
     {
-        $remotePayment = new MercadoPagoOrderPayment;
-        $remotePayment->id = 'PAY-MP-1';
-        $remotePayment->status = $status;
-        $remotePayment->status_detail = $detail;
-        $remotePayment->payment_method = (object) ['id' => 'visa'];
-
-        $remote = new MercadoPagoOrder;
-        $remote->id = 'ORD-MP-1';
+        $remote = new MercadoPagoApiPayment;
+        $remote->id = 123456789;
         $remote->status = $status;
         $remote->status_detail = $detail;
-        $remote->total_amount = '112.00';
-        $remote->currency = 'PEN';
-        $remote->transactions = ['payments' => [$remotePayment]];
+        $remote->transaction_amount = 112.00;
+        $remote->currency_id = 'PEN';
+        $remote->payment_method_id = 'visa';
+        $remote->payment_type_id = 'credit_card';
+        $remote->external_reference = 'BRV-MP-TEST-0001';
 
-        return $gateway->resultFromOrder($remote);
+        return $gateway->resultFromPayment($remote);
     }
 
     public function test_payment_screen_is_separate_and_requires_the_order_owner(): void
@@ -189,7 +186,7 @@ class MercadoPagoCheckoutApiTest extends TestCase
     {
         $this->configureMercadoPago();
 
-        $this->postJson('/webhooks/mercadopago?type=order&data.id=ORD-MP-1', [], [
+        $this->postJson('/webhooks/mercadopago?type=payment&data.id=123456789', [], [
             'x-signature' => 'ts=1,v1=invalid',
             'x-request-id' => 'request-test-1',
         ])->assertStatus(401);

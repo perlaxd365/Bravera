@@ -237,10 +237,11 @@ Prueba envíos a Gmail/Outlook y revisa que no caigan en spam.
 
 ### 9.1 Mercado Pago Checkout API
 
-La integración usa **Checkout API**: el comprador ingresa la tarjeta dentro de
-Brevare y Mercado Pago la tokeniza con sus campos seguros. El servidor crea la
-orden con la **Orders API** (`POST /v1/orders`) y recibe las notificaciones del
-tópico `orders`.
+La integración usa **Checkout API** con la **Payments API** (`POST /v1/payments`),
+que es el contrato habilitado para la aplicación actual de Brevare. El comprador
+ingresa la tarjeta dentro de Brevare y Mercado Pago la tokeniza con sus campos
+seguros. El servidor crea el pago y recibe las notificaciones del tópico
+`payment`.
 
 1. En Mercado Pago, usa una aplicación de tipo **Checkout API** (la app actual
    `App-Checkout-API-Brevare` ya corresponde a ese producto).
@@ -253,12 +254,13 @@ tópico `orders`.
    - `MP_PUBLIC_KEY` (Public Key de producción; es pública)
    - `MP_WEBHOOK_SECRET` (Webhooks → Secret)
    - `MP_WEBHOOK_URL=https://brevare.com/webhooks/mercadopago`
-4. Registra el webhook en Mercado Pago con el tópico **`order`** y la URL
+4. Registra el webhook en Mercado Pago con el tópico **`payment`** y la URL
    `https://brevare.com/webhooks/mercadopago`. La aplicación valida la firma
-   `x-signature` antes de consultar la order.
-5. Para probar con la Orders API necesitas un **usuario de prueba comprador** de
-   Mercado Pago. El correo del comprador debe ser el de ese usuario; no uses el
-   correo de la cuenta vendedora (Mercado Pago responde `4390`).
+   `x-signature` antes de consultar el pago.
+5. Las credenciales `TEST-` sirven para probar. Para cobrar de verdad, reemplázalas
+   por las credenciales `APP_USR-` de la pestaña **Producción**. Si Mercado Pago
+   exige un comprador de prueba, usa un usuario de prueba distinto de la cuenta
+   vendedora; no uses el correo de la cuenta que cobra (Mercado Pago responde `4390`).
 6. Tarjetas de prueba Perú: Visa `4009 1753 3280 6176` o Mastercard
    `5031 7557 3453 0604`, CVV `123`, vencimiento `11/30`, documento `123456789`.
 7. Haz una compra de prueba y confirma que el pedido pasa a `paid`, que el webhook

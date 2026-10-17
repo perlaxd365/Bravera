@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoOrderSync;
 use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoPaymentSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,15 +14,13 @@ class MercadoPagoWebhookController extends Controller
 {
     public function __invoke(
         Request $request,
-        MercadoPagoOrderSync $orderSync,
         MercadoPagoPaymentSync $paymentSync,
     ): JsonResponse
     {
         $eventType = (string) ($request->query('type') ?? $request->query('topic') ?? $request->input('type', ''));
-        $isOrderEvent = in_array($eventType, ['order', 'orders'], true);
         $isPaymentEvent = in_array($eventType, ['payment', 'payments'], true);
 
-        if ($eventType !== '' && ! $isOrderEvent && ! $isPaymentEvent) {
+        if (! $isPaymentEvent) {
             return response()->json(['ok' => true]);
         }
 
@@ -54,14 +51,7 @@ class MercadoPagoWebhookController extends Controller
             return response()->json(['ok' => false], 401);
         }
 
-        // Checkout API usa el tópico `orders` y su data.id es el ID de la
-        // order. El tópico `payment` se conserva para pagos históricos de
-        // Checkout Pro que todavía puedan notificar.
-        $result = $isPaymentEvent
-            ? $paymentSync->sync($remoteId)
-            : $orderSync->sync($remoteId);
-
-        if ($result === null) {
+        if ($paymentSync->sync($remoteId) === null) {
             return response()->json(['ok' => false], 503);
         }
 

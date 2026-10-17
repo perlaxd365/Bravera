@@ -81,10 +81,15 @@ class MercadoPagoPaymentSync
             return null;
         }
 
-        $preferenceId = (string) data_get($payment->raw_response, 'preference_id', '');
+        // Los pagos de Checkout API no usan preferencia. Si el intento local
+        // viene de una preferencia histórica de Checkout Pro, se sigue
+        // verificando que el pago pertenezca a esa misma preferencia.
+        $localPreferenceId = (string) data_get($payment->raw_response, 'preference_id', '');
         $remotePreferenceId = (string) ($remote->preference_id ?? '');
 
-        if ($preferenceId === '' || $remotePreferenceId === '' || ! hash_equals($preferenceId, $remotePreferenceId)) {
+        if ($localPreferenceId !== ''
+            && $remotePreferenceId !== ''
+            && ! hash_equals($localPreferenceId, $remotePreferenceId)) {
             Log::warning('El pago notificado no pertenece a la preferencia guardada.', [
                 'payment_id' => $remoteId,
                 'local_payment_id' => $payment->id,
@@ -98,9 +103,11 @@ class MercadoPagoPaymentSync
             'status' => (string) ($remote->status ?? ''),
             'status_detail' => (string) ($remote->status_detail ?? ''),
             'external_reference' => $orderNumber,
-            'preference_id' => $remotePreferenceId ?: $preferenceId,
+            'preference_id' => $remotePreferenceId ?: $localPreferenceId,
             'transaction_amount' => (float) $remote->transaction_amount,
             'currency_id' => (string) $remote->currency_id,
+            'payment_method_id' => (string) ($remote->payment_method_id ?? ''),
+            'payment_type_id' => (string) ($remote->payment_type_id ?? ''),
         ];
 
         $status = strtolower((string) ($remote->status ?? ''));

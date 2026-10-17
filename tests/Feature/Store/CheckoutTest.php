@@ -1481,7 +1481,10 @@ class CheckoutTest extends TestCase
      */
     public function test_sin_clave_publica_no_se_ofrece_pagar_con_culqi(): void
     {
-        config(['payments.culqi.public_key' => null]);
+        config([
+            'payments.default_gateway' => 'culqi',
+            'payments.culqi.public_key' => null,
+        ]);
 
         $user = $this->customer();
         $variant = $this->productWithStock();

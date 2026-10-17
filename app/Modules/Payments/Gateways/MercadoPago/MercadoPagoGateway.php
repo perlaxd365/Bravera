@@ -9,16 +9,18 @@ use App\Models\Payment;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use MercadoPago\Client\Common\RequestOptions;
-use MercadoPago\Client\Order\OrderClient;
+use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Client\Payment\PaymentRefundClient;
-use MercadoPago\Resources\Order as MercadoPagoOrder;
+use MercadoPago\Resources\Payment as MercadoPagoPayment;
 use Throwable;
 
 /**
  * Checkout API de Mercado Pago: pago con tarjeta dentro de Brevare.
  *
  * El navegador tokeniza la tarjeta con MercadoPago.js. Este servidor recibe
- * únicamente el token opaco y crea una order en la Orders API (`POST /v1/orders`).
+ * únicamente el token opaco y crea el pago con la Payments API, que es el
+ * contrato habilitado para la aplicación Checkout API de Brevare.
+ *
  * Los datos completos de la tarjeta nunca pasan por Laravel.
  */
 class MercadoPagoGateway implements PaymentGateway
@@ -66,6 +68,7 @@ class MercadoPagoGateway implements PaymentGateway
         $token = trim((string) $payment->source_id);
         $paymentMethodId = trim((string) data_get($payment->raw_response, 'payment_method_id', ''));
         $identification = preg_replace('/\D+/', '', (string) data_get($payment->raw_response, 'identification_number', ''));
+        $issuerId = trim((string) data_get($payment->raw_response, 'issuer_id', ''));
 
         if ($token === '' || $paymentMethodId === '') {
             return $this->failure(
@@ -90,41 +93,50 @@ class MercadoPagoGateway implements PaymentGateway
             );
         }
 
-        $payload = $this->buildOrderPayload($payment, $order, $token, $paymentMethodId, $identification, $payerEmail);
+        $payload = $this->buildPaymentPayload(
+            $payment,
+            $order,
+            $token,
+            $paymentMethodId,
+            $identification,
+            $payerEmail,
+            $issuerId,
+        );
 
         try {
-            $remote = (new OrderClient)->create(
+            $remote = (new PaymentClient)->create(
                 $payload,
-                $this->requestOptions('brevare-order-payment-'.$payment->id)
+                $this->requestOptions('brevare-payment-'.$payment->id)
             );
         } catch (Throwable $e) {
             report($e);
 
             return $this->failure(
                 'No pudimos procesar el pago con Mercado Pago. Revisa los datos de tu tarjeta e inténtalo otra vez.',
-                'order_creation_failed'
+                'payment_creation_failed'
             );
         }
 
-        return $this->resultFromOrder($remote);
+        return $this->resultFromPayment($remote);
     }
 
     /**
-     * Construye el payload oficial de la Orders API.
+     * Construye el payload de la Payments API.
      *
      * El monto y la referencia salen del pedido local, nunca del navegador.
      *
      * @return array<string, mixed>
      */
-    public function buildOrderPayload(
+    public function buildPaymentPayload(
         Payment $payment,
         Order $order,
         string $token,
         string $paymentMethodId,
         string $identification,
         string $payerEmail,
+        string $issuerId = '',
     ): array {
-        $amount = number_format((float) $payment->amount, 2, '.', '');
+        $amount = round((float) $payment->amount, 2);
         $payerName = trim((string) ($order->user?->name ?? data_get($order->customer_snapshot, 'name', '')));
         $nameParts = $this->payerNameParts($payerName);
         $statementDescriptor = mb_substr(
@@ -133,11 +145,12 @@ class MercadoPagoGateway implements PaymentGateway
             22
         );
 
-        return [
-            'type' => 'online',
-            'processing_mode' => 'automatic',
-            'total_amount' => $amount,
-            'external_reference' => (string) $order->order_number,
+        $payload = [
+            'transaction_amount' => $amount,
+            'token' => $token,
+            'description' => mb_substr('Pedido Brevare '.$order->order_number, 0, 256),
+            'installments' => 1,
+            'payment_method_id' => $paymentMethodId,
             'payer' => array_filter([
                 'email' => $payerEmail,
                 'first_name' => $nameParts['first_name'],
@@ -147,35 +160,32 @@ class MercadoPagoGateway implements PaymentGateway
                     'number' => $identification,
                 ],
             ], static fn ($value) => $value !== '' && $value !== []),
-            'items' => [[
-                'id' => (string) $order->order_number,
-                'title' => mb_substr('Pedido Brevare '.$order->order_number, 0, 250),
-                'description' => mb_substr('Compra en Brevare', 0, 250),
-                'quantity' => 1,
-                'unit_price' => $amount,
-            ]],
-            'transactions' => [
-                'payments' => [[
-                    'amount' => $amount,
-                    'payment_method' => [
-                        'id' => $paymentMethodId,
-                        'type' => $this->paymentMethodType($paymentMethodId),
-                        'token' => $token,
-                        'installments' => 1,
-                        'statement_descriptor' => $statementDescriptor,
-                    ],
-                ]],
+            'external_reference' => (string) $order->order_number,
+            'statement_descriptor' => $statementDescriptor,
+            'notification_url' => (string) config('payments.mercadopago.webhook_url'),
+            'metadata' => [
+                'order_number' => (string) $order->order_number,
+                'local_payment_id' => (int) $payment->id,
             ],
         ];
+
+        if ($issuerId !== '') {
+            $payload['issuer_id'] = $issuerId;
+        }
+
+        return $payload;
     }
 
     public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
     {
         $this->ensureConfigured();
-        $transactionId = trim((string) $payment->gateway_transaction_id);
+        $paymentId = trim((string) $payment->gateway_transaction_id);
 
-        if ($transactionId === '') {
-            return $this->failure('El pago no tiene un identificador reembolsable de Mercado Pago.', 'missing_payment_id');
+        if (! ctype_digit($paymentId)) {
+            return $this->failure(
+                'El pago no tiene un identificador numérico reembolsable de Mercado Pago.',
+                'missing_payment_id'
+            );
         }
 
         if ($amount !== null && abs($amount - (float) $payment->amount) > 0.005) {
@@ -186,47 +196,20 @@ class MercadoPagoGateway implements PaymentGateway
         }
 
         try {
-            $legacyPaymentId = ctype_digit($transactionId);
+            $refund = (new PaymentRefundClient)->refundTotal(
+                (int) $paymentId,
+                $this->requestOptions('brevare-refund-'.$payment->id)
+            );
+            $status = strtolower((string) ($refund->status ?? ''));
+            $refundId = (string) ($refund->id ?? $paymentId);
 
-            // Los pagos nuevos usan el ID de la order. Se conserva el camino
-            // anterior para pagos históricos de Checkout Pro, cuyo ID es numérico.
-            if ($legacyPaymentId) {
-                $refund = (new PaymentRefundClient)->refundTotal(
-                    (int) $transactionId,
-                    $this->requestOptions('brevare-refund-'.$payment->id)
-                );
-                $status = strtolower((string) ($refund->status ?? ''));
-                $refundId = (string) ($refund->id ?? $transactionId);
-                $refundSucceeded = in_array($status, ['approved', 'refunded'], true);
-            } else {
-                $refund = (new OrderClient)->refund(
-                    $transactionId,
-                    null,
-                    $this->requestOptions('brevare-refund-'.$payment->id)
-                );
-                $status = strtolower((string) ($refund->status ?? ''));
-                $detail = strtolower((string) ($refund->status_detail ?? ''));
-                $refundId = (string) (data_get($refund, 'transactions.refunds.0.id') ?? $transactionId);
-
-                if ($status === 'processed' && $detail === 'refunded') {
-                    $status = 'refunded';
-                }
-
-                $refundSucceeded = $status === 'refunded'
-                    || ($status === 'processed' && in_array($detail, ['refunded', 'partially_refunded'], true));
-            }
-
-            if ($refundSucceeded) {
+            if (in_array($status, ['approved', 'refunded'], true)) {
                 return [
                     'success' => true,
                     'transaction_id' => $refundId,
                     'status' => PaymentStatus::REFUNDED->value,
                     'message' => 'Reembolso procesado.',
-                    'raw' => [
-                        'refund_id' => $refundId,
-                        'status' => $status,
-                        'order_id' => $legacyPaymentId ? null : $transactionId,
-                    ],
+                    'raw' => ['refund_id' => $refundId, 'status' => $status],
                 ];
             }
 
@@ -239,29 +222,26 @@ class MercadoPagoGateway implements PaymentGateway
     }
 
     /**
-     * Convierte la respuesta de la Orders API en el contrato interno.
+     * Convierte la respuesta de la Payments API en el contrato interno.
      */
-    public function resultFromOrder(MercadoPagoOrder $remote): array
+    public function resultFromPayment(MercadoPagoPayment $remote): array
     {
         $status = strtolower((string) ($remote->status ?? ''));
         $detail = strtolower((string) ($remote->status_detail ?? ''));
         $remoteId = (string) ($remote->id ?? '');
-        $remotePayment = data_get($remote, 'transactions.payments.0');
-        $paymentId = (string) data_get($remotePayment, 'id', '');
 
         $raw = [
-            'order_id' => $remoteId,
-            'order_status' => $status,
-            'order_status_detail' => $detail,
-            'payment_id' => $paymentId,
-            'payment_status' => (string) data_get($remotePayment, 'status', ''),
-            'payment_status_detail' => (string) data_get($remotePayment, 'status_detail', ''),
-            'payment_method_id' => (string) data_get($remotePayment, 'payment_method.id', ''),
-            'transaction_amount' => (string) ($remote->total_amount ?? ''),
-            'currency' => (string) ($remote->currency ?? 'PEN'),
+            'payment_id' => $remoteId,
+            'status' => $status,
+            'status_detail' => $detail,
+            'transaction_amount' => (string) ($remote->transaction_amount ?? ''),
+            'currency_id' => (string) ($remote->currency_id ?? ''),
+            'payment_method_id' => (string) ($remote->payment_method_id ?? ''),
+            'payment_type_id' => (string) ($remote->payment_type_id ?? ''),
+            'external_reference' => (string) ($remote->external_reference ?? ''),
         ];
 
-        if ($status === 'processed' && $detail === 'accredited') {
+        if ($status === 'approved') {
             return [
                 'success' => true,
                 'transaction_id' => $remoteId,
@@ -271,7 +251,7 @@ class MercadoPagoGateway implements PaymentGateway
             ];
         }
 
-        if (in_array($status, ['created', 'processing', 'action_required', 'in_review'], true)) {
+        if (in_array($status, ['pending', 'in_process', 'authorized'], true)) {
             return [
                 'success' => false,
                 'transaction_id' => $remoteId,
@@ -283,26 +263,34 @@ class MercadoPagoGateway implements PaymentGateway
             ];
         }
 
-        if ($status === 'refunded' || ($status === 'processed' && in_array($detail, ['refunded', 'partially_refunded'], true))) {
+        if (in_array($status, ['refunded', 'charged_back'], true)) {
             return [
                 'success' => false,
                 'transaction_id' => $remoteId,
                 'status' => PaymentStatus::FAILED->value,
-                'message' => 'El pago fue reembolsado y el pedido no se puede confirmar.',
+                'message' => 'El pago fue reembolsado o desconocido por el emisor.',
                 'raw' => array_merge($raw, [
-                    'message' => 'El pago fue reembolsado y el pedido no se puede confirmar.',
+                    'message' => 'El pago fue reembolsado o desconocido por el emisor.',
                 ]),
             ];
         }
+
+        $message = match ($detail) {
+            'cc_rejected_insufficient_amount' => 'La tarjeta no tiene fondos suficientes. Prueba con otra tarjeta.',
+            'cc_rejected_bad_filled_card_data',
+            'cc_rejected_bad_filled_security_code',
+            'cc_rejected_bad_filled_date' => 'Revisa los datos de tu tarjeta e inténtalo otra vez.',
+            'cc_rejected_call_for_authorize' => 'El banco requiere que autorices el pago. Contacta a tu banco.',
+            'cc_rejected_high_risk' => 'El pago fue rechazado por seguridad. Prueba con otra tarjeta.',
+            default => 'No se pudo procesar el pago. Revisa los datos de tu tarjeta e inténtalo otra vez.',
+        };
 
         return [
             'success' => false,
             'transaction_id' => $remoteId,
             'status' => PaymentStatus::FAILED->value,
-            'message' => 'No se pudo procesar el pago. Revisa los datos de tu tarjeta e inténtalo otra vez.',
-            'raw' => array_merge($raw, [
-                'message' => 'No se pudo procesar el pago. Revisa los datos de tu tarjeta e inténtalo otra vez.',
-            ]),
+            'message' => $message,
+            'raw' => array_merge($raw, ['message' => $message]),
         ];
     }
 
@@ -328,11 +316,6 @@ class MercadoPagoGateway implements PaymentGateway
         }
 
         return $options;
-    }
-
-    private function paymentMethodType(string $paymentMethodId): string
-    {
-        return str_starts_with(strtolower($paymentMethodId), 'deb') ? 'debit_card' : 'credit_card';
     }
 
     /**
