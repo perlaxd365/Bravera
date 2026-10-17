@@ -451,15 +451,37 @@ export const openModal = async (rawSession, publicKey, state) => {
     // En modo integrado no existe un modal que consultar: validamos que el
     // contenedor permanezca en la página y dejamos listo el control de reintento.
     setTimeout(() => {
-        if (!document.querySelector('#culqi-container')) {
+        const container = document.querySelector('#culqi-container');
+
+        if (!container) {
             console.error('[Culqi] no se encontró el contenedor del checkout integrado.');
             notify('No pudimos abrir el formulario de Culqi. Revisa tu conexión e inténtalo de nuevo.');
             const root = document.querySelector('[data-culqi-public-key]');
             window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
             return;
         }
+
+        // El SDK puede insertar su iframe con una altura mínima; se recalcula
+        // cuando ya existe y, si aun así no montó, se avisa en lugar de dejar
+        // un modal vacío.
+        fitEmbeddedCheckout();
+
+        const frame = container.querySelector('iframe');
+        const height = container.getBoundingClientRect().height;
+
+        if (!frame || height < 120) {
+            console.error('[Culqi] el formulario no se montó.', {
+                hasFrame: Boolean(frame),
+                height: Math.round(height),
+            });
+            notify('No pudimos mostrar el formulario de Culqi. Recarga la página e inténtalo de nuevo.');
+            const root = document.querySelector('[data-culqi-public-key]');
+            window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
+            return;
+        }
+
         console.debug('[Culqi] Checkout integrado iniciado.');
-    }, 1000);
+    }, 4000);
 };
 
 export const handleCulqiSettled = (payload) => {
