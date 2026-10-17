@@ -137,7 +137,10 @@ export const openModal = async (rawSession, publicKey, state) => {
 
     console.debug('[Culqi] CulqiCheckout cargado, creando instancia...');
 
-    const checkout = new Ctor(publicKey, {
+    let checkout;
+
+    try {
+        checkout = new Ctor(publicKey, {
         settings: {
             title: `Pago del pedido ${session.orderNumber}`,
             currency: session.currency,
@@ -165,7 +168,14 @@ export const openModal = async (rawSession, publicKey, state) => {
                 priceColor: '#0a0a0c',
             },
         },
-    });
+        });
+    } catch (error) {
+        console.error('[Culqi] no se pudo crear la instancia del checkout:', error);
+        notify('No pudimos iniciar el formulario de Culqi. Inténtalo otra vez.');
+        const root = document.querySelector('[data-culqi-public-key]');
+        window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
+        return;
+    }
 
     checkout.culqi = async () => {
         // Culqi puede conservar información de la orden asociada al checkout.
@@ -380,7 +390,17 @@ export const openModal = async (rawSession, publicKey, state) => {
 
     // Culqi renderiza el formulario dentro del contenedor de Brevare.
     console.debug('[Culqi] Montando checkout integrado...');
-    checkout.open();
+
+    try {
+        checkout.open();
+    } catch (error) {
+        console.error('[Culqi] no se pudo montar el checkout integrado:', error);
+        state.checkout = null;
+        notify('No pudimos abrir el formulario de Culqi. Inténtalo otra vez.');
+        const root = document.querySelector('[data-culqi-public-key]');
+        window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
+        return;
+    }
 
     // El SDK monta su iframe con una altura interna corta en algunos tamaños
     // de ventana. Aunque el contenedor tenga más espacio, eso recorta los
@@ -471,6 +491,50 @@ export const initCheckout = (publicKey, wireId) => {
 
     console.debug('[Culqi] initCheckout llamado, registrando listeners...', { wireId });
 
+    /**
+     * El modal se pinta en la misma respuesta que dispara `culqi:open`.
+     * Según el orden en que Livewire aplique el DOM y los eventos, el nodo
+     * puede no existir todavía; por eso se reintenta antes de rendirse.
+     */
+    const mountCulqiModal = (session, attempt = 0) => {
+        const paymentModal = document.querySelector('#culqi-payment-modal');
+        const container = document.querySelector('#culqi-container');
+
+        if (!paymentModal || !container) {
+            if (attempt < 60) {
+                window.setTimeout(() => mountCulqiModal(session, attempt + 1), 50);
+                return;
+            }
+
+            console.error('[Culqi] el modal no apareció en el DOM.');
+            notify('No pudimos abrir el formulario de Culqi. Recarga la página e inténtalo de nuevo.');
+            return;
+        }
+
+        state.lastSession = `${session.orderId ?? ''}-${session.gatewayOrderId ?? ''}`;
+
+        paymentModal.classList.remove('hidden');
+        paymentModal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        // Un doble clic puede disparar dos aperturas: se destruye la anterior.
+        if (state.checkout) {
+            try {
+                state.checkout.close();
+            } catch (error) {
+                console.warn('[Culqi] no se pudo cerrar la instancia anterior:', error);
+            }
+
+            state.checkout = null;
+            container.replaceChildren();
+        }
+
+        void openModal(session, publicKey, state).catch((error) => {
+            console.error('[Culqi] no se pudo montar el checkout:', error);
+            notify('No pudimos cargar el formulario de Culqi. Revisa tu conexión e inténtalo otra vez.');
+        });
+    };
+
     Livewire.on('culqi:open', (event) => {
         console.debug('[Culqi] >>> EVENTO culqi:open RECIBIDO <<<', event);
         const session = plain(event?.session ?? event?.detail?.session ?? null);
@@ -482,11 +546,7 @@ export const initCheckout = (publicKey, wireId) => {
         }
 
         console.debug('[Culqi] Abriendo modal con sesión:', session);
-        const paymentModal = document.querySelector('#culqi-payment-modal');
-        paymentModal?.classList.remove('hidden');
-        paymentModal?.classList.add('flex');
-        document.body.style.overflow = 'hidden';
-        openModal(session, publicKey, state);
+        mountCulqiModal(session);
     });
 
     Livewire.on('culqi:cancelled', () => {
@@ -529,6 +589,46 @@ export const initCheckout = (publicKey, wireId) => {
             });
         }
     });
+
+    // Si la página se recarga con un pago de Culqi abierto, el modal ya viene
+    // visible desde el servidor y basta montar el formulario.
+    const initialModal = document.querySelector('#culqi-payment-modal:not(.hidden)');
+
+    if (initialModal?.dataset.culqiSession) {
+        try {
+            const initialSession = plain(JSON.parse(initialModal.dataset.culqiSession));
+
+            if (initialSession) {
+                mountCulqiModal(initialSession);
+            }
+        } catch (error) {
+            console.error('[Culqi] no se pudo leer la sesión inicial:', error);
+        }
+    }
+
+    // Último recurso: si el evento se pierde pero el servidor dejó el modal
+    // visible con su sesión, se monta igualmente.
+    window.setInterval(() => {
+        const modal = document.querySelector('#culqi-payment-modal:not(.hidden)');
+        const rawSession = modal?.dataset.culqiSession;
+
+        if (!rawSession || state.checkout) {
+            return;
+        }
+
+        try {
+            const session = plain(JSON.parse(rawSession));
+            const key = `${session?.orderId ?? ''}-${session?.gatewayOrderId ?? ''}`;
+
+            if (!session || state.lastSession === key) {
+                return;
+            }
+
+            mountCulqiModal(session);
+        } catch (error) {
+            console.error('[Culqi] no se pudo recuperar la sesión del modal:', error);
+        }
+    }, 700);
 };
 
 const autoInit = () => {

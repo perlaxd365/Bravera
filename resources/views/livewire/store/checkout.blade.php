@@ -545,7 +545,8 @@
     </div>
 
     @if ($usesProviderModal && $culqiSession !== [])
-        <div id="culqi-payment-modal" class="pay-modal hidden"
+        <div id="culqi-payment-modal" class="pay-modal {{ $culqiFormOpened ? '' : 'hidden' }}"
+            data-culqi-session="{{ json_encode($culqiSession) }}"
             role="dialog" aria-modal="true" aria-labelledby="culqi-payment-title">
             <div class="pay-modal__backdrop"></div>
 

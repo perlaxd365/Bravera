@@ -425,28 +425,42 @@ class CheckoutTest extends TestCase
         ]);
 
         $user = $this->customer();
-        $order = Order::create([
-            'order_number' => 'BRV-MP-SWITCH-1',
-            'user_id' => $user->id,
-            'status' => OrderStatus::PENDING,
-            'payment_status' => PaymentStatus::PENDING,
-            'payment_intent' => 'mercadopago',
-            'subtotal' => 10,
-            'shipping_total' => 0,
-            'discount_total' => 0,
-            'total' => 10,
-            'cost_total' => 5,
-            'currency' => 'PEN',
-            'customer_snapshot' => ['name' => $user->name, 'email' => $user->email],
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true);
+
+        $mpOrder = Order::firstOrFail();
+
+        $this->useCulqi();
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(
+                CulqiResponses::pendingOrder('ord_switch_modal'),
+                201
+            ),
         ]);
 
-        Livewire::actingAs($user)
-            ->test(Checkout::class, ['pagar' => $order->order_number])
-            ->call('switchToCulqi')
-            ->assertRedirect(route('checkout', ['gateway' => 'culqi']));
+        // El botón "Pagar con Culqi" del modal cancela el intento de Mercado
+        // Pago y abre Culqi sin una redirección intermedia.
+        $component->call('switchToCulqi')
+            ->assertSet('showMercadoPagoModal', false)
+            ->assertSet('selectedGateway', 'culqi')
+            ->assertDispatched('culqi:open');
 
-        $this->assertSame(OrderStatus::CANCELLED, $order->fresh()->status);
-        $this->assertSame(PaymentStatus::EXPIRED, $order->fresh()->payment_status);
+        $mpOrder->refresh();
+        $this->assertSame(OrderStatus::CANCELLED, $mpOrder->status);
+        $this->assertSame(PaymentStatus::EXPIRED, $mpOrder->payment_status);
+
+        $culqiOrder = Order::latest('id')->firstOrFail();
+        $this->assertSame(2, Order::count());
+        $this->assertSame('ord_switch_modal', $culqiOrder->gateway_order_id);
+        $this->assertSame(OrderStatus::PENDING, $culqiOrder->status);
     }
 
     public function test_retoma_un_pedido_de_izipay_sin_caer_en_culqi(): void

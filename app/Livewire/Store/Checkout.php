@@ -717,11 +717,16 @@ class Checkout extends Component
         $this->showMercadoPagoModal = false;
         $this->culqiOrderId = null;
         $this->pendingOrderNumber = null;
+        $this->culqiSession = [];
+        $this->culqiFormOpened = false;
+        $this->paymentStage = 'idle';
         $this->selectedGateway = 'culqi';
         $this->syncPaymentMethodToGateway();
         session()->forget('mercadopago_pending_order');
 
-        $this->redirect(route('checkout', ['gateway' => 'culqi']));
+        // Abre Culqi en el mismo paso: el comprador ya eligió pagar con Culqi,
+        // no tiene que volver a pulsar "Continuar al pago" tras una redirección.
+        $this->startCulqiCheckout();
     }
 
     public function payMercadoPago(
