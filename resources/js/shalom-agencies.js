@@ -6,6 +6,8 @@ let mapFailed = false;
 let markers = [];
 let infoWindow = null;
 let selectedId = null;
+let agencyRailHintPlayed = false;
+let agencyRailInteracted = false;
 
 const byId = (id) => document.getElementById(id);
 
@@ -302,7 +304,51 @@ const renderList = (root, query) => {
         listElement.appendChild(card);
     });
 
+    if (query === '' && list.length > 1 && !agencyRailHintPlayed) {
+        scheduleAgencyRailHint(listElement);
+    }
+
     return list;
+};
+
+/**
+ * Muestra brevemente la siguiente tarjeta y vuelve al inicio. Es una pista
+ * de gesto, no un carrusel automático: se ejecuta una sola vez y se cancela
+ * en cuanto el comprador toca o mueve la lista.
+ */
+const scheduleAgencyRailHint = (listElement) => {
+    if (!listElement
+        || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        || listElement.scrollWidth <= listElement.clientWidth + 4) {
+        return;
+    }
+
+    agencyRailHintPlayed = true;
+
+    if (listElement.dataset.hintBound !== '1') {
+        listElement.dataset.hintBound = '1';
+
+        ['pointerdown', 'touchstart', 'wheel'].forEach((eventName) => {
+            listElement.addEventListener(eventName, () => {
+                agencyRailInteracted = true;
+            }, { passive: true });
+        });
+    }
+
+    window.setTimeout(() => {
+        if (agencyRailInteracted) {
+            return;
+        }
+
+        const peek = Math.min(48, Math.max(0, listElement.scrollWidth - listElement.clientWidth));
+        listElement.scrollTo({ left: peek, behavior: 'smooth' });
+
+        window.setTimeout(() => {
+            if (!agencyRailInteracted) {
+                listElement.scrollTo({ left: 0, behavior: 'smooth' });
+            }
+        }, 850);
+    }, 900);
 };
 
 const MAP_STYLE = [

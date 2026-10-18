@@ -314,10 +314,21 @@ main > * {
 }
 
 .shalom-agency-list .shalom-agency-card {
-    flex: 0 0 min(78vw, 300px);
+    flex: 0 0 min(68vw, 280px);
     width: auto;
     scroll-snap-align: start;
     scroll-snap-stop: always;
+}
+
+#shalom-list-hint:not(.hidden)::after {
+    content: ' →';
+    display: inline-block;
+    animation: shalom-swipe-cue 1.6s cubic-bezier(.22, 1, .36, 1) 3;
+}
+
+@keyframes shalom-swipe-cue {
+    0%, 100% { transform: translateX(0); opacity: .55; }
+    50% { transform: translateX(5px); opacity: 1; }
 }
 
 @media (min-width: 1024px) {
@@ -339,6 +350,17 @@ main > * {
 
     .shalom-agency-list .shalom-agency-card + .shalom-agency-card {
         margin-top: .5rem;
+    }
+
+    #shalom-list-hint:not(.hidden)::after {
+        content: none;
+        animation: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #shalom-list-hint:not(.hidden)::after {
+        animation: none;
     }
 }
 
