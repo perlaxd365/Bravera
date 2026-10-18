@@ -8,6 +8,7 @@ use App\Http\Controllers\MercadoPagoConfigController;
 use App\Http\Controllers\MercadoPagoReturnController;
 use App\Http\Controllers\Seo\SitemapController;
 use App\Http\Controllers\Seo\GoogleMerchantFeedController;
+use App\Http\Controllers\ShalomAgencyController;
 use App\Livewire\Account\Addresses;
 use App\Livewire\Account\OrderDetail;
 use App\Livewire\Account\Orders;
@@ -83,6 +84,9 @@ Route::get('carrito', CartIndex::class)
 Route::get('checkout', Checkout::class)
     ->middleware('verified.if.authenticated')
     ->name('checkout');
+
+Route::get('shalom/agencias', ShalomAgencyController::class)
+    ->name('shalom.agencies');
 
 Route::get('pedido/{order:order_number}/confirmado', OrderPlaced::class)
     ->middleware('verified.if.authenticated')

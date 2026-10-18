@@ -144,8 +144,17 @@
                 </section>
 
                 <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 class="font-bold text-gray-900">Entrega</h2>
+                    <h2 class="font-bold text-gray-900">Recojo</h2>
+                    @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
+                    @if (! empty($pickup))
+                        <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Agencia Shalom · Regular</p>
+                            <p class="mt-1 font-semibold text-emerald-950">{{ $pickup['address'] ?? '' }}</p>
+                            <p class="text-sm text-emerald-800">{{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }}</p>
+                        </div>
+                    @endif
                     <div class="mt-3 space-y-1 text-sm">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección de contacto</p>
                         <p class="font-semibold text-gray-900">{{ $order->address_snapshot['full_name'] ?? '' }}</p>
                         <p class="text-gray-500">{{ $order->address_snapshot['address'] ?? '' }}</p>
                         <p class="text-gray-500">{{ $order->address_snapshot['location_label'] ?? '' }}</p>

@@ -17,6 +17,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\ShalomAgency;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\Supplier;
@@ -109,6 +110,22 @@ class CheckoutTest extends TestCase
 
     private function addressFor(User $user, Location $district): CustomerAddress
     {
+        if (! ShalomAgency::query()->exists()) {
+            ShalomAgency::create([
+                'code' => 'SH-TEST-MIRAFLORES',
+                'department' => 'LIMA',
+                'province' => 'LIMA',
+                'district' => 'MIRAFLORES',
+                'address' => 'AV. LARCO 123',
+                'modality' => 'Regular',
+                'latitude' => -12.1219,
+                'longitude' => -77.0297,
+                'geocode_precision' => 'exact',
+                'geocoded_at' => now(),
+                'active' => true,
+            ]);
+        }
+
         return CustomerAddress::create([
             'user_id' => $user->id,
             'full_name' => 'Cliente Checkout',
@@ -251,6 +268,70 @@ class CheckoutTest extends TestCase
         $this->assertSame(PaymentStatus::PENDING, $order->payment_status);
         $this->assertSame('mercadopago', $order->payment_intent);
         $this->assertSame(0, $order->payments()->count());
+    }
+
+    public function test_el_pedido_guarda_la_agencia_shalom_seleccionada(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+        $agency = ShalomAgency::firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('selectedShalomAgencyId', $agency->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true);
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('shalom_pickup', $order->address_snapshot['shipping_method']);
+        $this->assertSame($agency->id, $order->address_snapshot['pickup_agency']['id']);
+        $this->assertSame('Regular', $order->address_snapshot['pickup_agency']['modality']);
+        // El costo de envío sigue saliendo del flujo existente por dirección.
+        $this->assertSame(112.00, (float) $order->total);
+    }
+
+    public function test_sin_agencia_elegida_se_usa_la_mas_cercana_del_distrito(): void
+    {
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertSet('showMercadoPagoModal', true);
+
+        $order = Order::firstOrFail();
+        $agency = ShalomAgency::firstOrFail();
+
+        $this->assertSame($agency->id, $order->address_snapshot['pickup_agency']['id']);
+        $this->assertSame('MIRAFLORES', $order->address_snapshot['pickup_agency']['district']);
     }
 
     public function test_mercadopago_modal_confirms_the_order_with_the_token(): void

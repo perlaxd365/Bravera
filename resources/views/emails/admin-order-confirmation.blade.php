@@ -44,7 +44,14 @@
         @endif
         <strong>Total:</strong> S/ {{ number_format((float) $order->total, 2) }}</p>
 
-    <h2>Dirección de entrega</h2>
+    @php($pickup = $address['pickup_agency'] ?? null)
+    @if (! empty($pickup))
+        <h2>Recojo en agencia Shalom</h2>
+        <p><strong>{{ $pickup['address'] ?? '' }}</strong><br>
+            {{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }} · Regular</p>
+    @endif
+
+    <h2>Dirección de contacto</h2>
     <p>{{ $address['full_name'] ?? $customerName }}<br>
         {{ $address['address'] ?? '—' }}<br>
         {{ $address['reference'] ?? '' }}<br>

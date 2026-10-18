@@ -83,12 +83,12 @@
         {{-- Columna principal --}}
         <div class="space-y-4 lg:col-span-2">
 
-            {{-- 1. Dirección de entrega --}}
+            {{-- 1. Dirección de recojo --}}
             <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
                         class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">1</span>
-                    Dirección de entrega
+                    Dirección de recojo
                 </h2>
 
                 @if ($addresses->isNotEmpty())
@@ -228,6 +228,55 @@
                 @error('selectedAddressId')
                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                 @enderror
+
+                @if ($selectedAddressId)
+                    <div id="shalom-picker" class="mt-6 border-t border-gray-100 pt-5"
+                        data-agencies-url="{{ $shalomAgenciesUrl }}"
+                        data-maps-key="{{ $googleMapsKey }}"
+                        data-selected-id="{{ $selectedShalomAgencyId }}"
+                        data-department="{{ $pickupDepartment }}"
+                        data-province="{{ $pickupProvince }}"
+                        data-district="{{ $pickupDistrict }}">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h3 class="flex items-center gap-2 text-sm font-bold text-gray-900">
+                                    <flux:icon name="building-storefront" class="size-4 text-emerald-600" />
+                                    Agencia de recojo Shalom
+                                </h3>
+                                <p class="mt-1 text-xs leading-relaxed text-gray-500">
+                                    Ordenamos primero las agencias más cercanas a tu distrito.
+                                    Puedes buscar otra ciudad o distrito si lo necesitas.
+                                </p>
+                            </div>
+                            <span
+                                class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                                Regular
+                            </span>
+                        </div>
+
+                        <div class="relative mt-4">
+                            <flux:icon name="magnifying-glass"
+                                class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                            <input id="shalom-search" type="search" autocomplete="off"
+                                placeholder="Buscar otra ciudad, distrito o dirección…"
+                                class="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15">
+                        </div>
+
+                        <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                            <div id="shalom-agency-list" wire:ignore
+                                class="max-h-[360px] space-y-2 overflow-y-auto pr-1"></div>
+                            <div id="shalom-map" wire:ignore
+                                class="h-[320px] overflow-hidden rounded-2xl border border-gray-200 bg-gray-100"></div>
+                        </div>
+
+                        <p id="shalom-empty" class="mt-3 hidden rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                            No encontramos agencias con esa búsqueda. Prueba con otro distrito o ciudad.
+                        </p>
+                        <p id="shalom-map-fallback" class="mt-3 hidden text-xs text-gray-500">
+                            No se pudo cargar el mapa. La dirección de la agencia sigue disponible en la lista.
+                        </p>
+                    </div>
+                @endif
             </section>
 
             {{-- 2. Envío --}}
@@ -473,6 +522,19 @@
                         {{ number_format($total, 2) }}</span>
                 </div>
 
+                @if ($selectedShalomAgency)
+                    <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                        <p class="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                            <flux:icon name="building-storefront" class="size-4" />
+                            Recojo en agencia Shalom
+                        </p>
+                        <p class="mt-1 text-sm text-emerald-900">{{ $selectedShalomAgency->displayName() }}</p>
+                        <p class="text-xs text-emerald-700">
+                            {{ $selectedShalomAgency->district }} · {{ $selectedShalomAgency->province }} · Regular
+                        </p>
+                    </div>
+                @endif
+
                 <div class="mt-4">
                     <label class="mb-1.5 block text-xs font-semibold text-gray-700">Notas (opcional)</label>
                     <textarea wire:model="notes" rows="2"
@@ -523,7 +585,7 @@
                 @if ($gatewayChoice !== '' && $usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
                     @if ($culqiSession === [])
                         <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
-                            wire:target="startCulqiCheckout" @if (!$selectedAddressId) disabled @endif
+                            wire:target="startCulqiCheckout" @if (!$selectedAddressId || !$selectedShalomAgencyId) disabled @endif
                             class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                             <span wire:loading.remove wire:target="startCulqiCheckout"
                                 class="inline-flex items-center gap-2">
@@ -542,7 +604,7 @@
                     @endif
                 @elseif ($gatewayChoice !== '' && !$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
-                        @if (!$selectedAddressId) disabled @endif
+                        @if (!$selectedAddressId || !$selectedShalomAgencyId) disabled @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                         <span wire:loading.remove>
                             {{ match ($selectedGateway) {

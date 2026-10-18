@@ -66,7 +66,16 @@
         </tr>
     </table>
 
-    <h2 style="margin:0 0 8px;font-size:15px;font-weight:600;color:#111827;">Dirección de entrega</h2>
+    @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
+    @if (! empty($pickup))
+        <h2 style="margin:0 0 8px;font-size:15px;font-weight:600;color:#111827;">Recojo en agencia Shalom</h2>
+        <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4b5563;">
+            <strong>{{ $pickup['address'] ?? '' }}</strong><br>
+            {{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }} · Regular
+        </p>
+    @endif
+
+    <h2 style="margin:0 0 8px;font-size:15px;font-weight:600;color:#111827;">Dirección de contacto</h2>
     <p style="margin:0 0 24px;font-size:14px;line-height:1.7;color:#4b5563;">
         {{ $order->address_snapshot['full_name'] ?? '' }}<br>
         {{ $order->address_snapshot['address'] ?? '' }}

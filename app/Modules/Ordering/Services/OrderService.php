@@ -48,6 +48,8 @@ class OrderService
                     'address' => $data->address->address,
                     'reference' => $data->address->reference,
                     'location_label' => $data->address->locationLabel(),
+                    'shipping_method' => 'shalom_pickup',
+                    'pickup_agency' => $data->pickupAgency,
                 ],
                 'currency' => 'PEN',
                 'notes' => $data->notes,

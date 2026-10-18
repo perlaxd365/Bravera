@@ -18,6 +18,18 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'nominatim' => [
+        'url' => env('NOMINATIM_URL', 'https://nominatim.openstreetmap.org'),
+        'user_agent' => env(
+            'NOMINATIM_USER_AGENT',
+            'BraveraCheckout/1.0 (administracion@brevare.com)'
+        ),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

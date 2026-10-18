@@ -28,5 +28,6 @@ class CheckoutData
         public readonly array $shippingPerItem,
         public readonly ?Coupon $coupon = null,
         public readonly ?string $notes = null,
+        public readonly ?array $pickupAgency = null,
     ) {}
 }

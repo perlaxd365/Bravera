@@ -88,8 +88,16 @@
     </table>
 
     @if ($newStatus->value === 'shipped' || $newStatus->value === 'delivered')
+        @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
+        @if (! empty($pickup))
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
+                <strong style="color:#111827;">Recojo en agencia Shalom:</strong><br>
+                {{ $pickup['address'] ?? '' }}<br>
+                {{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }} · Regular
+            </p>
+        @endif
         <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4b5563;">
-            <strong style="color:#111827;">Dirección de entrega:</strong><br>
+            <strong style="color:#111827;">Dirección de contacto:</strong><br>
             {{ $order->address_snapshot['full_name'] ?? '' }}<br>
             {{ $order->address_snapshot['address'] ?? '' }}<br>
             {{ $order->address_snapshot['location_label'] ?? '' }}<br>

@@ -100,10 +100,20 @@
             </div>
 
             <div class="mt-6 space-y-3 border-t border-gray-100 pt-6 text-left text-sm text-gray-700">
+                @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
+                @if (! empty($pickup))
+                    <p class="flex items-start gap-2">
+                        <flux:icon name="building-storefront" class="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                        <span>
+                            <strong class="text-gray-900">Recojo en agencia Shalom:</strong>
+                            {{ $pickup['address'] ?? '' }} · {{ $pickup['district'] ?? '' }} · Regular
+                        </span>
+                    </p>
+                @endif
                 <p class="flex items-start gap-2">
                     <flux:icon name="map-pin" class="mt-0.5 size-4 shrink-0 text-gray-400" />
                     <span>
-                        <strong class="text-gray-900">Entrega a:</strong>
+                        <strong class="text-gray-900">Dirección de contacto:</strong>
                         {{ $order->address_snapshot['full_name'] ?? '' }} —
                         {{ $order->address_snapshot['address'] ?? '' }},
                         {{ $order->address_snapshot['location_label'] ?? '' }}

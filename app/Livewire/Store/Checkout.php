@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\ShalomAgency;
 use App\Modules\Discounts\Services\CouponService;
 use App\Modules\Location\Services\LocationService;
 use App\Modules\Ordering\Data\CheckoutData;
@@ -94,6 +95,8 @@ class Checkout extends Component
      * válido por defecto para que las tarjetas de prueba no fallen.
      */
     public string $culqiIdentification = '';
+
+    public ?int $selectedShalomAgencyId = null;
 
     public bool $showMercadoPagoModal = false;
 
@@ -439,7 +442,9 @@ class Checkout extends Component
         $this->selectedAddressId = (int) $address->id;
         $this->showNewAddress = false;
         $this->couponApplied = null;
+        $this->selectedShalomAgencyId = null;
         $this->refreshQuote();
+        $this->dispatch('shalom:refresh');
     }
 
     public function selectAddress(int $id): void
@@ -449,6 +454,8 @@ class Checkout extends Component
         $this->selectedAddressId = $owned ? $id : null;
         $this->quote = null;
         $this->couponError = null;
+        $this->selectedShalomAgencyId = null;
+        $this->dispatch('shalom:refresh');
     }
 
     public function applyCoupon(): void
@@ -486,6 +493,88 @@ class Checkout extends Component
         return CustomerAddress::with('location')
             ->where('user_id', auth()->id())
             ->find($this->selectedAddressId);
+    }
+
+    /**
+     * Agencia seleccionada o, si el comprador aún no eligió, la más adecuada
+     * para su distrito/provincia/departamento.
+     */
+    private function resolveShalomAgency(CustomerAddress $address): ?ShalomAgency
+    {
+        if ($this->selectedShalomAgencyId) {
+            $selected = ShalomAgency::query()
+                ->active()
+                ->find($this->selectedShalomAgencyId);
+
+            if ($selected !== null) {
+                return $selected;
+            }
+        }
+
+        $location = $address->location;
+        $district = $location?->name;
+        $province = $location?->parent?->name;
+        $department = $location?->parent?->parent?->name;
+
+        if ($district) {
+            $agency = ShalomAgency::query()->active()->inDistrict($district)->orderBy('address')->first();
+
+            if ($agency !== null) {
+                return $agency;
+            }
+        }
+
+        if ($province) {
+            $agency = ShalomAgency::query()
+                ->active()
+                ->whereRaw('UPPER(province) = ?', [mb_strtoupper(trim($province))])
+                ->orderBy('district')
+                ->orderBy('address')
+                ->first();
+
+            if ($agency !== null) {
+                return $agency;
+            }
+        }
+
+        if ($department) {
+            $agency = ShalomAgency::query()
+                ->active()
+                ->inDepartment($department)
+                ->orderBy('province')
+                ->orderBy('district')
+                ->first();
+
+            if ($agency !== null) {
+                return $agency;
+            }
+        }
+
+        return ShalomAgency::query()
+            ->active()
+            ->orderBy('department')
+            ->orderBy('province')
+            ->orderBy('district')
+            ->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function pickupAgencySnapshot(ShalomAgency $agency): array
+    {
+        return [
+            'id' => $agency->id,
+            'code' => $agency->code,
+            'name' => $agency->displayName(),
+            'address' => $agency->address,
+            'district' => $agency->district,
+            'province' => $agency->province,
+            'department' => $agency->department,
+            'modality' => $agency->modality,
+            'latitude' => $agency->latitude,
+            'longitude' => $agency->longitude,
+        ];
     }
 
     /**
@@ -1302,6 +1391,17 @@ class Checkout extends Component
 
         $cart = app(CartService::class);
 
+        $pickupAgency = $this->resolveShalomAgency($address);
+
+        if ($pickupAgency === null) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'No encontramos agencias Shalom disponibles para tu ubicación. Escríbenos para ayudarte.',
+            ]);
+
+            return null;
+        }
+
         $data = new CheckoutData(
             user: auth()->user(),
             cart: $cart->currentCart(),
@@ -1315,6 +1415,7 @@ class Checkout extends Component
             shippingPerItem: $totals['shippingPerItem'],
             coupon: $totals['coupon'],
             notes: $this->notes ?: null,
+            pickupAgency: $this->pickupAgencySnapshot($pickupAgency),
         );
 
         // 0. Si la pasarela no puede cobrar, no se crea el pedido: un fallo
@@ -1822,6 +1923,12 @@ class Checkout extends Component
         });
         $productDiscount = round($summaryItems->sum(fn ($item) => max(0, $item['regularSubtotal'] - $item['subtotal'])), 2);
 
+        $pickupAddress = $this->selectedAddress();
+        $pickupLocation = $pickupAddress?->location;
+        $selectedShalomAgency = $pickupAddress
+            ? $this->resolveShalomAgency($pickupAddress)
+            : null;
+
         return view('livewire.store.checkout', [
             'summaryItems' => $summaryItems,
             'productDiscount' => $productDiscount,
@@ -1849,6 +1956,13 @@ class Checkout extends Component
             'settledOrderNumber' => $order !== null && ! $awaitingPayment
                 ? $order->order_number
                 : null,
+
+            'shalomAgenciesUrl' => route('shalom.agencies'),
+            'googleMapsKey' => (string) config('services.google_maps.key'),
+            'selectedShalomAgency' => $selectedShalomAgency,
+            'pickupDistrict' => $pickupLocation?->name,
+            'pickupProvince' => $pickupLocation?->parent?->name,
+            'pickupDepartment' => $pickupLocation?->parent?->parent?->name,
         ]);
     }
 

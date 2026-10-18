@@ -2,6 +2,7 @@ import './bootstrap';
 import Swal from 'sweetalert2';
 import './checkout';
 import './mercadopago-modal';
+import './shalom-agencies';
 
 document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('js');
