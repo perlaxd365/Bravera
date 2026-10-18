@@ -177,6 +177,9 @@
                                                     </div>
                                                     <div>
                                                         <x-input label="Precio antes del descuento" type="number" step="0.01" min="0" wire:model.blur="variantForm.sale_price" />
+                                                        <p class="mt-1 text-xs text-gray-500">
+                                                            El precio final se calcula aplicando el descuento. Para vender a S/1 sin descuento, deja el descuento en 0%.
+                                                        </p>
                                                     </div>
                                                 </div>
 
