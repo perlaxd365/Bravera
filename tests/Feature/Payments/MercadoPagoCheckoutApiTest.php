@@ -121,6 +121,10 @@ class MercadoPagoCheckoutApiTest extends TestCase
             PaymentStatus::FAILED->value,
             $this->remotePayment('rejected', 'cc_rejected_insufficient_amount', $gateway)['status']
         );
+
+        $highRisk = $this->remotePayment('rejected', 'cc_rejected_high_risk', $gateway);
+        $this->assertSame(PaymentStatus::FAILED->value, $highRisk['status']);
+        $this->assertStringContainsString('No se realizó ningún cargo', $highRisk['message']);
     }
 
     private function remotePayment(string $status, string $detail, MercadoPagoGateway $gateway): array

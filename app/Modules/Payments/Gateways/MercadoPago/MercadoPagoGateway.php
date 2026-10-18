@@ -306,7 +306,7 @@ class MercadoPagoGateway implements PaymentGateway
             'cc_rejected_bad_filled_security_code',
             'cc_rejected_bad_filled_date' => 'Revisa los datos de tu tarjeta e inténtalo otra vez.',
             'cc_rejected_call_for_authorize' => 'El banco requiere que autorices el pago. Contacta a tu banco.',
-            'cc_rejected_high_risk' => 'El pago fue rechazado por seguridad. Prueba con otra tarjeta.',
+            'cc_rejected_high_risk' => 'Mercado Pago rechazó el pago por seguridad. No se realizó ningún cargo. Prueba con otra tarjeta o contacta a tu banco.',
             default => 'No se pudo procesar el pago. Revisa los datos de tu tarjeta e inténtalo otra vez.',
         };
 
