@@ -314,7 +314,7 @@ main > * {
 }
 
 .shalom-agency-list .shalom-agency-card {
-    flex: 0 0 min(68vw, 280px);
+    flex: 0 0 min(62vw, 260px);
     width: auto;
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -355,6 +355,12 @@ main > * {
     #shalom-list-hint:not(.hidden)::after {
         content: none;
         animation: none;
+    }
+}
+
+@media (max-width: 1023px) {
+    .shalom-agency-badge {
+        display: none;
     }
 }
 

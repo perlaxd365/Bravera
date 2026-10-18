@@ -294,7 +294,7 @@ const renderList = (root, query) => {
                     <p class="truncate text-sm font-semibold text-gray-900">${escapeHtml(agency.address)}</p>
                     <p class="mt-0.5 text-xs text-gray-500">${escapeHtml(agency.district)} · ${escapeHtml(agency.province)} · ${escapeHtml(agency.department)}</p>
                 </div>
-                <span class="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Regular</span>
+                <span class="shalom-agency-badge shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Regular</span>
             </div>
             <p class="mt-2 text-xs font-medium ${agency.precision === 'district' ? 'text-amber-700' : 'text-emerald-700'}">
                 ${escapeHtml(locationLabel(agency))}
