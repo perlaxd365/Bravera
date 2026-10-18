@@ -183,7 +183,7 @@ const renderList = (root, query) => {
     listElement.replaceChildren();
     empty?.classList.toggle('hidden', list.length > 0);
 
-    list.slice(0, 100).forEach((agency) => {
+    list.forEach((agency) => {
         const active = Number(agency.id) === selectedId;
         const card = document.createElement('button');
         card.type = 'button';
