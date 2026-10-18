@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Livewire\Store\MercadoPagoPayment;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
 use App\Modules\Payments\Gateways\MercadoPago\MercadoPagoGateway;
@@ -125,6 +126,50 @@ class MercadoPagoCheckoutApiTest extends TestCase
         $highRisk = $this->remotePayment('rejected', 'cc_rejected_high_risk', $gateway);
         $this->assertSame(PaymentStatus::FAILED->value, $highRisk['status']);
         $this->assertStringContainsString('No se realizó ningún cargo', $highRisk['message']);
+    }
+
+    public function test_incluye_el_detalle_de_productos_en_el_pago(): void
+    {
+        $this->configureMercadoPago();
+        $user = $this->customer();
+        $order = $this->orderFor($user);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_name' => 'Tren navideño rojo',
+            'variant_sku' => '882866415',
+            'quantity' => 1,
+            'unit_price' => 0.70,
+            'line_subtotal' => 0.70,
+        ]);
+
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'gateway' => 'mercadopago',
+            'method' => 'card',
+            'source_id' => 'card-token',
+            'amount' => 112,
+            'currency' => 'PEN',
+            'status' => PaymentStatus::PENDING,
+        ]);
+
+        $payload = (new MercadoPagoGateway)->buildPaymentPayload(
+            $payment,
+            $order,
+            'card-token',
+            '123456789',
+            'comprador@brevare.test',
+        );
+
+        $item = $payload['additional_info']['items'][0];
+
+        $this->assertSame('882866415', $item['id']);
+        $this->assertSame('Tren navideño rojo', $item['title']);
+        $this->assertStringContainsString('Tren navideño rojo', $item['description']);
+        $this->assertSame('others', $item['category_id']);
+        $this->assertSame(1, $item['quantity']);
+        $this->assertSame(0.70, $item['unit_price']);
     }
 
     private function remotePayment(string $status, string $detail, MercadoPagoGateway $gateway): array

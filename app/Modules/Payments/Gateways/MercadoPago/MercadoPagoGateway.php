@@ -61,7 +61,7 @@ class MercadoPagoGateway implements PaymentGateway
             return $this->failure('El pedido debe tener un total válido en soles.', 'invalid_amount_or_currency');
         }
 
-        $order = $payment->order?->loadMissing(['items', 'user']);
+        $order = $payment->order?->loadMissing(['items.product.category', 'items.variant', 'user']);
 
         if ($order === null) {
             return $this->failure('No encontramos el pedido asociado al pago.', 'order_not_found');
@@ -198,7 +198,47 @@ class MercadoPagoGateway implements PaymentGateway
             ],
         ];
 
+        $additionalInfo = $this->additionalInfo($order);
+
+        if ($additionalInfo !== []) {
+            $payload['additional_info'] = $additionalInfo;
+        }
+
         return $payload;
+    }
+
+    /**
+     * Detalle de productos para el antifraude de Mercado Pago.
+     *
+     * La calidad de integración recomienda enviar id, título, descripción,
+     * categoría, cantidad y precio. El ID y los datos salen del pedido
+     * congelado, no del navegador.
+     *
+     * @return array{items: array<int, array<string, mixed>>}|array{}
+     */
+    private function additionalInfo(Order $order): array
+    {
+        $items = $order->items
+            ->map(function ($item): array {
+                $description = trim(implode(' ', array_filter([
+                    (string) $item->product_name,
+                    (string) ($item->variant_sku ?? ''),
+                    (string) ($item->attributesLabel() ?? ''),
+                ])));
+
+                return array_filter([
+                    'id' => (string) ($item->variant_sku ?: $item->product_variant_id ?: $item->id),
+                    'title' => mb_substr((string) ($item->product_name ?: 'Producto Brevare'), 0, 256),
+                    'description' => mb_substr($description ?: 'Producto Brevare', 0, 256),
+                    'category_id' => (string) ($item->product?->category?->slug ?: 'others'),
+                    'quantity' => (int) $item->quantity,
+                    'unit_price' => round((float) $item->unit_price, 2),
+                ], static fn ($value): bool => $value !== null && $value !== '');
+            })
+            ->values()
+            ->all();
+
+        return $items === [] ? [] : ['items' => $items];
     }
 
     public function refund(Payment $payment, ?RefundReason $reason = null, ?float $amount = null): array
