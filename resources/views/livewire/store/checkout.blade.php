@@ -78,13 +78,13 @@
             }
         }
     </style>
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
 
         {{-- Columna principal --}}
-        <div class="space-y-4 lg:col-span-2">
+        <div class="min-w-0 space-y-4 lg:col-span-2">
 
             {{-- 1. Dirección de recojo --}}
-            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
                         class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">1</span>
@@ -94,21 +94,21 @@
                 @if ($addresses->isNotEmpty())
                     @foreach ($addresses as $address)
                         <label for="addr-{{ $address->id }}"
-                            class="mb-2 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300">
+                            class="mb-2 flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300">
                             <input type="radio" name="address" value="{{ $address->id }}"
                                 id="addr-{{ $address->id }}" wire:model="selectedAddressId"
                                 wire:change="selectAddress({{ $address->id }})"
                                 @if ($address->is_default) checked @endif
                                 class="mt-1 size-4 shrink-0 border-gray-300 text-gray-900 focus:ring-gray-900/30">
-                            <span class="w-full">
-                                <span class="flex items-center justify-between gap-2">
-                                    <strong class="text-sm text-gray-900">{{ $address->full_name }}</strong>
+                            <span class="min-w-0 w-full">
+                                <span class="flex min-w-0 items-start justify-between gap-2">
+                                    <strong class="min-w-0 break-words text-sm text-gray-900">{{ $address->full_name }}</strong>
                                     @if ($address->is_default)
                                         <span
-                                            class="rounded-full border border-gray-300 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600">Principal</span>
+                                            class="shrink-0 rounded-full border border-gray-300 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600">Principal</span>
                                     @endif
                                 </span>
-                                <span class="mt-0.5 block text-xs leading-relaxed text-gray-500">
+                                <span class="mt-0.5 block break-words text-xs leading-relaxed text-gray-500">
                                     {{ $address->address }}
                                     @if ($address->reference)
                                         ({{ $address->reference }})
@@ -134,7 +134,7 @@
                 @endif
 
                 @if ($showNewAddress)
-                    <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-5" wire:key="new-address">
+                    <div class="mt-4 min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5" wire:key="new-address">
                         <h3 class="mb-4 font-bold text-gray-900">Nueva dirección</h3>
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div>
@@ -211,7 +211,7 @@
                                 <input type="text" wire:model="newReference" placeholder="Opcional"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             </div>
-                            <div class="flex gap-2 sm:col-span-2">
+                            <div class="flex flex-wrap gap-2 sm:col-span-2">
                                 <button wire:click="saveNewAddress"
                                     class="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
                                     Guardar y usar
@@ -281,7 +281,8 @@
 
                         <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                             <div id="shalom-agency-list" wire:ignore
-                                class="max-h-[360px] space-y-2 overflow-y-auto pr-1"></div>
+                                class="shalom-agency-list"
+                                role="group" aria-label="Agencias Shalom disponibles"></div>
                             <div id="shalom-map" wire:ignore
                                 class="h-[320px] overflow-hidden rounded-2xl border border-gray-200 bg-gray-100"></div>
                         </div>
@@ -301,14 +302,14 @@
             </section>
 
             {{-- 2. Envío --}}
-            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
                         class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">2</span>
                     Envío
                 </h2>
                 @if ($quote)
-                    <div class="flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                    <div class="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
                         <flux:icon name="truck" class="size-5 text-gray-500" />
                         Costo de envío estimado: <strong>S/ {{ number_format($shippingTotal, 2) }}</strong>
                     </div>
@@ -334,16 +335,16 @@
             </section>
 
             {{-- 3. Cupón de descuento --}}
-            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
                         class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">3</span>
                     Cupón de descuento
                 </h2>
                 @if ($couponApplied)
-                    <div class="flex items-center justify-between gap-3 rounded-xl bg-green-50 px-4 py-3">
-                        <div>
-                            <p class="flex items-center gap-1.5 text-sm font-semibold text-green-800">
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-green-50 px-4 py-3">
+                        <div class="min-w-0">
+                            <p class="flex min-w-0 items-center gap-1.5 break-words text-sm font-semibold text-green-800">
                                 <flux:icon name="tag" class="size-4" /> {{ $couponApplied['coupon']->code }}
                                 — Descuento: S/ {{ number_format($discount, 2) }}
                             </p>
@@ -355,11 +356,11 @@
                         </button>
                     </div>
                 @else
-                    <div class="flex gap-2">
+                    <div class="flex flex-col gap-2 sm:flex-row">
                         <input type="text" wire:model="couponCode" placeholder="Ingresa tu código (ej: BREVARE10)"
-                            class="w-full rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                            class="min-w-0 w-full rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         <button wire:click="applyCoupon"
-                            class="shrink-0 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-50">
+                            class="w-full shrink-0 rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 sm:w-auto sm:py-2">
                             Aplicar
                         </button>
                     </div>
@@ -372,7 +373,7 @@
             </section>
 
             {{-- 4. Pago --}}
-            <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
                         class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">4</span>
@@ -380,17 +381,17 @@
                 </h2>
 
                 @if (count($availableGateways) > 0)
-                    <div class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Pasarela de pago">
+                        <div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Pasarela de pago">
                         @foreach ($availableGateways as $gatewayKey => $gateway)
                             <label for="gateway-{{ $gatewayKey }}"
-                                class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $gatewayChoice === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }}">
+                                    class="flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition {{ $gatewayChoice === $gatewayKey ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300' }}">
                                 <input id="gateway-{{ $gatewayKey }}" type="radio" name="payment_gateway"
                                     value="{{ $gatewayKey }}" wire:model.live="gatewayChoice"
                                     @disabled(in_array($paymentStage, ['processing', 'pending', 'paid'], true))
-                                    class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
-                                <span>
+                                    class="mt-0.5 size-4 shrink-0 border-gray-300 text-gray-900 focus:ring-gray-900/30">
+                                <span class="min-w-0">
                                     <span class="block text-sm font-semibold text-gray-900">{{ $gateway['title'] }}</span>
-                                    <span class="mt-0.5 block text-xs leading-5 text-gray-500">
+                                    <span class="mt-0.5 block break-words text-xs leading-5 text-gray-500">
                                         {{ $gateway['description'] }}
                                     </span>
                                 </span>
@@ -471,14 +472,14 @@
                 @else
                     @foreach ($paymentMethods as $key => $label)
                         <label for="pm-{{ $key }}"
-                            class="mb-2 flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition {{ $paymentMethod === $key ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300' }}">
+                            class="mb-2 flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition {{ $paymentMethod === $key ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300' }}">
                             {{-- .live es imprescindible: sin él el servidor no conoce el
                                  método elegido hasta una acción, y los campos del medio
                                  anterior se quedan en pantalla. --}}
                             <input type="radio" name="payment_method" id="pm-{{ $key }}"
                                 value="{{ $key }}" wire:model.live="paymentMethod"
                                 class="size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
-                            <span class="text-sm font-medium text-gray-900">{{ $label }}</span>
+                            <span class="min-w-0 break-words text-sm font-medium text-gray-900">{{ $label }}</span>
                         </label>
                     @endforeach
 
@@ -491,8 +492,8 @@
         </div>
 
         {{-- Resumen --}}
-        <aside class="h-fit space-y-4 lg:sticky lg:top-24">
-            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <aside class="h-fit min-w-0 space-y-4 lg:sticky lg:top-24">
+            <div class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="font-bold text-gray-900">Resumen del pedido</h2>
 
                 <div class="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm">
@@ -512,7 +513,7 @@
                                     @endif
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="block truncate text-gray-700">
+                                    <span class="line-clamp-2 break-words leading-5 text-gray-700">
                                     {{ $item['quantity'] }} × {{ $item['name'] }}
                                     </span>
                                     @if ($item['regularSubtotal'] > $item['subtotal'])
@@ -559,9 +560,9 @@
                     @endif
                 </dl>
 
-                <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+                <div class="mt-4 flex flex-wrap items-end justify-between gap-2 border-t border-gray-100 pt-4">
                     <span class="font-bold text-gray-900">Total</span>
-                    <span class="text-2xl font-extrabold tracking-tight text-gray-900">S/
+                    <span class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl">S/
                         {{ number_format($total, 2) }}</span>
                 </div>
 
@@ -571,7 +572,7 @@
                             <flux:icon name="building-storefront" class="size-4" />
                             Recojo en agencia Shalom
                         </p>
-                        <p class="mt-1 text-sm text-emerald-900">{{ $selectedShalomAgency->displayName() }}</p>
+                        <p class="mt-1 break-words text-sm text-emerald-900">{{ $selectedShalomAgency->displayName() }}</p>
                         <p class="text-xs text-emerald-700">
                             {{ $selectedShalomAgency->district }} · {{ $selectedShalomAgency->province }} · Regular
                         </p>

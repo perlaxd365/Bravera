@@ -95,22 +95,32 @@ main > * {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-/* Auto advancing category rail: deliberately clipped, with no native scroll. */
+/* Category rail: swipeable on touch, auto-advancing only with a precise
+   pointer. The next card stays partially visible as a discovery cue. */
 .category-carousel-viewport {
     width: 100%;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
 }
 
 .category-carousel {
     width: max-content;
     max-width: none;
-    transition: transform 900ms cubic-bezier(.22, 1, .36, 1);
-    will-change: transform;
 }
 
 .category-carousel > a {
     flex: 0 0 min(83vw, 440px);
     min-height: 270px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.category-carousel-viewport::-webkit-scrollbar {
+    display: none;
 }
 
 @media (min-width: 640px) {
@@ -275,6 +285,60 @@ main > * {
 
     .home-hero-image {
         min-height: 250px;
+    }
+
+    .category-carousel-viewport {
+        scroll-snap-type: x mandatory;
+    }
+
+    .category-carousel > a {
+        flex-basis: min(82vw, 340px);
+    }
+}
+
+/* Agency picker: swipe rail on touch, contained list on desktop. */
+.shalom-agency-list {
+    display: flex;
+    gap: .75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 .25rem;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+}
+
+.shalom-agency-list::-webkit-scrollbar {
+    display: none;
+}
+
+.shalom-agency-list .shalom-agency-card {
+    flex: 0 0 min(84vw, 340px);
+    width: auto;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+@media (min-width: 1024px) {
+    .shalom-agency-list {
+        display: block;
+        max-height: 360px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding-right: .25rem;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .shalom-agency-list .shalom-agency-card {
+        flex: none;
+        width: 100%;
+    }
+
+    .shalom-agency-list .shalom-agency-card + .shalom-agency-card {
+        margin-top: .5rem;
     }
 }
 

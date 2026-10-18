@@ -86,38 +86,56 @@
     {{-- Categorías en una vitrina de avance automático, sin controles ni scroll manual. --}}
     @if ($allCategories->isNotEmpty())
         <section x-data="{
-            offset: 0,
-            direction: 1,
             timer: null,
+            resumeTimer: null,
             paused: false,
-            get cards() { return this.$refs.track?.children ?? [] },
+            reduced() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches },
+            touchLayout() {
+                return window.matchMedia('(max-width: 639px)').matches
+                    || window.matchMedia('(pointer: coarse)').matches;
+            },
             step() {
                 const track = this.$refs.track;
-                if (!track || !this.cards.length) return 0;
+                const first = track?.firstElementChild;
+                if (!first) return 0;
                 const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-                return this.cards[0].getBoundingClientRect().width + gap;
+                return first.getBoundingClientRect().width + gap;
             },
             move() {
-                const track = this.$refs.track;
                 const viewport = this.$refs.viewport;
-                if (!track || !viewport || this.cards.length < 2) return;
-                const max = Math.max(0, track.scrollWidth - viewport.clientWidth);
-                const destination = this.offset + this.direction * this.step();
-                if (this.direction > 0 && destination >= max - 4) {
-                    this.offset = max;
-                    this.direction = -1;
-                } else if (this.direction < 0 && destination <= 4) {
-                    this.offset = 0;
-                    this.direction = 1;
-                } else {
-                    this.offset = Math.max(0, Math.min(max, destination));
-                }
+                if (!viewport) return;
+                const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+                if (max < 4) return;
+                let direction = viewport.dataset.direction === '-1' ? -1 : 1;
+                if (direction > 0 && viewport.scrollLeft >= max - 4) direction = -1;
+                if (direction < 0 && viewport.scrollLeft <= 4) direction = 1;
+                viewport.dataset.direction = String(direction);
+                viewport.scrollTo({
+                    left: Math.max(0, Math.min(max, viewport.scrollLeft + direction * this.step())),
+                    behavior: this.reduced() ? 'auto' : 'smooth',
+                });
             },
-            start() { this.stop(); if (this.cards.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) this.timer = setInterval(() => { if (!this.paused) this.move() }, 5200) },
-            stop() { clearInterval(this.timer); this.timer = null }
+            start() {
+                this.stop();
+                if (this.touchLayout() || this.reduced() || !this.$refs.viewport) return;
+                this.timer = setInterval(() => { if (!this.paused) this.move() }, 6500);
+            },
+            stop() { clearInterval(this.timer); this.timer = null },
+            nudge(direction) {
+                const viewport = this.$refs.viewport;
+                if (!viewport) return;
+                this.paused = true;
+                viewport.scrollBy({
+                    left: direction * viewport.clientWidth * 0.82,
+                    behavior: this.reduced() ? 'auto' : 'smooth',
+                });
+                clearTimeout(this.resumeTimer);
+                this.resumeTimer = setTimeout(() => { this.paused = false }, 5000);
+            }
         }"
             x-init="start()" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
-            @visibilitychange.window="document.hidden ? stop() : start()" @resize.window="offset = Math.min(offset, Math.max(0, $refs.track.scrollWidth - $refs.viewport.clientWidth))"
+            @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="start()"
+            @touchstart.passive="paused = true" @touchend.passive="paused = false"
             class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
                 <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
@@ -129,8 +147,9 @@
                     <a href="{{ route('store.search') }}" class="mb-1 hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">Ver todas <span class="ml-1" aria-hidden="true">↗</span></a>
                 </div>
 
-                <div x-ref="viewport" class="category-carousel-viewport" role="region" aria-label="Explora categorías">
-                    <div x-ref="track" class="category-carousel flex gap-4 pb-2 sm:gap-5 lg:gap-6" :style="'transform: translate3d(-' + offset + 'px, 0, 0)'">
+                <div x-ref="viewport" class="category-carousel-viewport" role="region"
+                    aria-label="Explora categorías" tabindex="0">
+                    <div x-ref="track" class="category-carousel flex gap-4 pb-2 sm:gap-5 lg:gap-6" data-direction="1">
                     @foreach ($allCategories as $category)
                         <a href="{{ route('store.category', ['path' => $category->path]) }}" class="home-category-card group relative isolate flex min-h-[270px] shrink-0 items-end overflow-hidden rounded-[1.5rem] bg-[#e8e3da] text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700 sm:min-h-[340px] sm:rounded-[1.8rem] lg:min-h-[390px]">
                             <img src="{{ $category->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $category->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]">
@@ -146,7 +165,19 @@
                     @endforeach
                     </div>
                 </div>
-                <div class="mt-3 flex justify-end text-xs text-gray-500 sm:hidden"><a href="{{ route('store.search') }}" class="font-semibold text-gray-800">Ver todas ↗</a></div>
+                <div class="mt-3 flex items-center justify-between gap-3 sm:hidden">
+                    <div class="flex gap-2">
+                        <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
+                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-gray-800 shadow-sm active:scale-95">
+                            ←
+                        </button>
+                        <button type="button" @click="nudge(1)" aria-label="Categorías siguientes"
+                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-gray-800 shadow-sm active:scale-95">
+                            →
+                        </button>
+                    </div>
+                    <a href="{{ route('store.search') }}" class="text-xs font-semibold text-gray-800">Ver todas ↗</a>
+                </div>
             </div>
         </section>
     @endif

@@ -206,6 +206,23 @@ const selectAgency = (root, agency) => {
         card.classList.toggle('bg-white', !active);
     });
 
+    const listElement = byId('shalom-agency-list');
+    const activeCard = listElement?.querySelector(`[data-agency-id="${selectedId}"]`);
+
+    if (listElement && activeCard) {
+        if (listElement.scrollWidth > listElement.clientWidth + 4) {
+            listElement.scrollTo({
+                left: Math.max(0, activeCard.offsetLeft - listElement.offsetLeft - 8),
+                behavior: 'smooth',
+            });
+        } else if (listElement.scrollHeight > listElement.clientHeight + 4) {
+            listElement.scrollTo({
+                top: Math.max(0, activeCard.offsetTop - listElement.offsetTop - 8),
+                behavior: 'smooth',
+            });
+        }
+    }
+
     updateMap(root, agency);
 
     if (previousId !== selectedId) {
@@ -231,7 +248,7 @@ const renderList = (root, query) => {
         card.type = 'button';
         card.dataset.agencyId = String(agency.id);
         card.className = [
-            'w-full rounded-xl border px-4 py-3 text-left transition',
+            'shalom-agency-card w-full rounded-xl border px-4 py-3 text-left transition',
             active
                 ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500/20'
                 : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/40',
