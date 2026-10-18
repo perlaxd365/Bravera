@@ -10,7 +10,7 @@ class ShalomAgencyController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $agencies = Cache::remember('shalom:agencies:active:v2', now()->addHour(), function () {
+        $agencies = Cache::remember('shalom:agencies:active:v2', now()->addMinutes(10), function () {
             return ShalomAgency::query()
                 ->active()
                 ->orderBy('department')
@@ -47,6 +47,6 @@ class ShalomAgencyController extends Controller
 
         return response()
             ->json(['agencies' => $agencies])
-            ->header('Cache-Control', 'public, max-age=3600');
+            ->header('Cache-Control', 'public, max-age=600');
     }
 }

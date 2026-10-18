@@ -334,6 +334,38 @@ class CheckoutTest extends TestCase
         $this->assertSame('MIRAFLORES', $order->address_snapshot['pickup_agency']['district']);
     }
 
+    public function test_el_checkout_muestra_el_selector_de_agencias_shalom(): void
+    {
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('shalom-picker', false)
+            ->assertSee('Agencia de recojo Shalom')
+            ->assertSee('Regular');
+    }
+
+    public function test_el_endpoint_de_agencias_shalom_devuelve_json(): void
+    {
+        $this->withoutExceptionHandling();
+
+        $user = $this->customer();
+        $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $this->addressFor($user, $district);
+
+        $this->get(route('shalom.agencies'))
+            ->assertOk()
+            ->assertJsonCount(1, 'agencies')
+            ->assertJsonPath('agencies.0.district', 'MIRAFLORES')
+            ->assertJsonPath('agencies.0.modality', 'Regular');
+    }
+
     public function test_mercadopago_modal_confirms_the_order_with_the_token(): void
     {
         config([

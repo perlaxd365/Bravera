@@ -82,7 +82,7 @@ const loadAgencies = (url) => {
 
     agenciesPromise = fetch(url, {
         headers: { Accept: 'application/json' },
-        cache: 'force-cache',
+        cache: 'no-store',
     })
         .then((response) => response.ok ? response.json() : { agencies: [] })
         .then((payload) => {
