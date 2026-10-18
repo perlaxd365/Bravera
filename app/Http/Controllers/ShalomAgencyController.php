@@ -10,7 +10,7 @@ class ShalomAgencyController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $agencies = Cache::remember('shalom:agencies:active', now()->addHour(), function () {
+        $agencies = Cache::remember('shalom:agencies:active:v2', now()->addHour(), function () {
             return ShalomAgency::query()
                 ->active()
                 ->orderBy('department')
@@ -41,7 +41,8 @@ class ShalomAgencyController extends Controller
                     'lng' => $agency->longitude,
                     'precision' => $agency->geocode_precision,
                 ])
-                ->values();
+                ->values()
+                ->all();
         });
 
         return response()
