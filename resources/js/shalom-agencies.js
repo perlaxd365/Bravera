@@ -331,9 +331,12 @@ const scheduleAgencyRailHint = (listElement) => {
         ['pointerdown', 'touchstart', 'wheel'].forEach((eventName) => {
             listElement.addEventListener(eventName, () => {
                 agencyRailInteracted = true;
+                listElement.style.scrollSnapType = '';
             }, { passive: true });
         });
     }
+
+    const previousSnap = listElement.style.scrollSnapType;
 
     window.setTimeout(() => {
         if (agencyRailInteracted) {
@@ -341,12 +344,20 @@ const scheduleAgencyRailHint = (listElement) => {
         }
 
         const peek = Math.min(48, Math.max(0, listElement.scrollWidth - listElement.clientWidth));
+        listElement.style.scrollSnapType = 'none';
         listElement.scrollTo({ left: peek, behavior: 'smooth' });
 
         window.setTimeout(() => {
-            if (!agencyRailInteracted) {
-                listElement.scrollTo({ left: 0, behavior: 'smooth' });
+            if (agencyRailInteracted) {
+                listElement.style.scrollSnapType = previousSnap;
+
+                return;
             }
+
+            listElement.scrollTo({ left: 0, behavior: 'smooth' });
+            window.setTimeout(() => {
+                listElement.style.scrollSnapType = previousSnap;
+            }, 450);
         }, 850);
     }, 900);
 };
