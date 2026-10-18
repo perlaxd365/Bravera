@@ -278,7 +278,8 @@
                                 placeholder="Buscar otra ciudad, distrito o dirección…"
                                 class="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15">
                         </div>
-                        <p id="shalom-list-hint" class="mt-2 hidden text-[11px] leading-relaxed text-gray-500"></p>
+                        <p id="shalom-list-hint" wire:ignore
+                            class="mt-2 hidden text-[11px] leading-relaxed text-gray-500"></p>
 
                         <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                             <div id="shalom-agency-list" wire:ignore
