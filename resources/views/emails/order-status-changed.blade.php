@@ -88,7 +88,9 @@
     </table>
 
     @if ($newStatus->value === 'shipped' || $newStatus->value === 'delivered')
-        @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
+        @php
+            $pickup = $order->address_snapshot['pickup_agency'] ?? null;
+        @endphp
         @if (! empty($pickup))
             <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4b5563;">
                 <strong style="color:#111827;">Recojo en agencia Shalom:</strong><br>

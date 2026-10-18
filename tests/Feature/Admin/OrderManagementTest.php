@@ -342,6 +342,30 @@ class OrderManagementTest extends TestCase
         });
     }
 
+    public function test_el_correo_de_cambio_de_estado_se_renderiza_sin_errores(): void
+    {
+        [$order] = $this->orderWithTwoProducts();
+
+        $order->update([
+            'address_snapshot' => array_merge($order->address_snapshot ?? [], [
+                'pickup_agency' => [
+                    'address' => 'AGENCIA TEST',
+                    'district' => 'MIRAFLORES',
+                    'province' => 'LIMA',
+                ],
+            ]),
+        ]);
+
+        $html = (new OrderStatusChangedMail(
+            $order->fresh(['items.variant.images', 'items.product.variants.images']),
+            OrderStatus::PROCESSING,
+            OrderStatus::SHIPPED,
+        ))->render();
+
+        $this->assertStringContainsString('Tu pedido fue despachado', $html);
+        $this->assertStringContainsString('Recojo en agencia Shalom', $html);
+    }
+
     public function test_status_change_to_same_value_does_not_send_email(): void
     {
         Mail::fake();
