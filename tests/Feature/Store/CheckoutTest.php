@@ -398,6 +398,24 @@ class CheckoutTest extends TestCase
         $this->assertSame(8, Order::firstOrFail()->delivery_days);
     }
 
+    public function test_el_carrito_refresca_el_precio_cuando_cambia_la_variante(): void
+    {
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $this->cartWith($user, $variant);
+
+        $variant->update([
+            'sale_price' => 0.70,
+            'compare_price' => 1.00,
+            'discount_percent' => 30,
+        ]);
+
+        $items = app(CartService::class)->items();
+
+        $this->assertSame(0.70, (float) $items->firstOrFail()->unit_price);
+        $this->assertSame(0.70, app(CartService::class)->subtotal());
+    }
+
     public function test_mercadopago_creates_the_order_and_opens_the_payment_modal(): void
     {
         config([

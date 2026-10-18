@@ -427,7 +427,46 @@ class CartService
 
     public function items()
     {
-        return $this->currentCart()->activeItems()->get()->sortBy('created_at');
+        $items = $this->currentCart()->activeItems()->get()->sortBy('created_at');
+
+        // El precio del carrito es una copia del precio de la variante. Si el
+        // catálogo cambia antes de pagar, el carrito debe reflejar el precio
+        // vigente y no conservar una cotización vieja que ya no está a la venta.
+        foreach ($items as $item) {
+            $variant = $item->variant;
+
+            if ($variant === null) {
+                continue;
+            }
+
+            $values = [];
+            $salePrice = round((float) $variant->sale_price, 2);
+
+            if (abs((float) $item->unit_price - $salePrice) > 0.001) {
+                $values['unit_price'] = $salePrice;
+            }
+
+            $supplierVariant = $item->supplierVariant;
+
+            if ($supplierVariant !== null) {
+                $cost = round((float) $supplierVariant->cost_price, 2);
+                $shipping = round((float) $supplierVariant->shipping_cost, 2);
+
+                if (abs((float) $item->unit_cost - $cost) > 0.001) {
+                    $values['unit_cost'] = $cost;
+                }
+
+                if (abs((float) $item->supplier_shipping_cost - $shipping) > 0.001) {
+                    $values['supplier_shipping_cost'] = $shipping;
+                }
+            }
+
+            if ($values !== []) {
+                $item->update($values);
+            }
+        }
+
+        return $items;
     }
 
     public function count(): int
