@@ -87,7 +87,7 @@ const loadAgencies = (url) => {
     return agenciesPromise;
 };
 
-const visibleAgencies = (root, query) => {
+const visibleAgencies = (root, query, options = {}) => {
     const term = normalize(query);
     const department = normalize(root.dataset.department);
     const district = normalize(root.dataset.district);
@@ -101,7 +101,7 @@ const visibleAgencies = (root, query) => {
         list = list.filter((agency) => normalize(agency.department) === department);
     }
 
-    return list
+    const sorted = list
         .map((agency) => ({ ...agency, scopeRank: locationScopeRank(root, agency) }))
         .sort((a, b) => {
             if (a.scopeRank !== b.scopeRank) {
@@ -124,6 +124,27 @@ const visibleAgencies = (root, query) => {
 
             return `${a.district} ${a.address}`.localeCompare(`${b.district} ${b.address}`);
         });
+
+    if (options.all) {
+        return sorted;
+    }
+
+    // La vitrina muestra una selección corta; el buscador es la vía para
+    // recorrer el resto del padrón sin un scroll interminable.
+    const limit = term === '' ? 24 : 50;
+
+    if (sorted.length <= limit) {
+        return sorted;
+    }
+
+    const limited = sorted.slice(0, limit);
+    const current = sorted.find((agency) => Number(agency.id) === Number(selectedId));
+
+    if (current && !limited.some((agency) => Number(agency.id) === Number(current.id))) {
+        limited.unshift(current);
+    }
+
+    return limited;
 };
 
 /**
@@ -239,8 +260,20 @@ const renderList = (root, query) => {
     }
 
     const list = visibleAgencies(root, query);
+    const total = visibleAgencies(root, query, { all: true }).length;
     listElement.replaceChildren();
     empty?.classList.toggle('hidden', list.length > 0);
+
+    const hint = byId('shalom-list-hint');
+
+    if (hint) {
+        const limited = total > list.length;
+
+        hint.classList.toggle('hidden', !limited);
+        hint.textContent = limited
+            ? `Mostrando ${list.length} de ${total} agencias. Busca por distrito o dirección para acotar la lista.`
+            : '';
+    }
 
     list.forEach((agency) => {
         const active = Number(agency.id) === selectedId;
