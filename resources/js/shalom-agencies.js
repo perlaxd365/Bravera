@@ -271,7 +271,7 @@ const renderList = (root, query) => {
 
         hint.classList.toggle('hidden', !limited);
         hint.textContent = limited
-            ? `Mostrando ${list.length} de ${total} agencias. Busca por distrito o dirección para acotar la lista.`
+            ? `Mostrando ${list.length} de ${total} agencias. Desliza para ver más o busca por distrito para acotar la lista.`
             : '';
     }
 
