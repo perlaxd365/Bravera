@@ -23,7 +23,7 @@ new #[Layout('layouts.guest')] class extends Component
             $authenticatedUser = Auth::user();
 
             if ($authenticatedUser->hasVerifiedEmail()) {
-                $this->redirectRoute('home', navigate: true);
+                $this->redirectIntended(default: route('home'), navigate: true);
 
                 return;
             }
@@ -45,7 +45,7 @@ new #[Layout('layouts.guest')] class extends Component
             Session::forget('pending_email_verification_user_id');
             Auth::login($user);
             Session::regenerate();
-            $this->redirectRoute('home', navigate: true);
+            $this->redirectIntended(default: route('home'), navigate: true);
 
             return;
         }
@@ -80,7 +80,7 @@ new #[Layout('layouts.guest')] class extends Component
             Session::regenerate();
             Session::flash('status', 'verified');
 
-            $this->redirectRoute('home', navigate: true);
+            $this->redirectIntended(default: route('home'), navigate: true);
 
             return;
         }
@@ -102,7 +102,7 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         if ($user->hasVerifiedEmail()) {
-            $this->redirectRoute('home', navigate: true);
+            $this->redirectIntended(default: route('home'), navigate: true);
 
             return;
         }

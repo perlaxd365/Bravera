@@ -168,6 +168,10 @@ class Checkout extends Component
         $this->authRequired = ! auth()->check();
 
         if ($this->authRequired) {
+            // El checkout no redirige a login: muestra una pantalla de acceso.
+            // Guardamos el destino aquí para que, después de autenticarse,
+            // Laravel vuelva al checkout con el carrito que traía el invitado.
+            session(['url.intended' => request()->fullUrl()]);
             session()->flash('login_intent', 'Inicia sesión para completar tu compra.');
 
             return;

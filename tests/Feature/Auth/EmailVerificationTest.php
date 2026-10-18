@@ -3,10 +3,13 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Services\EmailVerificationService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
@@ -56,5 +59,26 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($user)->get($verificationUrl);
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_el_codigo_verificado_vuelve_al_checkout_pendiente(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+        $code = app(EmailVerificationService::class)->sendCode($user, force: true);
+
+        session([
+            'pending_email_verification_user_id' => $user->id,
+            'url.intended' => route('checkout'),
+        ]);
+
+        Volt::test('pages.auth.verify-email')
+            ->set('code', $code)
+            ->call('verify')
+            ->assertRedirect(route('checkout', absolute: false));
+
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        $this->assertAuthenticatedAs($user);
     }
 }

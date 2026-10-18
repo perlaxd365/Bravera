@@ -66,7 +66,7 @@ class GoogleController extends Controller
             return redirect()->route('set-password');
         }
 
-        return redirect()->route('home');
+        return redirect()->intended(route('home'));
     }
 
     /**

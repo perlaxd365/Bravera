@@ -36,13 +36,19 @@ class CartService
         $sessionCartId = Session::get(self::SESSION_KEY);
 
         if ($sessionCartId) {
-            $sessionCart = Cart::active()
-                ->whereKey($sessionCartId)
-                ->where('user_id', Auth::id())
-                ->first();
+            $sessionCart = Cart::active()->whereKey($sessionCartId)->first();
 
             if ($sessionCart) {
-                return $sessionCart;
+                if ((int) $sessionCart->user_id === (int) Auth::id()) {
+                    return $sessionCart;
+                }
+
+                // El comprador agregó productos antes de entrar. Ese carrito
+                // tiene prioridad sobre un carrito vacío de su cuenta: es la
+                // compra que acaba de preparar y espera retomar al volver.
+                if ($sessionCart->user_id === null && $sessionCart->activeItems()->exists()) {
+                    return $this->adoptGuestCart($sessionCart);
+                }
             }
         }
 
@@ -70,6 +76,60 @@ class CartService
         }
 
         return $this->adoptSessionCart();
+    }
+
+    /**
+     * Vincula el carrito de invitado a la cuenta recién autenticada.
+     *
+     * Si la cuenta ya tiene un carrito activo, los productos se trasladan a
+     * ese carrito para no perder ninguna de las dos selecciones. Si no existe,
+     * el propio carrito de invitado pasa a ser el carrito del cliente.
+     */
+    private function adoptGuestCart(Cart $guestCart): Cart
+    {
+        $userCart = Cart::active()
+            ->where('user_id', Auth::id())
+            ->whereKeyNot($guestCart->id)
+            ->whereDoesntHave('orders', function ($query) {
+                $query
+                    ->where('status', OrderStatus::PENDING)
+                    ->where('payment_status', PaymentStatus::PENDING);
+            })
+            ->latest()
+            ->first();
+
+        if ($userCart === null) {
+            $guestCart->update([
+                'user_id' => Auth::id(),
+                'session_id' => null,
+            ]);
+
+            Session::put(self::SESSION_KEY, $guestCart->id);
+
+            return $guestCart;
+        }
+
+        foreach ($guestCart->items()->get() as $item) {
+            $existing = CartItem::query()
+                ->where('cart_id', $userCart->id)
+                ->where('product_variant_id', $item->product_variant_id)
+                ->where('supplier_variant_id', $item->supplier_variant_id)
+                ->first();
+
+            if ($existing) {
+                $existing->increment('quantity', (int) $item->quantity);
+                $item->delete();
+
+                continue;
+            }
+
+            $item->update(['cart_id' => $userCart->id]);
+        }
+
+        $guestCart->delete();
+        Session::put(self::SESSION_KEY, $userCart->id);
+
+        return $userCart;
     }
 
     /**

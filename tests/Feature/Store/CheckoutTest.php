@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Locked;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
+use Livewire\Volt\Volt;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\CulqiResponses;
 use Tests\Support\StubGateway;
@@ -235,6 +236,66 @@ class CheckoutTest extends TestCase
         $this->assertSame(0.00, (float) $order->discount_total);
         $this->assertSame(112.00, (float) $order->total);
         $this->assertSame(12.00, (float) $order->items->first()->shipping_price);
+    }
+
+    public function test_el_checkout_de_invitado_guarda_el_destino_posterior_al_login(): void
+    {
+        $this->get(route('checkout'))
+            ->assertOk()
+            ->assertSee('Necesitas una cuenta');
+
+        $this->assertSame(route('checkout'), session('url.intended'));
+    }
+
+    public function test_el_carrito_de_invitado_se_une_al_carrito_del_usuario_y_vuelve_al_checkout(): void
+    {
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $emptyUserCart = Cart::create([
+            'user_id' => $user->id,
+            'status' => 'active',
+        ]);
+
+        app(CartService::class)->add($variant->id);
+        $guestCartId = (int) session(CartService::SESSION_KEY);
+
+        $this->assertGuest();
+        $this->assertNotSame($emptyUserCart->id, $guestCartId);
+
+        session(['url.intended' => route('checkout')]);
+
+        Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', '12345678')
+            ->call('login')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('checkout'));
+
+        $this->assertAuthenticatedAs($user);
+
+        $cart = app(CartService::class);
+
+        $this->assertSame(1, $cart->count());
+        $this->assertSame($emptyUserCart->id, session(CartService::SESSION_KEY));
+        $this->assertSame(1, $emptyUserCart->activeItems()->count());
+        $this->assertDatabaseMissing('carts', ['id' => $guestCartId]);
+    }
+
+    public function test_el_carrito_de_invitado_se_adopta_si_la_cuenta_no_tiene_carrito(): void
+    {
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+
+        app(CartService::class)->add($variant->id);
+        $guestCartId = (int) session(CartService::SESSION_KEY);
+
+        $this->actingAs($user);
+
+        $cart = app(CartService::class)->currentCart();
+
+        $this->assertSame($guestCartId, $cart->id);
+        $this->assertSame($user->id, $cart->user_id);
+        $this->assertSame(1, $cart->activeItems()->count());
     }
 
     public function test_el_pago_genera_un_codigo_de_recojo_de_cuatro_digitos(): void
