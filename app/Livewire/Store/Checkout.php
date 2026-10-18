@@ -585,7 +585,7 @@ class Checkout extends Component
      * cliente (#[Locked]): el navegador no puede alterarlas, y aunque lo
      * intentara, el pedido se persiste con los valores de esta función.
      *
-     * @return array{items: Collection, subtotal: float, shippingTotal: float, shippingPerItem: array<int, float>, discount: float, coupon: ?Coupon, total: float}
+     * @return array{items: Collection, subtotal: float, shippingTotal: float, shippingPerItem: array<int, float>, deliveryDays: int|null, discount: float, coupon: ?Coupon, total: float}
      */
     private function resolveTotals(?CustomerAddress $address): array
     {
@@ -597,6 +597,7 @@ class Checkout extends Component
             : null;
 
         $shippingTotal = (float) ($this->quote['total'] ?? 0);
+        $deliveryDays = $this->quote['deliveryDays'] ?? null;
 
         $this->couponError = null;
         $this->couponApplied = null;
@@ -622,6 +623,7 @@ class Checkout extends Component
             'subtotal' => $subtotal,
             'shippingTotal' => $shippingTotal,
             'shippingPerItem' => $this->quote['items'] ?? [],
+            'deliveryDays' => $deliveryDays,
             'discount' => $discount,
             'coupon' => $this->couponApplied['coupon'] ?? null,
             'total' => round($subtotal + $shippingTotal - $discount, 2),
@@ -1413,6 +1415,7 @@ class Checkout extends Component
             total: $totals['total'],
             costTotal: $cart->costTotal(),
             shippingPerItem: $totals['shippingPerItem'],
+            deliveryDays: $totals['deliveryDays'] ?? null,
             coupon: $totals['coupon'],
             notes: $this->notes ?: null,
             pickupAgency: $this->pickupAgencySnapshot($pickupAgency),
@@ -1740,7 +1743,7 @@ class Checkout extends Component
         }
 
         if ($order->fresh()?->payment_status !== PaymentStatus::PAID) {
-            $order->cart?->update(['status' => 'active']);
+            $this->restoreCartForEditing($order);
         }
 
         $this->showMercadoPagoModal = false;
@@ -1754,6 +1757,36 @@ class Checkout extends Component
 
         $this->dispatch('culqi:cancelled');
         $this->dispatch('mercadopago:modal-closed');
+    }
+
+    /**
+     * Devuelve el carrito del pedido a la sesión antes de cambiar de pasarela.
+     *
+     * Reactivar el carrito en la base no basta: si mientras el pedido estaba
+     * pendiente se creó otro carrito vacío, la sesión seguía apuntando a ese y
+     * el comprador veía su compra borrada al cambiar de pasarela. Solo se
+     * reemplaza la sesión cuando el carrito actual no tiene artículos, para no
+     * pisar productos que el comprador haya agregado después.
+     */
+    private function restoreCartForEditing(Order $order): void
+    {
+        $cart = $order->cart;
+
+        if ($cart === null) {
+            return;
+        }
+
+        $cart->update(['status' => 'active']);
+
+        $sessionCartId = session(CartService::SESSION_KEY);
+        $sessionCartHasItems = $sessionCartId
+            && \App\Models\CartItem::query()
+                ->where('cart_id', $sessionCartId)
+                ->exists();
+
+        if (! $sessionCartHasItems) {
+            session([CartService::SESSION_KEY => $cart->id]);
+        }
     }
 
     private function syncPaymentMethodToGateway(): void
@@ -1937,6 +1970,7 @@ class Checkout extends Component
             'subtotal' => $totals['subtotal'],
             'discount' => $totals['discount'],
             'shippingTotal' => $totals['shippingTotal'],
+            'deliveryDays' => $totals['deliveryDays'] ?? null,
             'total' => $totals['total'],
 
             'paymentMethods' => $paymentMethods,
@@ -2003,7 +2037,7 @@ class Checkout extends Component
      * Importes del pedido ya creado, leídos de lo que quedó congelado al
      * crearlo. El carrito está convertido, así que no sirven para reconstruirlos.
      *
-     * @return array{items: Collection, subtotal: float, shippingTotal: float, discount: float, total: float}
+     * @return array{items: Collection, subtotal: float, shippingTotal: float, deliveryDays: int|null, discount: float, total: float}
      */
     private function totalsFromOrder(Order $order): array
     {
@@ -2014,6 +2048,7 @@ class Checkout extends Component
             ])->get(),
             'subtotal' => (float) $order->subtotal,
             'shippingTotal' => (float) $order->shipping_total,
+            'deliveryDays' => $order->delivery_days,
             'discount' => (float) $order->discount_total,
             'total' => (float) $order->total,
         ];

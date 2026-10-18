@@ -322,7 +322,18 @@
                             <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Agencia Shalom · Regular</p>
                             <p class="mt-1 font-semibold text-emerald-950">{{ $pickup['address'] ?? '' }}</p>
                             <p class="text-sm text-emerald-800">{{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }}</p>
+                            @if ($order->pickup_code)
+                                <p class="mt-3 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-center text-lg font-black tracking-[0.3em] text-emerald-950">
+                                    {{ $order->pickup_code }}
+                                </p>
+                                <p class="mt-1 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Código de recojo</p>
+                            @endif
                         </div>
+                    @endif
+                    @if ($order->delivery_days)
+                        <p class="mt-3 text-xs text-gray-500">
+                            Tiempo de entrega: <strong class="text-gray-900">{{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}</strong>
+                        </p>
                     @endif
                     <div class="mt-3 space-y-1 text-sm">
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección de contacto</p>

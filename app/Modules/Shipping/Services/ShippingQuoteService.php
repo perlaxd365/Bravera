@@ -18,7 +18,7 @@ class ShippingQuoteService
      * Calcula el costo de envío para el carrito hacia una ubicación.
      *
      * @param  Collection<int, CartItem>  $items
-     * @return array{items: array<int, float>, total: float, zone: ShippingZone|null, warnings: array<int, string>}
+     * @return array{items: array<int, float>, total: float, deliveryDays: int|null, zone: ShippingZone|null, warnings: array<int, string>}
      */
     public function quoteForCart(Collection $items, Location $location): array
     {
@@ -26,6 +26,7 @@ class ShippingQuoteService
 
         $supplierCharges = [];
         $warnings = [];
+        $deliveryDays = null;
 
         foreach ($items as $item) {
             $shipping = (float) ($item->supplier_shipping_cost ?? 0);
@@ -40,6 +41,10 @@ class ShippingQuoteService
 
                 if ($rate) {
                     $shipping = round((float) $rate->price, 2);
+
+                    if ($rate->delivery_days !== null) {
+                        $deliveryDays = max((int) $deliveryDays, (int) $rate->delivery_days);
+                    }
                 }
             } else {
                 $warnings[] = 'No se encontró zona de envío para la ubicación; se usará la tarifa del proveedor.';
@@ -75,6 +80,7 @@ class ShippingQuoteService
         return [
             'items' => $perItem,
             'total' => round(array_sum($perItem), 2),
+            'deliveryDays' => $deliveryDays,
             'zone' => $zone,
             'warnings' => array_values(array_unique($warnings)),
         ];

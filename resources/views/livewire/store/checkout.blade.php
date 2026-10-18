@@ -238,20 +238,37 @@
                         data-province="{{ $pickupProvince }}"
                         data-district="{{ $pickupDistrict }}">
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h3 class="flex items-center gap-2 text-sm font-bold text-gray-900">
-                                    <flux:icon name="building-storefront" class="size-4 text-emerald-600" />
-                                    Agencia de recojo Shalom
-                                </h3>
-                                <p class="mt-1 text-xs leading-relaxed text-gray-500">
-                                    Ordenamos primero las agencias más cercanas a tu distrito.
-                                    Puedes buscar otra ciudad o distrito si lo necesitas.
-                                </p>
+                            <div class="flex items-center gap-3">
+                                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-white px-2 shadow-sm">
+                                    <x-shalom-wordmark class="h-4 w-auto" />
+                                </span>
+                                <div>
+                                    <h3 class="flex items-center gap-2 text-sm font-bold text-gray-900">
+                                        <flux:icon name="building-storefront" class="size-4 text-emerald-600" />
+                                        Agencia de recojo Shalom
+                                    </h3>
+                                    <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                        Powered by Shalom
+                                    </p>
+                                </div>
                             </div>
                             <span
                                 class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
                                 Regular
                             </span>
+                        </div>
+
+                        <div class="mt-3 rounded-xl border border-red-100 bg-red-50/60 px-4 py-3">
+                            <p class="text-xs leading-relaxed text-gray-700">
+                                Estamos afiliados a <strong class="text-[#E30613]">Shalom</strong>.
+                                Elegimos automáticamente la agencia más cercana a tu dirección; puedes
+                                cambiarla desde la lista o buscando otra ciudad.
+                            </p>
+                            <p class="mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-gray-600">
+                                <flux:icon name="key" class="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+                                Una vez confirmado el pago te daremos un código de 4 dígitos para recoger
+                                tu pedido en la agencia.
+                            </p>
                         </div>
 
                         <div class="relative mt-4">
@@ -275,6 +292,10 @@
                         <p id="shalom-map-fallback" class="mt-3 hidden text-xs text-gray-500">
                             No se pudo cargar el mapa. La dirección de la agencia sigue disponible en la lista.
                         </p>
+                        <p class="mt-2 text-[11px] leading-relaxed text-gray-500">
+                            Los pines ámbar y los números indican agencias con la misma ubicación
+                            referencial del distrito; toca un pin para ver todas las agencias de ese punto.
+                        </p>
                     </div>
                 @endif
             </section>
@@ -291,6 +312,22 @@
                         <flux:icon name="truck" class="size-5 text-gray-500" />
                         Costo de envío estimado: <strong>S/ {{ number_format($shippingTotal, 2) }}</strong>
                     </div>
+                    <p class="mt-2 flex items-center gap-1.5 text-sm text-gray-600">
+                        <flux:icon name="clock" class="size-4 text-emerald-600" />
+                        @if ($deliveryDays)
+                            Tiempo de entrega estimado:
+                            <strong class="text-gray-900">
+                                {{ $deliveryDays }} {{ $deliveryDays === 1 ? 'día hábil' : 'días hábiles' }}
+                            </strong>
+                        @else
+                            Tiempo de entrega: <strong class="text-gray-900">por confirmar</strong>
+                        @endif
+                    </p>
+                    @if ($deliveryDays)
+                        <p class="mt-1 text-xs text-gray-500">
+                            Si tu pedido incluye productos de varios proveedores, mostramos el plazo más largo.
+                        </p>
+                    @endif
                 @else
                     <p class="text-sm text-gray-500">Selecciona una dirección para calcular el envío.</p>
                 @endif
@@ -508,6 +545,12 @@
                         <dt class="text-gray-500">Envío</dt>
                         <dd class="text-gray-900">S/ {{ number_format($shippingTotal, 2) }}</dd>
                     </div>
+                    @if ($deliveryDays)
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">Entrega</dt>
+                            <dd class="text-gray-900">{{ $deliveryDays }} {{ $deliveryDays === 1 ? 'día hábil' : 'días hábiles' }}</dd>
+                        </div>
+                    @endif
                     @if ($discount > 0)
                         <div class="flex justify-between text-green-700">
                             <dt>Cupón</dt>

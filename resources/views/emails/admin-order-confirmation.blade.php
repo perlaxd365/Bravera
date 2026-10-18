@@ -49,6 +49,9 @@
         <h2>Recojo en agencia Shalom</h2>
         <p><strong>{{ $pickup['address'] ?? '' }}</strong><br>
             {{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }} · Regular</p>
+        @if ($order->pickup_code)
+            <p><strong>Código de recojo:</strong> {{ $order->pickup_code }}</p>
+        @endif
     @endif
 
     <h2>Dirección de contacto</h2>

@@ -102,9 +102,12 @@
                                 Costo de envío
                             </h4>
 
-                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div class="mt-4 grid gap-3 sm:grid-cols-3">
                                 <x-input label="Precio de envío" type="number" step="0.01" min="0"
                                     wire:model.live="form.price" placeholder="0.00" />
+
+                                <x-input label="Días de entrega" type="number" min="0" max="365"
+                                    wire:model.live="form.delivery_days" placeholder="Ej. 3" />
 
                                 <x-select label="Estado" wire:model.live="form.status">
                                     <option value="1">
@@ -116,6 +119,11 @@
                                     </option>
                                 </x-select>
                             </div>
+
+                            <p class="mt-2 text-xs text-gray-500">
+                                Días hábiles estimados desde la confirmación del pago. Si un pedido tiene
+                                varios productos, el checkout mostrará el plazo más largo.
+                            </p>
                         </div>
                     </div>
 

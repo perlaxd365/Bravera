@@ -23,18 +23,6 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => 
     "'": '&#039;',
 })[char]);
 
-const haversine = (a, b) => {
-    const rad = (value) => (value * Math.PI) / 180;
-    const dLat = rad(b.lat - a.lat);
-    const dLng = rad(b.lng - a.lng);
-    const lat1 = rad(a.lat);
-    const lat2 = rad(b.lat);
-    const h = Math.sin(dLat / 2) ** 2
-        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-
-    return 6371 * 2 * Math.asin(Math.sqrt(h));
-};
-
 const centroid = (list) => {
     if (!list.length) {
         return null;
@@ -113,22 +101,12 @@ const visibleAgencies = (root, query) => {
         list = list.filter((agency) => normalize(agency.department) === department);
     }
 
-    const point = customerPoint(root);
-
     return list
-        .map((agency) => ({
-            ...agency,
-            distance: point && agency.lat && agency.lng
-                ? haversine(point, { lat: Number(agency.lat), lng: Number(agency.lng) })
-                : null,
-        }))
+        .map((agency) => ({ ...agency, scopeRank: locationScopeRank(root, agency) }))
         .sort((a, b) => {
-            if (a.distance !== null && b.distance !== null) {
-                return a.distance - b.distance;
+            if (a.scopeRank !== b.scopeRank) {
+                return a.scopeRank - b.scopeRank;
             }
-
-            if (a.distance !== null) return -1;
-            if (b.distance !== null) return 1;
 
             const aDistrict = normalize(a.district) === district ? 0 : 1;
             const bDistrict = normalize(b.district) === district ? 0 : 1;
@@ -137,8 +115,72 @@ const visibleAgencies = (root, query) => {
                 return aDistrict - bDistrict;
             }
 
+            const aExact = a.precision === 'exact' ? 0 : 1;
+            const bExact = b.precision === 'exact' ? 0 : 1;
+
+            if (aExact !== bExact) {
+                return aExact - bExact;
+            }
+
             return `${a.district} ${a.address}`.localeCompare(`${b.district} ${b.address}`);
         });
+};
+
+/**
+ * Sin coordenadas del domicilio, una distancia en kilómetros sería inventada.
+ * El orden se basa en la ubicación real que sí conocemos: distrito, provincia
+ * y departamento.
+ */
+const locationScopeRank = (root, agency) => {
+    const sameDepartment = normalize(agency.department) === normalize(root.dataset.department);
+    const sameProvince = sameDepartment
+        && normalize(agency.province) === normalize(root.dataset.province);
+    const sameDistrict = sameProvince
+        && normalize(agency.district) === normalize(root.dataset.district);
+
+    if (sameDistrict) return 0;
+    if (sameProvince) return 1;
+    if (sameDepartment) return 2;
+
+    return 3;
+};
+
+/**
+ * Las agencias geocodificadas solo hasta el distrito comparten el mismo punto.
+ * No se muestran como si cada una tuviera una ubicación exacta: se agrupan y
+ * se etiquetan como referencia del distrito.
+ */
+const coordinateKey = (agency) => `${Number(agency.lat).toFixed(5)}:${Number(agency.lng).toFixed(5)}`;
+
+const groupByCoordinate = (list) => {
+    const groups = new Map();
+
+    list
+        .filter((agency) => agency.lat && agency.lng)
+        .forEach((agency) => {
+            const key = coordinateKey(agency);
+
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    lat: Number(agency.lat),
+                    lng: Number(agency.lng),
+                    agencies: [],
+                });
+            }
+
+            groups.get(key).agencies.push(agency);
+        });
+
+    return [...groups.values()];
+};
+
+const locationLabel = (agency) => {
+    const scope = ['En tu distrito', 'En tu provincia', 'En tu departamento', 'Otra región'][agency.scopeRank ?? 3];
+
+    return agency.precision === 'district'
+        ? `${scope} · ubicación referencial`
+        : scope;
 };
 
 const syncSelected = (root, id) => {
@@ -202,9 +244,9 @@ const renderList = (root, query) => {
                 </div>
                 <span class="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Regular</span>
             </div>
-            ${agency.distance !== null
-                ? `<p class="mt-2 text-xs font-medium text-emerald-700">A ${agency.distance.toFixed(1)} km de tu zona</p>`
-                : '<p class="mt-2 text-xs text-gray-400">Agencia Shalom</p>'}
+            <p class="mt-2 text-xs font-medium ${agency.precision === 'district' ? 'text-amber-700' : 'text-emerald-700'}">
+                ${escapeHtml(locationLabel(agency))}
+            </p>
         `;
         card.addEventListener('click', () => selectAgency(root, agency));
         listElement.appendChild(card);
@@ -249,15 +291,41 @@ const loadGoogleMaps = (key) => {
     return mapPromise;
 };
 
-const markerIcon = (active) => ({
+const markerIcon = (active, approximate = false) => ({
     path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z',
-    fillColor: active ? '#0a0a0c' : '#9ca3af',
+    fillColor: active ? '#0a0a0c' : (approximate ? '#d97706' : '#9ca3af'),
     fillOpacity: 1,
     strokeColor: '#ffffff',
     strokeWeight: 2,
     scale: active ? 1.8 : 1.2,
     anchor: new window.google.maps.Point(12, 22),
 });
+
+const groupPopup = (group) => {
+    const rows = group.agencies.slice(0, 5).map((agency) => `
+        <div style="padding:7px 0;border-top:1px solid #f3f4f6;">
+            <strong style="display:block;color:#111827;font-size:12px;line-height:1.35;">${escapeHtml(agency.address)}</strong>
+            <span style="color:#6b7280;font-size:11px;">${escapeHtml(agency.district)} · ${escapeHtml(agency.province)}</span>
+            ${agency.precision === 'district'
+                ? '<br><span style="color:#b45309;font-size:11px;">Ubicación referencial del distrito</span>'
+                : ''}
+        </div>
+    `).join('');
+    const extra = group.agencies.length > 5
+        ? `<p style="margin:6px 0 0;color:#6b7280;font-size:11px;">+${group.agencies.length - 5} agencias más en este punto</p>`
+        : '';
+
+    return `
+        <div style="max-width:270px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;">
+            <p style="margin:0 0 4px;color:#111827;font-size:12px;font-weight:700;">
+                ${group.agencies.length === 1 ? 'Agencia Shalom' : `${group.agencies.length} agencias en este punto`}
+            </p>
+            ${rows}
+            ${extra}
+            <p style="margin:6px 0 0;color:#9ca3af;font-size:10px;">Powered by Shalom</p>
+        </div>
+    `;
+};
 
 const initMap = async (root) => {
     if (map || mapFailed) {
@@ -306,43 +374,89 @@ const updateMap = async (root, agency) => {
     markers.forEach((marker) => marker.setMap(null));
     markers = [];
 
-    const point = { lat: Number(agency.lat), lng: Number(agency.lng) };
+    const list = visibleAgencies(root, byId('shalom-search')?.value ?? '');
+    const selected = list.find((item) => Number(item.id) === Number(agency.id)) ?? agency;
+    const seed = [
+        selected,
+        ...list
+            .filter((item) => Number(item.id) !== Number(selected.id) && item.lat && item.lng)
+            .slice(0, 12),
+    ];
+    const seedKeys = new Set(seed.filter((item) => item.lat && item.lng).map(coordinateKey));
+    const groups = groupByCoordinate([
+        selected,
+        ...list.filter((item) => Number(item.id) !== Number(selected.id)
+            && item.lat
+            && item.lng
+            && seedKeys.has(coordinateKey(item))),
+    ]);
 
-    map.panTo(point);
-    map.setZoom(14);
+    const selectedGroup = groups.find((group) => group.agencies.some(
+        (item) => Number(item.id) === Number(selected.id)
+    ));
 
-    const selectedMarker = new window.google.maps.Marker({
-        position: point,
-        map,
-        icon: markerIcon(true),
-        title: agency.address,
-        zIndex: 10,
-    });
-    selectedMarker.addListener('click', () => {
-        infoWindow.setContent(`<strong>${escapeHtml(agency.address)}</strong><br>${escapeHtml(agency.district)} · Regular`);
-        infoWindow.open({ map, anchor: selectedMarker });
-    });
-    markers.push(selectedMarker);
-    infoWindow.setContent(`<strong>${escapeHtml(agency.address)}</strong><br>${escapeHtml(agency.district)} · Regular`);
-    infoWindow.open({ map, anchor: selectedMarker });
+    if (!selectedGroup) {
+        return;
+    }
 
-    const nearby = visibleAgencies(root, byId('shalom-search')?.value ?? '')
-        .filter((item) => Number(item.id) !== Number(agency.id) && item.lat && item.lng)
-        .slice(0, 8);
+    const bounds = new window.google.maps.LatLngBounds();
 
-    nearby.forEach((item) => {
+    groups.forEach((group) => {
+        const isSelectedGroup = group.key === selectedGroup.key;
+        const approximate = group.agencies.every((item) => item.precision === 'district');
         const marker = new window.google.maps.Marker({
-            position: { lat: Number(item.lat), lng: Number(item.lng) },
+            position: { lat: group.lat, lng: group.lng },
             map,
-            icon: markerIcon(false),
-            title: item.address,
+            icon: markerIcon(isSelectedGroup, approximate),
+            label: group.agencies.length > 1
+                ? {
+                    text: String(group.agencies.length),
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                }
+                : undefined,
+            title: group.agencies.length > 1
+                ? `${group.agencies.length} agencias Shalom en este punto`
+                : group.agencies[0].address,
+            zIndex: isSelectedGroup ? 10 : 1,
         });
+
         marker.addListener('click', () => {
-            infoWindow.setContent(`<strong>${escapeHtml(item.address)}</strong><br>${escapeHtml(item.district)} · Regular`);
+            const first = group.agencies[0];
+
+            if (Number(first.id) !== Number(selected.id) && !isSelectedGroup) {
+                selectAgency(root, first);
+
+                return;
+            }
+
+            infoWindow.setContent(groupPopup(group));
             infoWindow.open({ map, anchor: marker });
         });
+
         markers.push(marker);
+        bounds.extend({ lat: group.lat, lng: group.lng });
     });
+
+    const selectedApproximate = selectedGroup.agencies.every((item) => item.precision === 'district');
+
+    if (groups.length === 1) {
+        map.setCenter({ lat: selectedGroup.lat, lng: selectedGroup.lng });
+        map.setZoom(selectedApproximate ? 12 : 15);
+    } else {
+        map.fitBounds(bounds, {
+            padding: 36,
+            maxZoom: selectedApproximate ? 13 : 15,
+        });
+    }
+
+    const selectedMarker = markers.find((_, index) => groups[index]?.key === selectedGroup.key);
+
+    if (selectedMarker) {
+        infoWindow.setContent(groupPopup(selectedGroup));
+        infoWindow.open({ map, anchor: selectedMarker });
+    }
 };
 
 const refresh = async () => {

@@ -86,6 +86,14 @@
                         <dt class="text-gray-500">Envío</dt>
                         <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
                     </div>
+                    @if ($order->delivery_days)
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">Tiempo de entrega</dt>
+                            <dd class="text-gray-900">
+                                {{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}
+                            </dd>
+                        </div>
+                    @endif
                     @if ((float) $order->discount_total > 0)
                         <div class="flex justify-between text-green-700">
                             <dt>Cupón {{ $order->coupon_code }}</dt>
@@ -107,8 +115,29 @@
                         <span>
                             <strong class="text-gray-900">Recojo en agencia Shalom:</strong>
                             {{ $pickup['address'] ?? '' }} · {{ $pickup['district'] ?? '' }} · Regular
+                            <span class="mt-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                Powered by Shalom
+                            </span>
                         </span>
                     </p>
+
+                    @if ($order->payment_status->value === 'paid' && $order->pickup_code)
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-center">
+                            <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                                Código de recojo
+                            </p>
+                            <p class="mt-1 text-4xl font-black tracking-[0.35em] text-emerald-950">
+                                {{ $order->pickup_code }}
+                            </p>
+                            <p class="mt-2 text-xs text-emerald-800">
+                                Presenta este código en la agencia Shalom junto con tu DNI para recoger el pedido.
+                            </p>
+                        </div>
+                    @elseif ($order->payment_status->value === 'pending')
+                        <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                            Tu código de recojo de 4 dígitos se generará cuando se confirme el pago.
+                        </p>
+                    @endif
                 @endif
                 <p class="flex items-start gap-2">
                     <flux:icon name="map-pin" class="mt-0.5 size-4 shrink-0 text-gray-400" />

@@ -33,6 +33,7 @@ class OrderService
                 'payment_intent' => $paymentIntent,
                 'subtotal' => $data->subtotal,
                 'shipping_total' => $data->shippingTotal,
+                'delivery_days' => $data->deliveryDays,
                 'discount_total' => $data->discountTotal,
                 'total' => $data->total,
                 'cost_total' => $data->costTotal,

@@ -94,6 +94,26 @@ class CartService
             ->where('status', 'converted')
             ->first();
 
+        // La sesión puede apuntar a un carrito vacío creado mientras el pago
+        // estaba pendiente. En ese caso se recupera el último carrito
+        // convertido que sí pertenece a un pedido esperando pago.
+        if (! $cart) {
+            $cart = Cart::query()
+                ->where('user_id', Auth::id())
+                ->where('status', 'converted')
+                ->whereHas('orders', function ($query) {
+                    $query
+                        ->where('status', OrderStatus::PENDING)
+                        ->where('payment_status', PaymentStatus::PENDING);
+                })
+                ->latest('updated_at')
+                ->first();
+
+            if ($cart) {
+                Session::put(self::SESSION_KEY, $cart->id);
+            }
+        }
+
         if (! $cart) {
             return;
         }

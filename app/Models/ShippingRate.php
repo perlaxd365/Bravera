@@ -14,6 +14,7 @@ class ShippingRate extends Model
         'product_id',
         'product_variant_id',
         'price',
+        'delivery_days',
         'status',
     ];
 
@@ -21,6 +22,7 @@ class ShippingRate extends Model
     {
         return [
             'price' => 'decimal:2',
+            'delivery_days' => 'integer',
             'status' => 'boolean',
         ];
     }

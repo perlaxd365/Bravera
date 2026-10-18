@@ -12,6 +12,7 @@ class ImportShalomAgencies extends Command
     protected $signature = 'shalom:import
         {file? : Ruta del CSV de agencias}
         {--geocode : Geocodificar las agencias sin coordenadas}
+        {--refresh : Reintentar la geocodificación exacta de agencias con ubicación solo de distrito}
         {--delay=1100 : Milisegundos entre solicitudes a Nominatim}
         {--department= : Limitar la geocodificación a un departamento}';
 
@@ -109,10 +110,20 @@ class ImportShalomAgencies extends Command
             return self::SUCCESS;
         }
 
-        $query = ShalomAgency::query()
-            ->where(function ($query) {
+        $query = ShalomAgency::query();
+
+        if ($this->option('refresh')) {
+            $query->where(function ($query) {
+                $query
+                    ->whereNull('latitude')
+                    ->orWhereNull('longitude')
+                    ->orWhere('geocode_precision', 'district');
+            });
+        } else {
+            $query->where(function ($query) {
                 $query->whereNull('latitude')->orWhereNull('longitude');
             });
+        }
 
         if ($this->option('department')) {
             $query->whereRaw(

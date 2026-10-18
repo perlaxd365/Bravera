@@ -52,6 +52,14 @@
             <td style="padding:4px 0;color:#6b7280;">Envío</td>
             <td align="right" style="padding:4px 0;color:#111827;">S/ {{ number_format((float) $order->shipping_total, 2) }}</td>
         </tr>
+        @if ($order->delivery_days)
+            <tr>
+                <td style="padding:4px 0;color:#6b7280;">Tiempo de entrega</td>
+                <td align="right" style="padding:4px 0;color:#111827;">
+                    {{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}
+                </td>
+            </tr>
+        @endif
         @if ((float) $order->discount_total > 0)
             <tr>
                 <td style="padding:4px 0;color:#6b7280;">Cupón {{ $order->coupon_code }}</td>
@@ -72,6 +80,29 @@
         <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4b5563;">
             <strong>{{ $pickup['address'] ?? '' }}</strong><br>
             {{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }} · Regular
+        </p>
+
+        @if ($order->pickup_code)
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                style="margin:0 0 20px;border:1px solid #a7f3d0;border-radius:14px;background-color:#ecfdf5;">
+                <tr>
+                    <td align="center" style="padding:18px;">
+                        <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:1px;color:#047857;text-transform:uppercase;">
+                            Código de recojo
+                        </p>
+                        <p style="margin:0;font-size:34px;line-height:1;font-weight:800;letter-spacing:8px;color:#064e3b;">
+                            {{ $order->pickup_code }}
+                        </p>
+                        <p style="margin:8px 0 0;font-size:12px;color:#065f46;">
+                            Preséntalo en la agencia Shalom junto con tu DNI.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        @endif
+
+        <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:1px;color:#9ca3af;text-transform:uppercase;">
+            Powered by Shalom
         </p>
     @endif
 

@@ -10,6 +10,7 @@ class ShippingRateDTO
         public readonly ?int $product_id,
         public readonly ?int $product_variant_id,
         public readonly float $price,
+        public readonly ?int $delivery_days = null,
         public readonly bool $status = true,
     ) {}
 
@@ -21,6 +22,7 @@ class ShippingRateDTO
             'product_id' => $this->product_id,
             'product_variant_id' => $this->product_variant_id,
             'price' => $this->price,
+            'delivery_days' => $this->delivery_days,
             'status' => $this->status,
         ];
     }

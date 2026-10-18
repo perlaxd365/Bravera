@@ -307,6 +307,7 @@ class PaymentService
                 'status' => OrderStatus::CONFIRMED,
                 'payment_status' => PaymentStatus::PAID,
                 'paid_at' => now(),
+                'pickup_code' => $order->pickup_code ?: $this->pickupCode(),
             ]);
             $cart = $order->cart;
             if ($cart !== null) {
@@ -324,6 +325,22 @@ class PaymentService
 
             return $payment->fresh();
         });
+    }
+
+    /**
+     * Código de cuatro dígitos que el comprador presenta en la agencia Shalom.
+     *
+     * Se genera dentro de la transacción que confirma el pago y solo cuando el
+     * pedido pasa a pagado. La comprobación evita repetir un código entre
+     * pedidos, de modo que el número sigue siendo una referencia útil en caja.
+     */
+    private function pickupCode(): string
+    {
+        do {
+            $code = (string) random_int(1000, 9999);
+        } while (Order::query()->where('pickup_code', $code)->exists());
+
+        return $code;
     }
 
     /**

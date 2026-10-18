@@ -26,6 +26,7 @@ class CheckoutData
         public readonly float $total,
         public readonly float $costTotal,
         public readonly array $shippingPerItem,
+        public readonly ?int $deliveryDays = null,
         public readonly ?Coupon $coupon = null,
         public readonly ?string $notes = null,
         public readonly ?array $pickupAgency = null,

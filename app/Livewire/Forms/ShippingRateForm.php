@@ -26,6 +26,9 @@ class ShippingRateForm extends Form
     #[Validate('required|numeric|min:0|max:99999999.99')]
     public ?float $price = null;
 
+    #[Validate('nullable|integer|min:0|max:365')]
+    public ?int $delivery_days = null;
+
     #[Validate('boolean')]
     public bool $status = true;
 
@@ -41,6 +44,7 @@ class ShippingRateForm extends Form
         $this->product_id = null;
         $this->product_variant_id = null;
         $this->price = null;
+        $this->delivery_days = null;
         $this->status = true;
     }
 
@@ -56,6 +60,7 @@ class ShippingRateForm extends Form
         $this->product_id = $rate->product_id;
         $this->product_variant_id = $rate->product_variant_id;
         $this->price = (float) $rate->price;
+        $this->delivery_days = $rate->delivery_days;
         $this->status = $rate->status;
     }
 
@@ -74,6 +79,7 @@ class ShippingRateForm extends Form
                 ? (int) $this->product_variant_id
                 : null,
             price: (float) $this->price,
+            delivery_days: $this->delivery_days,
             status: $this->status,
         );
     }

@@ -130,6 +130,14 @@
                             <dt class="text-gray-500">Envío</dt>
                             <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
                         </div>
+                        @if ($order->delivery_days)
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Entrega</dt>
+                                <dd class="text-gray-900">
+                                    {{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}
+                                </dd>
+                            </div>
+                        @endif
                         @if ((float) $order->discount_total > 0)
                             <div class="flex justify-between text-green-700">
                                 <dt>Cupón {{ $order->coupon_code }}</dt>
@@ -151,7 +159,16 @@
                             <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Agencia Shalom · Regular</p>
                             <p class="mt-1 font-semibold text-emerald-950">{{ $pickup['address'] ?? '' }}</p>
                             <p class="text-sm text-emerald-800">{{ $pickup['district'] ?? '' }} · {{ $pickup['province'] ?? '' }}</p>
+                            <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">Powered by Shalom</p>
                         </div>
+
+                        @if ($order->payment_status->value === 'paid' && $order->pickup_code)
+                            <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">Código de recojo</p>
+                                <p class="mt-1 text-3xl font-black tracking-[0.3em] text-gray-900">{{ $order->pickup_code }}</p>
+                                <p class="mt-1 text-xs text-gray-500">Preséntalo en la agencia junto con tu DNI.</p>
+                            </div>
+                        @endif
                     @endif
                     <div class="mt-3 space-y-1 text-sm">
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección de contacto</p>

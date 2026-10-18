@@ -26,6 +26,7 @@ use App\Models\User;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use App\Modules\Payments\Gateways\Culqi\CulqiGateway;
 use App\Modules\Payments\Gateways\DemoGateway;
+use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Shipping\Enums\ShippingZoneType;
 use App\Services\CartService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -234,6 +235,106 @@ class CheckoutTest extends TestCase
         $this->assertSame(0.00, (float) $order->discount_total);
         $this->assertSame(112.00, (float) $order->total);
         $this->assertSame(12.00, (float) $order->items->first()->shipping_price);
+    }
+
+    public function test_el_pago_genera_un_codigo_de_recojo_de_cuatro_digitos(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame(PaymentStatus::PAID, $order->payment_status);
+        $this->assertMatchesRegularExpression('/^\d{4}$/', (string) $order->pickup_code);
+
+        $code = $order->pickup_code;
+
+        $this->actingAs($user)
+            ->get(route('store.order.placed', ['order' => $order->order_number]))
+            ->assertOk()
+            ->assertSee($code)
+            ->assertSee('Código de recojo');
+
+        // Un webhook repetido no debe cambiar el código que ya recibió el cliente.
+        app(PaymentService::class)->markAsPaid($order->payments()->latest('id')->firstOrFail());
+
+        $this->assertSame($code, $order->fresh()->pickup_code);
+    }
+
+    public function test_el_plazo_de_entrega_es_el_mas_largo_del_pedido(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+
+        $supplier = Supplier::where('code', 'SUP-CHK-1')->firstOrFail();
+        $zone = ShippingZone::where('location_id', $district->id)->firstOrFail();
+        $categoryId = Product::firstOrFail()->category_id;
+
+        $secondProduct = Product::create([
+            'category_id' => $categoryId,
+            'name' => 'Casaca con entrega lenta',
+            'slug' => 'casaca-entrega-lenta',
+            'status' => true,
+        ]);
+        $secondVariant = ProductVariant::create([
+            'product_id' => $secondProduct->id,
+            'sku' => 'PV-CHK-SLOW',
+            'cost_price' => 40.00,
+            'sale_price' => 70.00,
+            'is_active' => true,
+        ]);
+        SupplierVariant::create([
+            'supplier_id' => $supplier->id,
+            'product_variant_id' => $secondVariant->id,
+            'sku' => 'SV-CHK-SLOW',
+            'supplier_sku' => 'SV-CASACA-SLOW',
+            'cost_price' => 40.00,
+            'shipping_cost' => 5.00,
+            'stock' => 10,
+            'reserved_stock' => 0,
+            'is_active' => true,
+        ]);
+
+        ShippingRate::query()
+            ->where('supplier_id', $supplier->id)
+            ->whereNull('product_id')
+            ->update(['delivery_days' => 3]);
+
+        ShippingRate::create([
+            'shipping_zone_id' => $zone->id,
+            'supplier_id' => $supplier->id,
+            'product_id' => $secondProduct->id,
+            'price' => 15.00,
+            'delivery_days' => 8,
+            'status' => true,
+        ]);
+
+        $this->cartWith($user, $variant);
+        $this->cartWith($user, $secondVariant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('8 días hábiles')
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $this->assertSame(8, Order::firstOrFail()->delivery_days);
     }
 
     public function test_mercadopago_creates_the_order_and_opens_the_payment_modal(): void
@@ -645,6 +746,12 @@ class CheckoutTest extends TestCase
         $order = Order::firstOrFail();
         $cart = $order->cart;
 
+        // La sesión puede haber quedado apuntando a un carrito vacío creado
+        // mientras el pago seguía pendiente. Al cambiar de pasarela debe
+        // recuperarse el carrito real del pedido, no mostrar la compra vacía.
+        $emptyCart = Cart::create(['user_id' => $user->id, 'status' => 'active']);
+        session([CartService::SESSION_KEY => $emptyCart->id]);
+
         // Al cambiar a Culqi el pedido anterior se cancela y el carrito vuelve
         // a estar activo, sin bloquear la nueva pasarela.
         $component->set('selectedGateway', 'culqi')
@@ -655,6 +762,8 @@ class CheckoutTest extends TestCase
         $this->assertSame(OrderStatus::CANCELLED, $order->status);
         $this->assertSame(PaymentStatus::EXPIRED, $order->payment_status);
         $this->assertSame('active', $cart->fresh()->status);
+        $this->assertSame($cart->id, session(CartService::SESSION_KEY));
+        $this->assertSame(1, $cart->items()->count());
 
         $this->useCulqi();
         Http::fake([

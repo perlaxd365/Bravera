@@ -29,6 +29,7 @@
                     <th class="px-6 py-3">Producto</th>
                     <th class="px-6 py-3">Variante</th>
                     <th class="px-6 py-3">Precio</th>
+                    <th class="px-6 py-3">Entrega</th>
                     <th class="px-6 py-3">Estado</th>
                     <th class="px-6 py-3 text-right">Acciones</th>
                 </tr>
@@ -53,6 +54,11 @@
                         </td>
                         <td class="whitespace-nowrap px-6 py-4 font-semibold text-gray-900">
                             S/ {{ number_format($rate->price, 2) }}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-4 text-gray-600">
+                            {{ $rate->delivery_days !== null
+                                ? $rate->delivery_days.' '.($rate->delivery_days === 1 ? 'día hábil' : 'días hábiles')
+                                : 'Sin definir' }}
                         </td>
                         <td class="px-6 py-4">
                             @if ($rate->status)
@@ -87,7 +93,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-14 text-center">
+                        <td colspan="9" class="px-6 py-14 text-center">
                             <x-brevare.empty-state icon="truck" title="No existen tarifas de envío registradas" description="Crea la primera tarifa de envío para comenzar." />
                         </td>
                     </tr>
