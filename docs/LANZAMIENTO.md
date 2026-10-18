@@ -267,6 +267,12 @@ seguros. El servidor crea el pago y recibe las notificaciones del tópico
    llega y que los correos se envían. Después repite con una compra real de bajo
    monto usando credenciales de producción.
 
+Si Mercado Pago responde `500 internal_error` incluso con las tarjetas de prueba,
+no es un problema de tarjeta ni de DNI. Completa la dirección/facturación de la
+cuenta de Mercado Pago y verifica que la aplicación de prueba sea de tipo
+**Checkout API**. Si persiste, envía a soporte el `x-request-id` de la respuesta
+de `/v1/payments`.
+
 `PAYMENT_GATEWAY` puede seguir apuntando a `culqi`; Mercado Pago aparecerá como
 opción adicional cuando `MP_ENABLED=true` y las tres credenciales estén completas.
 Si quieres que sea la pasarela preseleccionada, usa `PAYMENT_GATEWAY=mercadopago`.

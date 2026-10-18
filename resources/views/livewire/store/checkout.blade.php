@@ -767,7 +767,7 @@
                 @if ($mpModalTestMode)
                     <p class="mp-modal__test">
                         <strong>Modo prueba</strong>
-                        <span>Nombre APRO · DNI 123456789</span>
+                        <span>Nombre APRO · DNI 123456789 (9 dígitos)</span>
                     </p>
                 @endif
 

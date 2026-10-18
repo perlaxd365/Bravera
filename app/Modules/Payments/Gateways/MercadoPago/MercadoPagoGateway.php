@@ -112,12 +112,29 @@ class MercadoPagoGateway implements PaymentGateway
             $cause = data_get($json, 'cause.0.description')
                 ?? data_get($json, 'message')
                 ?? 'api_error';
+            $httpStatus = $e->getStatusCode();
 
             Log::warning('Mercado Pago rechazó el pago.', [
                 'local_payment_id' => $payment->id,
-                'http_status' => $e->getStatusCode(),
+                'http_status' => $httpStatus,
+                'message' => data_get($json, 'message'),
                 'cause' => is_scalar($cause) ? $cause : json_encode($cause),
             ]);
+
+            if ($httpStatus >= 500) {
+                return $this->failure(
+                    'Mercado Pago no pudo procesar el pago por un problema en la cuenta de cobro. '
+                        .'No se realizó ningún cargo. Usa otro medio de pago o contáctanos.',
+                    'gateway_internal_error'
+                );
+            }
+
+            if (in_array($httpStatus, [401, 403], true)) {
+                return $this->failure(
+                    'La cuenta de Mercado Pago no está habilitada para cobrar. Contáctanos para revisar la configuración.',
+                    'gateway_not_authorized'
+                );
+            }
 
             return $this->failure(
                 'Mercado Pago no pudo procesar el pago. Revisa los datos de la tarjeta e inténtalo otra vez.',
