@@ -22,6 +22,19 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'google_tag_manager' => [
+        'id' => env('GOOGLE_TAG_MANAGER_ID', 'GTM-WDP4X795'),
+    ],
+
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID', 'G-32J0PENN0L'),
+        'property_id' => env('GOOGLE_ANALYTICS_PROPERTY_ID'),
+        'credentials_path' => env(
+            'GOOGLE_ANALYTICS_CREDENTIALS_PATH',
+            storage_path('app/analytics/service-account.json'),
+        ),
+    ],
+
     'nominatim' => [
         'url' => env('NOMINATIM_URL', 'https://nominatim.openstreetmap.org'),
         'user_agent' => env(

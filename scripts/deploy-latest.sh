@@ -19,6 +19,15 @@ for path in \
   "resources/views/livewire/admin/dashboard/index.blade.php" \
   "app/Livewire/Admin/Catalog/Products/Form.php" \
   "app/Modules/Product/Forms/SupplierVariantForm.php" \
+  "app/Http/Middleware/ForceCanonicalHost.php" \
+  "app/Http/Middleware/TrackStorefrontView.php" \
+  "app/Models/PageView.php" \
+  "app/Services/GoogleAnalyticsService.php" \
+  "bootstrap/app.php" \
+  "config/services.php" \
+  "database/migrations/2026_10_21_000001_create_page_views_table.php" \
+  "resources/views/components/brevare/cookie-consent.blade.php" \
+  "resources/views/partials/legal/privacy.blade.php" \
   "public/images/social" \
   "public/build"
 do
@@ -37,6 +46,15 @@ git restore --source="origin/${BRANCH}" --worktree -- \
   resources/views/livewire/admin/dashboard/index.blade.php \
   app/Livewire/Admin/Catalog/Products/Form.php \
   app/Modules/Product/Forms/SupplierVariantForm.php \
+  app/Http/Middleware/ForceCanonicalHost.php \
+  app/Http/Middleware/TrackStorefrontView.php \
+  app/Models/PageView.php \
+  app/Services/GoogleAnalyticsService.php \
+  bootstrap/app.php \
+  config/services.php \
+  database/migrations/2026_10_21_000001_create_page_views_table.php \
+  resources/views/components/brevare/cookie-consent.blade.php \
+  resources/views/partials/legal/privacy.blade.php \
   public/images/social \
   public/build
 
@@ -50,4 +68,5 @@ php artisan view:clear
 php artisan view:cache
 
 printf 'Respaldo: %s\n' "${BACKUP}"
-printf 'Redes sociales, dashboard y corrección de proveedores desplegados.\n'
+printf 'Dashboard, medición local y conexión GA4 desplegados.\n'
+printf 'Migración pendiente si page_views no existe: php artisan migrate --force\n'

@@ -1,7 +1,7 @@
 <div>
     <h1 class="mb-6 text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
                 <flux:icon name="banknotes" class="size-3.5" /> Ingresos pagados
@@ -65,6 +65,22 @@
                 <span class="ml-auto text-emerald-700 transition group-hover:translate-x-0.5" aria-hidden="true">→</span>
             </p>
         </a>
+        <div class="rounded-2xl border border-sky-200 bg-sky-50/50 p-5">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-sky-800">
+                <flux:icon name="eye" class="size-3.5" /> Personas que vieron la página
+            </p>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight text-sky-950">
+                {{ $traffic['visitorsToday'] }}
+                <span class="text-sm font-medium text-sky-800/70">hoy</span>
+            </p>
+            <p class="mt-1 text-xs text-sky-900/70">
+                {{ $traffic['pageViewsToday'] }} páginas vistas · ayer: {{ $traffic['visitorsYesterday'] }} personas
+            </p>
+            <p class="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-sky-800/75">
+                <span class="size-1.5 rounded-full {{ $trafficSource === 'ga4' ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+                {{ $trafficSource === 'ga4' ? 'Google Analytics 4' : 'Contador local' }}
+            </p>
+        </div>
     </div>
 
     <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

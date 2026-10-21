@@ -193,6 +193,28 @@ bienvenida salen cada minuto.
 4. En **Sitemaps**, envía: `https://brevare.com/sitemap.xml`.
 5. Usa **Inspección de URL** sobre un producto para solicitar indexación inicial.
 
+### 6.1 Google Analytics 4
+
+La etiqueta GA4 mide el sitio, pero el panel necesita acceso de lectura a la
+API de datos para mostrar visitantes únicos y páginas vistas.
+
+1. En Google Cloud, habilita **Google Analytics Data API**.
+2. Crea una cuenta de servicio y descarga su llave JSON.
+3. En GA4, abre **Administrar → Acceso a la propiedad** y agrega el correo de
+   la cuenta de servicio con permiso **Lector**.
+4. Copia el ID numérico de la propiedad desde **Configuración de la propiedad**.
+5. Sube la llave fuera de `public/`, por ejemplo:
+   `storage/app/analytics/service-account.json` con permisos `600`.
+6. Configura en producción:
+
+```dotenv
+GOOGLE_ANALYTICS_PROPERTY_ID=123456789
+GOOGLE_ANALYTICS_CREDENTIALS_PATH=/home/USUARIO/Bravera/storage/app/analytics/service-account.json
+```
+
+No guardes ni envíes la llave JSON por chat o repositorio. Si la conexión falla,
+el panel usa automáticamente el contador interno de visitas consentidas.
+
 ---
 
 ## 7. Google Merchant Center (fichas con foto, precio y detalle)

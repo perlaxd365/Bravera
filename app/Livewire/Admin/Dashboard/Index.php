@@ -6,22 +6,31 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PageView;
 use App\Models\SupplierOrder;
 use App\Models\SupplierVariant;
 use App\Models\User;
 use App\Modules\Product\Services\ProductReadinessService;
+use App\Services\GoogleAnalyticsService;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Throwable;
 
 #[Layout('admin.layouts.app')]
 class Index extends Component
 {
-    public function boot(ProductReadinessService $readiness): void
-    {
+    public function boot(
+        ProductReadinessService $readiness,
+        GoogleAnalyticsService $analytics,
+    ): void {
         $this->readiness = $readiness;
+        $this->analytics = $analytics;
     }
 
     protected ProductReadinessService $readiness;
+
+    protected GoogleAnalyticsService $analytics;
 
     public function render()
     {
@@ -55,6 +64,41 @@ class Index extends Component
             'total' => (clone $customers)->count(),
             'change' => $customersToday - $customersYesterday,
         ];
+
+        $traffic = [
+            'visitorsToday' => 0,
+            'visitorsYesterday' => 0,
+            'pageViewsToday' => 0,
+        ];
+
+        if (Schema::hasTable('page_views')) {
+            $viewsToday = PageView::query()
+                ->where('viewed_at', '>=', today())
+                ->where('viewed_at', '<', today()->addDay());
+
+            $traffic = [
+                'visitorsToday' => (clone $viewsToday)
+                    ->distinct()
+                    ->count('visitor_token'),
+                'visitorsYesterday' => PageView::query()
+                    ->where('viewed_at', '>=', today()->subDay())
+                    ->where('viewed_at', '<', today())
+                    ->distinct()
+                    ->count('visitor_token'),
+                'pageViewsToday' => (clone $viewsToday)->count(),
+            ];
+        }
+
+        $trafficSource = 'local';
+
+        if ($this->analytics->isConfigured()) {
+            try {
+                $traffic = $this->analytics->traffic();
+                $trafficSource = 'ga4';
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         $lowStock = SupplierVariant::query()
             ->where('stock', '<=', 5)
@@ -97,6 +141,8 @@ class Index extends Component
                 'completed' => Order::where('status', OrderStatus::DELIVERED)->count(),
             ],
             'newCustomers' => $newCustomers,
+            'traffic' => $traffic,
+            'trafficSource' => $trafficSource,
             'lowStock' => $lowStock,
             'outOfStock' => $outOfStock,
             'pendingSupplierOrders' => $pendingSupplierOrders,
