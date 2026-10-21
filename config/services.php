@@ -27,7 +27,7 @@ return [
     ],
 
     'google_analytics' => [
-        'id' => env('GOOGLE_ANALYTICS_ID', 'G-32J0PENN0L'),
+        'id' => env('GOOGLE_ANALYTICS_ID', 'G-WZRCWQBLXC'),
         'property_id' => env('GOOGLE_ANALYTICS_PROPERTY_ID'),
         'credentials_path' => env(
             'GOOGLE_ANALYTICS_CREDENTIALS_PATH',
