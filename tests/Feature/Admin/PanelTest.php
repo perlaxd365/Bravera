@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
 use App\Livewire\Admin\Dropshipping\Orders\Index;
 use App\Models\Order;
 use App\Models\Supplier;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -44,6 +46,18 @@ class PanelTest extends TestCase
         ])->assignRole('Cliente');
     }
 
+    private function customerAt(Carbon $createdAt, string $email, bool $isGuest = false): User
+    {
+        $customer = User::factory()->create(['email' => $email]);
+        $customer->forceFill([
+            'created_at' => $createdAt,
+            'is_guest' => $isGuest,
+        ])->saveQuietly();
+        $customer->assignCustomerRole();
+
+        return $customer;
+    }
+
     public function test_admin_can_open_panel_pages(): void
     {
         $this->actingAs($this->admin());
@@ -53,6 +67,28 @@ class PanelTest extends TestCase
         $this->get(route('admin.orders.index'))->assertOk();
         $this->get(route('admin.dropshipping.orders.index'))->assertOk();
         $this->get(route('admin.discounts.coupons.index'))->assertOk();
+    }
+
+    public function test_dashboard_reports_daily_customer_registrations(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-21 12:00:00'));
+
+        $this->customerAt(today()->subDays(3), 'antiguo@test.com');
+        $this->customerAt(today()->subDay(), 'ayer@test.com');
+        $this->customerAt(today(), 'hoy-uno@test.com');
+        $this->customerAt(today(), 'hoy-dos@test.com');
+        $this->customerAt(today(), 'invitado@test.com', isGuest: true);
+
+        $this->actingAs($this->admin());
+
+        Livewire::test(DashboardIndex::class)
+            ->assertSee('Nuevos integrantes')
+            ->assertSee('+1 vs. ayer')
+            ->assertSee('4 en total')
+            ->assertViewHas('newCustomers', fn (array $metric): bool => $metric['today'] === 2
+                && $metric['yesterday'] === 1
+                && $metric['total'] === 4
+                && $metric['change'] === 1);
     }
 
     public function test_admin_can_open_order_detail(): void

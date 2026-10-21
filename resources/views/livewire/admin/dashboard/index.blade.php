@@ -1,7 +1,7 @@
 <div>
     <h1 class="mb-6 text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
                 <flux:icon name="banknotes" class="size-3.5" /> Ingresos pagados
@@ -29,9 +29,33 @@
             </p>
             <p class="mt-2 text-2xl font-extrabold tracking-tight text-gray-900">{{ $kpis['completed'] }}</p>
         </div>
+        <a href="{{ route('admin.customers.index') }}"
+            class="group rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+                <flux:icon name="user-plus" class="size-3.5" /> Nuevos integrantes
+            </p>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight text-emerald-950">
+                {{ $newCustomers['today'] }}
+                <span class="text-sm font-medium text-emerald-800/70">hoy</span>
+            </p>
+            <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+                <span class="{{ $newCustomers['change'] > 0 ? 'font-semibold text-emerald-700' : ($newCustomers['change'] < 0 ? 'font-semibold text-amber-700' : 'text-gray-500') }}">
+                    @if ($newCustomers['change'] > 0)
+                        +{{ $newCustomers['change'] }} vs. ayer
+                    @elseif ($newCustomers['change'] < 0)
+                        {{ abs($newCustomers['change']) }} menos que ayer
+                    @else
+                        Igual que ayer
+                    @endif
+                </span>
+                <span class="text-gray-300" aria-hidden="true">·</span>
+                <span class="text-gray-500">{{ $newCustomers['total'] }} en total</span>
+                <span class="ml-auto text-emerald-700 transition group-hover:translate-x-0.5" aria-hidden="true">→</span>
+            </p>
+        </a>
     </div>
 
-    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
             <p class="flex items-center gap-1.5 text-xs font-medium text-amber-700">
                 <flux:icon name="truck" class="size-3.5" /> Órdenes a proveedores pendientes
@@ -53,6 +77,19 @@
             </p>
             <p class="mt-2 text-2xl font-extrabold tracking-tight {{ $outOfStock > 0 ? 'text-red-600' : 'text-gray-900' }}">{{ $outOfStock }}</p>
         </div>
+        <a href="{{ route('admin.catalog.products.index') }}"
+            class="group rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-amber-800">
+                <flux:icon name="cube" class="size-3.5" /> Productos por publicar
+            </p>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight {{ $pendingPublication > 0 ? 'text-amber-900' : 'text-emerald-700' }}">
+                {{ $pendingPublication }}
+            </p>
+            <p class="mt-1 text-xs text-amber-800/70">
+                {{ $pendingPublication === 1 ? 'Ficha incompleta' : 'Fichas incompletas o no visibles' }}
+                <span class="ml-1 inline-block transition group-hover:translate-x-0.5" aria-hidden="true">→</span>
+            </p>
+        </a>
     </div>
 
     <div class="mt-6 grid gap-4 lg:grid-cols-5">

@@ -6,7 +6,7 @@ ROOT="${HOME}/Bravera"
 PUBLIC_ROOT="${HOME}/public_html"
 BRANCH="recuperar-cambios-godaddy"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-BACKUP="${HOME}/backups/social-footer-${STAMP}"
+BACKUP="${HOME}/backups/latest-ui-${STAMP}"
 
 cd "${ROOT}"
 
@@ -15,6 +15,8 @@ mkdir -p "${BACKUP}"
 for path in \
   "config/seo.php" \
   "resources/views/store/layouts/partials/footer.blade.php" \
+  "app/Livewire/Admin/Dashboard/Index.php" \
+  "resources/views/livewire/admin/dashboard/index.blade.php" \
   "public/images/social" \
   "public/build"
 do
@@ -29,6 +31,8 @@ git fetch origin "${BRANCH}"
 git restore --source="origin/${BRANCH}" --worktree -- \
   config/seo.php \
   resources/views/store/layouts/partials/footer.blade.php \
+  app/Livewire/Admin/Dashboard/Index.php \
+  resources/views/livewire/admin/dashboard/index.blade.php \
   public/images/social \
   public/build
 
@@ -42,4 +46,4 @@ php artisan view:clear
 php artisan view:cache
 
 printf 'Respaldo: %s\n' "${BACKUP}"
-printf 'Redes sociales y assets desplegados.\n'
+printf 'Redes sociales, indicador de integrantes y assets desplegados.\n'
