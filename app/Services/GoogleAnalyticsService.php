@@ -18,7 +18,7 @@ class GoogleAnalyticsService
     public function isConfigured(): bool
     {
         $propertyId = preg_replace('/\D+/', '', (string) config('services.google_analytics.property_id'));
-        $credentialsPath = (string) config('services.google_analytics.credentials_path');
+        $credentialsPath = $this->credentialsPath();
 
         return $propertyId !== ''
             && $credentialsPath !== ''
@@ -170,7 +170,7 @@ class GoogleAnalyticsService
      */
     protected function credentials(): array
     {
-        $path = (string) config('services.google_analytics.credentials_path');
+        $path = $this->credentialsPath();
 
         try {
             $credentials = json_decode(
@@ -194,6 +194,15 @@ class GoogleAnalyticsService
             'client_email' => (string) $credentials['client_email'],
             'private_key' => (string) $credentials['private_key'],
         ];
+    }
+
+    private function credentialsPath(): string
+    {
+        $path = trim((string) config('services.google_analytics.credentials_path'));
+
+        return $path !== ''
+            ? $path
+            : storage_path('app/analytics/service-account.json');
     }
 
     private function base64UrlEncode(string $value): string
