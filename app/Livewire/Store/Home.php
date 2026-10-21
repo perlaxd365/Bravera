@@ -69,6 +69,8 @@ class Home extends Component
         $categoryFallbacks = [
             'tech' => 'https://images.pexels.com/photos/7989741/pexels-photo-7989741.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'fashion' => 'https://images.pexels.com/photos/34373606/pexels-photo-34373606.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'men' => 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1000',
+            'shoes' => 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'home' => 'https://images.pexels.com/photos/14977714/pexels-photo-14977714.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'kitchen' => 'https://images.pexels.com/photos/16443132/pexels-photo-16443132.jpeg?auto=compress&cs=tinysrgb&w=1000',
             'beauty' => 'https://images.pexels.com/photos/3388335/pexels-photo-3388335.jpeg?auto=compress&cs=tinysrgb&w=1000',
@@ -86,7 +88,9 @@ class Home extends Component
             $label = mb_strtolower($category->name.' '.$category->path);
             $key = match (true) {
                 str_contains($label, 'tecnolog') || str_contains($label, 'electr') || str_contains($label, 'celular') || str_contains($label, 'comput') => 'tech',
-                str_contains($label, 'moda') || str_contains($label, 'ropa') || str_contains($label, 'calzado') => 'fashion',
+                str_contains($label, 'hombre') => 'men',
+                str_contains($label, 'calzado') || str_contains($label, 'zapat') || str_contains($label, 'sneaker') => 'shoes',
+                str_contains($label, 'moda') || str_contains($label, 'ropa') || str_contains($label, 'mujer') => 'fashion',
                 str_contains($label, 'cocina') => 'kitchen',
                 str_contains($label, 'hogar') || str_contains($label, 'dormitorio') || str_contains($label, 'mueble') => 'home',
                 str_contains($label, 'belleza') || str_contains($label, 'cuidado') || str_contains($label, 'salud') => 'beauty',
