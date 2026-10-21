@@ -187,7 +187,7 @@
             }
         }"
             x-init="$nextTick(() => { sync(); observeVisibility(); })"
-            @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
+            @focusin="paused = true" @focusout="paused = false"
             @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="sync(); start()"
             class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
