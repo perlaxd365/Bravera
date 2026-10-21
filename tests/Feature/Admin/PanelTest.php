@@ -82,9 +82,10 @@ class PanelTest extends TestCase
         $this->actingAs($this->admin());
 
         Livewire::test(DashboardIndex::class)
-            ->assertSee('Nuevos integrantes')
+            ->assertSee('Nuevos ingresantes')
+            ->assertSee('Nuevos registros en el día')
             ->assertSee('+1 vs. ayer')
-            ->assertSee('4 en total')
+            ->assertSee('en total')
             ->assertViewHas('newCustomers', fn (array $metric): bool => $metric['today'] === 2
                 && $metric['yesterday'] === 1
                 && $metric['total'] === 4

@@ -1,7 +1,7 @@
 <div>
     <h1 class="mb-6 text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
                 <flux:icon name="banknotes" class="size-3.5" /> Ingresos pagados
@@ -30,9 +30,23 @@
             <p class="mt-2 text-2xl font-extrabold tracking-tight text-gray-900">{{ $kpis['completed'] }}</p>
         </div>
         <a href="{{ route('admin.customers.index') }}"
+            class="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
+            <p class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                <flux:icon name="users" class="size-3.5" /> Nuevos ingresantes
+            </p>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight text-gray-900">
+                {{ $newCustomers['total'] }}
+                <span class="text-sm font-medium text-gray-400">en total</span>
+            </p>
+            <p class="mt-1 flex items-center text-xs text-gray-500">
+                Clientes con cuenta registrada
+                <span class="ml-auto text-emerald-700 transition group-hover:translate-x-0.5" aria-hidden="true">→</span>
+            </p>
+        </a>
+        <a href="{{ route('admin.customers.index') }}"
             class="group rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
             <p class="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
-                <flux:icon name="user-plus" class="size-3.5" /> Nuevos integrantes
+                <flux:icon name="user-plus" class="size-3.5" /> Nuevos registros en el día
             </p>
             <p class="mt-2 text-2xl font-extrabold tracking-tight text-emerald-950">
                 {{ $newCustomers['today'] }}
@@ -48,8 +62,6 @@
                         Igual que ayer
                     @endif
                 </span>
-                <span class="text-gray-300" aria-hidden="true">·</span>
-                <span class="text-gray-500">{{ $newCustomers['total'] }} en total</span>
                 <span class="ml-auto text-emerald-700 transition group-hover:translate-x-0.5" aria-hidden="true">→</span>
             </p>
         </a>
