@@ -5,21 +5,25 @@ namespace App\Livewire\Admin\Catalog\Products;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\ProductImage;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
 use App\Modules\Product\Forms\ProductForm;
 use App\Modules\Product\Forms\ProductVariantForm;
 use App\Modules\Product\Forms\SupplierVariantForm;
 use App\Modules\Product\Repositories\ProductRepository;
+use App\Modules\Product\Services\ProductReadinessService;
 use App\Modules\Product\Services\ProductService;
 use App\Modules\Product\Services\ProductVariantService;
 use App\Modules\Product\Services\SupplierVariantService;
 use App\Services\CloudinaryImageService;
+use App\Services\MetaAdsService;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Throwable;
 
 class Form extends Component
 {
@@ -63,10 +67,48 @@ class Form extends Component
 
     public ?string $productVideoPublicId = null;
 
+    public $metaAdVideo;
+
+    public ?string $metaAdVideoUrl = null;
+
+    public ?string $metaAdVideoPublicId = null;
+
+    /**
+     * Configuración del anuncio de Meta para este producto.
+     */
+    public bool $metaAdsConfigured = false;
+
+    public array $metaCampaigns = [];
+
+    public array $metaAdSets = [];
+
+    public string $metaCampaignId = '';
+
+    public string $metaAdSetId = '';
+
+    public string $metaMediaType = 'image';
+
+    public string $metaPrimaryText = '';
+
+    public string $metaHeadline = '';
+
+    public string $metaDescription = '';
+
+    public string $metaCta = 'SHOP_NOW';
+
+    public string $metaDestinationUrl = '';
+
+    public ?string $metaAdsError = null;
+
     /**
      * Mostrar modal.
      */
     public bool $show = false;
+
+    /**
+     * Paso visible del asistente. Solo controla la presentación del formulario.
+     */
+    public int $currentStep = 1;
 
     /**
      * Repositorio de productos.
@@ -78,6 +120,8 @@ class Form extends Component
      */
     protected ProductService $service;
 
+    protected ProductReadinessService $readiness;
+
     /**
      * Servicio de variantes.
      */
@@ -88,22 +132,30 @@ class Form extends Component
      */
     protected SupplierVariantService $supplierVariantService;
 
+    protected MetaAdsService $metaAdsService;
+
     /**
      * Inicializar dependencias.
      */
     public function boot(
         ProductRepository $repository,
         ProductService $service,
+        ProductReadinessService $readiness,
         ProductVariantService $variantService,
-        SupplierVariantService $supplierVariantService
+        SupplierVariantService $supplierVariantService,
+        MetaAdsService $metaAdsService
     ): void {
         $this->repository = $repository;
 
         $this->service = $service;
 
+        $this->readiness = $readiness;
+
         $this->variantService = $variantService;
 
         $this->supplierVariantService = $supplierVariantService;
+
+        $this->metaAdsService = $metaAdsService;
     }
 
     /**
@@ -118,10 +170,20 @@ class Form extends Component
 
         $this->supplierVariantForm->resetForm();
 
-        $this->reset(['productVideo', 'productVideoUrl', 'productVideoPublicId']);
+        $this->reset([
+            'productVideo',
+            'productVideoUrl',
+            'productVideoPublicId',
+            'metaAdVideo',
+            'metaAdVideoUrl',
+            'metaAdVideoPublicId',
+        ]);
+
+        $this->resetMetaForm();
 
         $this->resetValidation();
 
+        $this->currentStep = 1;
         $this->show = true;
     }
 
@@ -142,6 +204,18 @@ class Form extends Component
         $this->productVideoUrl = $product->video_url;
         $this->productVideoPublicId = $product->video_public_id;
         $this->productVideo = null;
+        $this->metaAdVideoUrl = $product->meta_ad_video_url;
+        $this->metaAdVideoPublicId = $product->meta_ad_video_public_id;
+        $this->metaAdVideo = null;
+
+        $this->resetMetaForm();
+        $this->metaPrimaryText = $product->short_description ?: $product->description ?: $product->name;
+        $this->metaHeadline = $product->name;
+        $this->metaDestinationUrl = route('store.product', ['slug' => $product->slug]);
+
+        if ($this->metaAdsConfigured) {
+            $this->loadMetaCampaigns(false);
+        }
 
         $this->variantForm->resetForm();
 
@@ -149,7 +223,31 @@ class Form extends Component
 
         $this->resetValidation();
 
+        $this->currentStep = 1;
         $this->show = true;
+    }
+
+    public function goToStep(int $step): void
+    {
+        $this->currentStep = max(1, min(5, $step));
+        $this->resetValidation();
+        $this->dispatch('product-step-changed');
+    }
+
+    public function updated(string $property, mixed $value): void
+    {
+        $pricingField = match ($property) {
+            'variantForm.cost_price' => 'cost',
+            'variantForm.sale_price' => 'base',
+            'variantForm.discount_percent' => 'discount',
+            'variantForm.retail_price' => 'retail',
+            'variantForm.wholesale_price' => 'wholesale',
+            default => null,
+        };
+
+        if ($pricingField !== null) {
+            $this->variantForm->applyAutomaticPricing($pricingField);
+        }
     }
 
     /**
@@ -157,7 +255,13 @@ class Form extends Component
      */
     public function save(): void
     {
-        $this->form->validate();
+        try {
+            $this->form->validate();
+        } catch (ValidationException $exception) {
+            $this->currentStep = 1;
+
+            throw $exception;
+        }
 
         if ($this->form->is_visible) {
             if (! $this->form->id) {
@@ -207,6 +311,8 @@ class Form extends Component
             $this->form->fromModel($product);
 
             $message = 'Producto creado correctamente.';
+            $this->currentStep = 2;
+            $this->dispatch('product-step-changed');
         }
 
         $this->dispatch('notify', [
@@ -256,7 +362,7 @@ class Form extends Component
                 'video_url' => $data['secure_url'],
                 'video_public_id' => $data['public_id'],
             ]);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             $cloudinary->delete($data['public_id'], 'video');
             throw $exception;
         }
@@ -299,6 +405,264 @@ class Form extends Component
             'type' => 'success',
             'message' => 'Video eliminado correctamente.',
         ]);
+    }
+
+    public function updatedMetaAdVideo(): void
+    {
+        $this->validate([
+            'metaAdVideo' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/webm', 'max:51200'],
+        ], [
+            'metaAdVideo.mimetypes' => 'El video del anuncio debe estar en formato MP4, MOV o WebM.',
+            'metaAdVideo.max' => 'El video del anuncio no puede superar los 50 MB.',
+        ]);
+    }
+
+    public function saveMetaAdVideo(CloudinaryImageService $cloudinary): void
+    {
+        if (! $this->form->id) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Guarda el producto antes de subir el video del anuncio.',
+            ]);
+
+            return;
+        }
+
+        $this->validate([
+            'metaAdVideo' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/webm', 'max:51200'],
+        ], [
+            'metaAdVideo.mimetypes' => 'El video del anuncio debe estar en formato MP4, MOV o WebM.',
+            'metaAdVideo.max' => 'El video del anuncio no puede superar los 50 MB.',
+        ]);
+
+        $product = Product::findOrFail($this->form->id);
+        $data = $cloudinary->uploadAdVideo($this->metaAdVideo);
+        $previousPublicId = $product->meta_ad_video_public_id;
+
+        try {
+            $product->update([
+                'meta_ad_video_url' => $data['secure_url'],
+                'meta_ad_video_public_id' => $data['public_id'],
+            ]);
+        } catch (Throwable $exception) {
+            $cloudinary->delete($data['public_id'], 'video');
+            throw $exception;
+        }
+
+        if ($previousPublicId) {
+            $cloudinary->delete($previousPublicId, 'video');
+        }
+
+        $this->metaAdVideoUrl = $data['secure_url'];
+        $this->metaAdVideoPublicId = $data['public_id'];
+        $this->metaAdVideo = null;
+        $this->resetValidation('metaAdVideo');
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Video para anuncio guardado.',
+        ]);
+    }
+
+    public function deleteMetaAdVideo(CloudinaryImageService $cloudinary): void
+    {
+        if (! $this->form->id) {
+            return;
+        }
+
+        $product = Product::findOrFail($this->form->id);
+        $publicId = $product->meta_ad_video_public_id;
+        $product->update([
+            'meta_ad_video_url' => null,
+            'meta_ad_video_public_id' => null,
+        ]);
+
+        if ($publicId) {
+            $cloudinary->delete($publicId, 'video');
+        }
+
+        $this->metaAdVideoUrl = null;
+        $this->metaAdVideoPublicId = null;
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Video para anuncio eliminado.',
+        ]);
+    }
+
+    /**
+     * Carga las campañas existentes de la cuenta publicitaria.
+     */
+    public function loadMetaCampaigns(bool $notify = true): void
+    {
+        $this->metaAdsError = null;
+        $this->metaAdsConfigured = $this->metaAdsService->isConfigured();
+
+        if (! $this->metaAdsConfigured) {
+            $this->metaCampaigns = [];
+
+            return;
+        }
+
+        try {
+            $this->metaCampaigns = $this->metaAdsService->campaigns();
+
+            if ($notify) {
+                $this->dispatch('notify', [
+                    'type' => 'success',
+                    'message' => 'Campañas de Meta cargadas.',
+                ]);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->metaCampaigns = [];
+            $this->metaAdsError = $exception->getMessage();
+
+            if ($notify) {
+                $this->dispatch('notify', [
+                    'type' => 'error',
+                    'message' => $this->metaAdsError,
+                ]);
+            }
+        }
+    }
+
+    public function updatedMetaCampaignId($value): void
+    {
+        $this->metaAdSetId = '';
+        $this->metaAdSets = [];
+        $this->metaAdsError = null;
+
+        if (! is_string($value) || trim($value) === '') {
+            return;
+        }
+
+        try {
+            $this->metaAdSets = $this->metaAdsService->adSets($value);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->metaAdsError = $exception->getMessage();
+        }
+    }
+
+    /**
+     * Crea un anuncio en pausa con la foto principal o el video del producto.
+     */
+    public function createMetaAd(): void
+    {
+        $this->validate([
+            'metaCampaignId' => ['required', 'string', 'max:64'],
+            'metaAdSetId' => ['required', 'string', 'max:64'],
+            'metaMediaType' => ['required', 'in:image,video'],
+            'metaPrimaryText' => ['required', 'string', 'max:2000'],
+            'metaHeadline' => ['required', 'string', 'max:40'],
+            'metaDescription' => ['nullable', 'string', 'max:200'],
+            'metaCta' => ['required', 'string', 'max:40'],
+            'metaDestinationUrl' => ['required', 'url', 'max:2048'],
+        ], [
+            'metaCampaignId.required' => 'Selecciona una campaña de Meta.',
+            'metaAdSetId.required' => 'Selecciona un conjunto de anuncios.',
+            'metaPrimaryText.required' => 'Escribe el texto principal del anuncio.',
+            'metaHeadline.required' => 'Escribe el titular del anuncio.',
+            'metaHeadline.max' => 'El titular no puede superar los 40 caracteres.',
+            'metaDestinationUrl.required' => 'Indica la URL de destino del anuncio.',
+        ]);
+
+        $product = $this->metaProduct();
+
+        if (! $product) {
+            $this->metaAdsError = 'Guarda el producto antes de crear su anuncio.';
+
+            return;
+        }
+
+        $campaignName = data_get(
+            collect($this->metaCampaigns)->firstWhere('id', $this->metaCampaignId),
+            'name'
+        );
+        $adSetName = data_get(
+            collect($this->metaAdSets)->firstWhere('id', $this->metaAdSetId),
+            'name'
+        );
+
+        try {
+            $record = $this->metaAdsService->createPausedAd($product, [
+                'campaign_id' => $this->metaCampaignId,
+                'campaign_name' => $campaignName,
+                'ad_set_id' => $this->metaAdSetId,
+                'ad_set_name' => $adSetName,
+                'media_type' => $this->metaMediaType,
+                'primary_text' => $this->metaPrimaryText,
+                'headline' => $this->metaHeadline,
+                'description' => $this->metaDescription,
+                'cta' => $this->metaCta,
+                'destination_url' => $this->metaDestinationUrl,
+            ], auth()->id());
+
+            $this->metaAdsError = null;
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Anuncio creado en pausa (ID '.$record->ad_id.'). Actívalo en Meta Ads Manager cuando lo revises.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->metaAdsError = $exception->getMessage();
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => $this->metaAdsError,
+            ]);
+        }
+    }
+
+    public function refreshMetaAd(int $id): void
+    {
+        $product = $this->metaProduct();
+        $record = $product?->metaAds()->find($id);
+
+        if (! $record) {
+            return;
+        }
+
+        try {
+            $this->metaAdsService->refreshStatus($record);
+            $this->metaAdsError = null;
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Estado del anuncio actualizado.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->metaAdsError = $exception->getMessage();
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => $this->metaAdsError,
+            ]);
+        }
+    }
+
+    private function resetMetaForm(): void
+    {
+        $this->metaAdsError = null;
+        $this->metaCampaigns = [];
+        $this->metaAdSets = [];
+        $this->metaCampaignId = '';
+        $this->metaAdSetId = '';
+        $this->metaMediaType = 'image';
+        $this->metaPrimaryText = '';
+        $this->metaHeadline = '';
+        $this->metaDescription = '';
+        $this->metaCta = (string) config('meta.ads.default_cta', 'SHOP_NOW');
+        $this->metaDestinationUrl = '';
+        $this->metaAdsConfigured = $this->metaAdsService->isConfigured();
+    }
+
+    private function metaProduct(): ?Product
+    {
+        if (! $this->form->id) {
+            return null;
+        }
+
+        return Product::with(['variants.images'])->find($this->form->id);
     }
 
     /*
@@ -568,6 +932,7 @@ class Form extends Component
 
         $this->supplierVariantForm->product_variant_id = $variant->id;
 
+        $this->currentStep = 4;
         $this->resetValidation();
     }
 
@@ -682,7 +1047,7 @@ class Form extends Component
                 return;
             }
 
-            $this->supplierVariantService->update(
+            $supplierVariant = $this->supplierVariantService->update(
                 $supplierVariant,
                 $this->supplierVariantForm->toDto()
             );
@@ -695,7 +1060,7 @@ class Form extends Component
             |--------------------------------------------------------------------------
             */
 
-            $this->supplierVariantService->create(
+            $supplierVariant = $this->supplierVariantService->create(
                 $this->supplierVariantForm->toDto()
             );
 
@@ -707,7 +1072,7 @@ class Form extends Component
             'message' => $message,
         ]);
 
-        $this->supplierVariantForm->resetForm();
+        $this->supplierVariantForm->fromModel($supplierVariant);
 
         $this->resetValidation();
     }
@@ -1005,6 +1370,10 @@ class Form extends Component
 
     public function render()
     {
+        $product = $this->form->id
+            ? $this->repository->find($this->form->id)
+            : null;
+
         $variants = collect();
 
         if ($this->form->id) {
@@ -1061,6 +1430,30 @@ class Form extends Component
 
         $galleryVariant = $this->galleryVariant();
 
+        $metaAds = $product?->metaAds()->latest()->get() ?? collect();
+        $metaImage = $product?->coverImage();
+        $metaVideo = $product?->meta_ad_video_url ?: $product?->video_url;
+        $metaAdsReady = $product !== null
+            && $product->status
+            && $product->is_visible
+            && $product->hasStock()
+            && filled($metaImage);
+
+        $readiness = $this->readiness->assess(
+            $product ?? new Product,
+            [
+                'name' => $this->form->name,
+                'category_id' => $this->form->category_id,
+                'slug' => $this->form->slug,
+                'short_description' => $this->form->short_description,
+                'description' => $this->form->description,
+                'seo_title' => $this->form->seo_title,
+                'seo_description' => $this->form->seo_description,
+                'status' => $this->form->status,
+                'is_visible' => $this->form->is_visible,
+            ],
+        );
+
         return view(
             'livewire.admin.catalog.products.form',
             [
@@ -1082,6 +1475,18 @@ class Form extends Component
                 'suppliers' => $suppliers,
 
                 'galleryVariant' => $galleryVariant,
+
+                'product' => $product,
+
+                'metaAds' => $metaAds,
+
+                'metaImage' => $metaImage,
+
+                'metaVideo' => $metaVideo,
+
+                'metaAdsReady' => $metaAdsReady,
+
+                'readiness' => $readiness,
             ]
         );
     }

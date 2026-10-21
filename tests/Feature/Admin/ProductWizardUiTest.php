@@ -120,7 +120,9 @@ class ProductWizardUiTest extends TestCase
             ->set('supplierVariantForm.minimum_stock', '1')
             ->set('supplierVariantForm.estimated_dispatch_days', '2')
             ->call('saveSupplierVariant')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertSee('Editar proveedor')
+            ->assertSee('Actualizar proveedor');
 
         $this->assertDatabaseHas('supplier_variants', [
             'supplier_id' => $supplier->id,

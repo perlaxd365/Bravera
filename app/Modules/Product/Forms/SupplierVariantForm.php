@@ -145,7 +145,7 @@ class SupplierVariantForm extends Form
         return [
             'supplier_id.required' => 'El proveedor es obligatorio.',
             'supplier_id.exists' => 'El proveedor seleccionado no es válido.',
-            'supplier_id.unique' => 'Este proveedor ya está asociado a la variante.',
+            'supplier_id.unique' => 'Este proveedor ya está asociado a esta variante. Edita el registro existente o pulsa Limpiar para agregar otro.',
 
             'product_variant_id.required' => 'La variante es obligatoria.',
             'product_variant_id.exists' => 'La variante seleccionada no es válida.',

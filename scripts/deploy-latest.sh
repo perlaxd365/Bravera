@@ -17,6 +17,7 @@ for path in \
   "resources/views/store/layouts/partials/footer.blade.php" \
   "app/Livewire/Admin/Dashboard/Index.php" \
   "resources/views/livewire/admin/dashboard/index.blade.php" \
+  "app/Livewire/Admin/Catalog/Products/Form.php" \
   "app/Modules/Product/Forms/SupplierVariantForm.php" \
   "public/images/social" \
   "public/build"
@@ -34,6 +35,7 @@ git restore --source="origin/${BRANCH}" --worktree -- \
   resources/views/store/layouts/partials/footer.blade.php \
   app/Livewire/Admin/Dashboard/Index.php \
   resources/views/livewire/admin/dashboard/index.blade.php \
+  app/Livewire/Admin/Catalog/Products/Form.php \
   app/Modules/Product/Forms/SupplierVariantForm.php \
   public/images/social \
   public/build
