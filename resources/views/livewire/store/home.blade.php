@@ -99,19 +99,18 @@
         </section>
     @endif
 
-    {{-- Carrusel editorial: avance pausado en escritorio y navegación manual en táctil. --}}
+    {{-- Carrusel editorial con avance automático pausable en cualquier dispositivo. --}}
     @if ($allCategories->isNotEmpty())
         <section x-data="{
             timer: null,
             paused: false,
             userPaused: false,
+            visible: false,
+            observer: null,
             active: 0,
             total: @js($allCategories->count()),
             progress: 0,
             reduced() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches },
-            touchLayout() {
-                return window.matchMedia('(pointer: coarse)').matches;
-            },
             step() {
                 const track = this.$refs.track;
                 const first = track?.firstElementChild;
@@ -146,29 +145,50 @@
             },
             start() {
                 this.stop();
-                if (this.userPaused || this.touchLayout() || this.reduced() || !this.$refs.viewport) return;
+                if (this.userPaused || !this.visible || this.reduced() || !this.$refs.viewport) return;
                 this.timer = setInterval(() => { if (!this.paused) this.move() }, 7000);
             },
             stop() { clearInterval(this.timer); this.timer = null },
+            observeVisibility() {
+                if (!('IntersectionObserver' in window)) {
+                    this.visible = true;
+                    this.start();
+                    return;
+                }
+
+                this.observer = new IntersectionObserver(([entry]) => {
+                    this.visible = Boolean(entry?.isIntersecting);
+                    this.visible ? this.start() : this.stop();
+                }, { threshold: 0.2 });
+
+                this.observer.observe(this.$el);
+            },
             toggleAutoplay() {
                 this.userPaused = !this.userPaused;
-                this.userPaused ? this.stop() : this.start();
+                if (this.userPaused) {
+                    this.stop();
+                    return;
+                }
+                this.paused = false;
+                this.start();
+            },
+            interact() {
+                this.userPaused = true;
+                this.stop();
             },
             nudge(direction) {
                 const viewport = this.$refs.viewport;
                 if (!viewport) return;
-                this.userPaused = true;
-                this.stop();
+                this.interact();
                 viewport.scrollBy({
                     left: direction * viewport.clientWidth * 0.82,
                     behavior: this.reduced() ? 'auto' : 'smooth',
                 });
             }
         }"
-            x-init="$nextTick(() => { sync(); start(); })"
+            x-init="$nextTick(() => { sync(); observeVisibility(); })"
             @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
             @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="sync(); start()"
-            @touchstart.passive="paused = true" @touchend.passive="paused = false"
             class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
                 <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
@@ -206,6 +226,7 @@
                 <div x-ref="viewport" class="category-carousel-viewport" role="region"
                     aria-label="Explora categorías destacadas" tabindex="0"
                     @scroll.debounce.100ms="sync()"
+                    @touchstart.passive="interact()"
                     @keydown.arrow-left.prevent="nudge(-1)"
                     @keydown.arrow-right.prevent="nudge(1)">
                     <div x-ref="track" class="category-carousel flex gap-4 pb-2 sm:gap-5 lg:gap-6" data-direction="1">
@@ -236,6 +257,9 @@
                         </span>
                     </div>
                     <div class="ml-auto flex gap-2">
+                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? 'Reanudar rotación' : 'Pausar rotación'"
+                            class="min-h-11 rounded-full border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 shadow-sm transition active:scale-95"
+                            x-text="userPaused ? 'Reanudar' : 'Pausar'">Pausar</button>
                         <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
                             class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
                             <flux:icon name="chevron-left" class="size-4" />
