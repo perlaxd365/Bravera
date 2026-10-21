@@ -14,6 +14,8 @@ mkdir -p "${BACKUP}"
 
 for path in \
   "config/seo.php" \
+  "app/Livewire/Store/Home.php" \
+  "resources/views/livewire/store/home.blade.php" \
   "resources/views/store/layouts/partials/footer.blade.php" \
   "app/Livewire/Admin/Dashboard/Index.php" \
   "resources/views/livewire/admin/dashboard/index.blade.php" \
@@ -41,6 +43,8 @@ git fetch origin "${BRANCH}"
 
 git restore --source="origin/${BRANCH}" --worktree -- \
   config/seo.php \
+  app/Livewire/Store/Home.php \
+  resources/views/livewire/store/home.blade.php \
   resources/views/store/layouts/partials/footer.blade.php \
   app/Livewire/Admin/Dashboard/Index.php \
   resources/views/livewire/admin/dashboard/index.blade.php \

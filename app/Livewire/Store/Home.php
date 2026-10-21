@@ -6,6 +6,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\HomepageSetting;
 use App\Models\Product;
+use App\Support\Seo\CatalogLinks;
+use App\Support\Seo\StructuredData;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -47,19 +49,21 @@ class Home extends Component
             ->limit(12)
             ->get();
 
-        $primaryCategories = Category::query()
-            ->where('is_visible', true)
-            ->whereNull('parent_id')
-            ->whereIn('slug', ['hombre', 'mujer', 'nino', 'nina'])
-            ->orderBy('position')
-            ->get();
-
-        $categories = Category::query()
-            ->where('is_visible', true)
-            ->whereNull('parent_id')
-            ->whereNotIn('slug', ['hombre', 'mujer', 'nino', 'nina'])
-            ->orderBy('position')
-            ->limit(8)
+        $christmasProducts = Product::query()
+            ->active()
+            ->visible()
+            ->whereHas('category', fn ($query) => $query
+                ->where('path', 'navidad')
+                ->orWhere('path', 'like', 'navidad/%'))
+            ->with(['category', 'variants.images', 'variants.supplierVariants.supplier'])
+            ->whereHas('variants', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
+                        ->active()
+                        ->whereColumn('stock', '>', 'reserved_stock'));
+            })
+            ->latest()
+            ->limit(6)
             ->get();
 
         $categoryFallbacks = [
@@ -74,8 +78,9 @@ class Home extends Component
             'general' => 'https://images.pexels.com/photos/34373606/pexels-photo-34373606.jpeg?auto=compress&cs=tinysrgb&w=1000',
         ];
 
-        $allCategories = $primaryCategories->concat($categories)->unique('id')->values();
-        $discoveryCategory = $categories->first() ?? $allCategories->first();
+        $curatedCategories = CatalogLinks::curated();
+        $allCategories = CatalogLinks::home(10);
+        $discoveryCategory = $allCategories->first();
 
         $allCategories->each(function (Category $category) use ($categoryFallbacks) {
             $label = mb_strtolower($category->name.' '.$category->path);
@@ -101,17 +106,82 @@ class Home extends Component
             ->get();
 
         $savedSettings = HomepageSetting::query()->first();
-        $heroSlides = $savedSettings?->hero_slides ?: config('homepage.slides', []);
+        $savedHeroSlides = collect($savedSettings?->hero_slides ?: config('homepage.slides', []));
+        $christmasSlides = $christmasProducts->take(3)->values()->map(function (Product $product, int $index): array {
+            $copy = [
+                [
+                    'eyebrow' => 'Navidad en casa',
+                    'title' => 'Detalles que iluminan',
+                    'highlight' => 'tu Navidad',
+                    'subtitle' => 'Coronas, ramos y guirnaldas para darle calidez a cada rincón.',
+                ],
+                [
+                    'eyebrow' => 'Momentos para compartir',
+                    'title' => 'Tu mesa, lista para',
+                    'highlight' => 'celebrar',
+                    'subtitle' => 'Pequeños detalles que hacen que diciembre se sienta especial.',
+                ],
+                [
+                    'eyebrow' => 'Decora a tu estilo',
+                    'title' => 'Una Navidad con',
+                    'highlight' => 'tu personalidad',
+                    'subtitle' => 'Encuentra piezas navideñas para transformar tu casa sin complicarte.',
+                ],
+            ][$index] ?? [];
+
+            return [
+                ...$copy,
+                'image' => $product->coverImageModel()?->sizedUrl(1600),
+                'cta' => 'Ver el producto',
+                'url' => route('store.product', ['slug' => $product->slug]),
+                'tone' => 'christmas',
+            ];
+        })->filter(fn (array $slide): bool => filled($slide['image'] ?? null))->values();
+
+        $heroSlides = $savedHeroSlides
+            ->take(2)
+            ->merge($christmasSlides)
+            ->merge($savedHeroSlides->slice(2))
+            ->unique(fn (array $slide): string => (string) ($slide['image'] ?? ''))
+            ->take(9)
+            ->values()
+            ->all();
         $heroFallbackImage = config('homepage.slides.0.image');
         $homeTexts = array_merge(config('homepage.texts', []), $savedSettings?->section_texts ?? []);
-        $offerPhrases = $savedSettings?->rotating_phrases ?: config('homepage.rotating_phrases', []);
-        $rotatingProducts = $featured->take(6)->values()->map(fn (Product $product, int $index) => [
-            'phrase' => $offerPhrases[$index % max(1, count($offerPhrases))] ?? 'Encuentra algo especial',
-            'name' => $product->name,
-            'image' => $product->coverImageModel()?->sizedUrl(180),
-            'url' => route('store.product', ['slug' => $product->slug]),
-        ])->values();
+        $promoTickerPhrases = [
+            'Navidad empieza en casa',
+            'Detalles que se sienten como regalo',
+            'Decora sin complicarte',
+            'Momentos para compartir',
+            'Ilumina cada rincón',
+            'Un detalle especial',
+        ];
+        $promoTickerItems = $christmasProducts->values()
+            ->map(function (Product $product, int $index) use ($promoTickerPhrases): array {
+                return [
+                    'eyebrow' => $promoTickerPhrases[$index % count($promoTickerPhrases)],
+                    'name' => $product->name,
+                    'image' => $product->coverImageModel()?->sizedUrl(220),
+                    'url' => route('store.product', ['slug' => $product->slug]),
+                ];
+            })
+            ->filter(fn (array $item): bool => filled($item['image']))
+            ->values()
+            ->all();
 
-        return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'rotatingProducts', 'homeTexts'));
+        $seoTitle = 'Brevare | Moda, tecnología, hogar y regalos en Perú';
+        $seoDescription = 'Compra moda, tecnología, hogar y regalos en Brevare. Envíos a todo el Perú, pagos seguros y atención cercana.';
+        $seoImage = $heroSlides[0]['image'] ?? asset('favicon-192.png');
+
+        return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'promoTickerItems', 'homeTexts'))
+            ->title($seoTitle)
+            ->layoutData([
+                'seoDescription' => $seoDescription,
+                'seoImage' => $seoImage,
+                'canonicalUrl' => route('home'),
+                'pageStructuredData' => [
+                    StructuredData::homeCategoryList($curatedCategories),
+                ],
+            ]);
     }
 }

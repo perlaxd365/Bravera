@@ -4,18 +4,32 @@
         <x-brevare.review-credentials />
     </div>
 
-    {{-- Descubrimiento destacado: una pausa editorial entre navegación y campaña. --}}
-    @if ($rotatingProducts->isNotEmpty())
-        <section x-data="{ items: @js($rotatingProducts), active: 0, timer: null, paused: false, next() { this.active = (this.active + 1) % this.items.length }, start() { this.stop(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.items.length > 1) this.timer = setInterval(() => { if (!this.paused) this.next() }, 4800) }, stop() { clearInterval(this.timer); this.timer = null } }"
-            x-init="start()" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
-            class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
-            <a :href="items[active].url" class="group flex min-h-[58px] items-center justify-between gap-4 rounded-2xl bg-[#f8f5ed] px-4 py-2.5 transition-colors hover:bg-amber-50 sm:px-5">
-                <span class="flex min-w-0 items-center gap-3">
-                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-amber-800"><flux:icon name="sparkles" class="size-4" /></span>
-                    <span class="min-w-0"><span class="block text-[10px] font-bold uppercase tracking-[.16em] text-amber-900/65" x-text="items[active].phrase"></span><span class="block truncate text-sm font-semibold text-gray-900" x-text="items[active].name"></span></span>
-                </span>
-                <span class="flex shrink-0 items-center gap-3"><img :src="items[active].image" alt="" class="size-10 rounded-xl object-cover" x-show="items[active].image" onerror="this.remove()"><span class="hidden text-sm font-semibold text-gray-800 sm:inline">Descubrir <span aria-hidden="true">↗</span></span></span>
-            </a>
+    {{-- Franja promocional animada con fotografías reales del catálogo navideño. --}}
+    @if ($promoTickerItems !== [])
+        <section class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:mt-5 lg:px-10"
+            aria-label="Ideas navideñas de Brevare">
+            <div class="home-promo-ticker">
+                <div class="home-promo-track">
+                    @foreach ([false, true] as $duplicate)
+                        <div class="home-promo-group" @if ($duplicate) aria-hidden="true" @endif>
+                            @foreach ($promoTickerItems as $item)
+                                <a href="{{ $item['url'] }}" @if ($duplicate) tabindex="-1" @endif
+                                    class="home-promo-card group">
+                                    <span class="home-promo-media">
+                                        <img src="{{ $item['image'] }}" alt="{{ $duplicate ? '' : $item['name'] }}"
+                                            loading="lazy" decoding="async">
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block text-[9px] font-bold uppercase tracking-[.17em] text-amber-800/75">{{ $item['eyebrow'] }}</span>
+                                        <span class="mt-0.5 block truncate text-sm font-semibold text-stone-950 sm:text-[15px]">{{ $item['name'] }}</span>
+                                    </span>
+                                    <span class="home-promo-cta">Ver <span aria-hidden="true">↗</span></span>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </section>
     @endif
 
@@ -28,30 +42,31 @@
             next() { this.active = (this.active + 1) % this.slides.length },
             prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
             go(i) { this.active = i },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 4000) },
+            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 2000) },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
             @visibilitychange.window="document.hidden ? stop() : start()"
             class="mx-auto mt-5 max-w-screen-2xl px-4 sm:mt-7 sm:px-6 lg:px-10">
             <div class="home-hero relative overflow-hidden rounded-[1.75rem] bg-[#f5f2eb] sm:rounded-[2.25rem]">
-                <div class="home-hero-grid grid min-h-[540px] lg:grid-cols-[.9fr_1.1fr]">
-                    <div class="home-hero-copy order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-10 lg:order-1 lg:px-14 lg:py-14 xl:px-[4.5rem]">
+                <div class="home-hero-grid grid min-h-[459px] lg:grid-cols-[.9fr_1.1fr]">
+                    <div class="home-hero-copy order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-9 lg:order-1 lg:px-14 lg:py-10 xl:px-[4.5rem]">
                         <template x-for="(slide, i) in slides" :key="'copy-' + i">
-                            <div x-show="i === active" x-transition:enter="transition ease-out duration-700" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-350" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="home-hero-slide">
+                            <div x-show="i === active" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="home-hero-slide">
                                 <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70 sm:text-xs" x-text="slide.eyebrow"></p>
-                                <h1 class="mt-4 max-w-xl text-[2.35rem] font-semibold leading-[1.04] tracking-[-.045em] text-[#171714] sm:text-5xl lg:text-[3.8rem] xl:text-[4.2rem]">
-                                    <span x-text="slide.title"></span>
-                                    <span class="text-amber-700" x-text="slide.highlight"></span>
+                                <h1 class="mt-3 max-w-xl text-[2.1rem] font-semibold leading-[1.04] tracking-[-.045em] text-[#171714] sm:text-[2.75rem] lg:text-[3.35rem] xl:text-[3.65rem]">
+                                    <span class="sr-only">Brevare: </span>
+                                    <span x-text="slide.title">Regalos que llegan</span>
+                                    <span class="text-amber-700" x-text="slide.highlight">con ilusión</span>
                                 </h1>
-                                <p class="mt-5 max-w-md text-base leading-7 text-gray-600 sm:text-lg sm:leading-8" x-text="slide.subtitle"></p>
-                                <a :href="slide.url" class="mt-7 inline-flex min-h-12 items-center gap-3 rounded-full bg-[#171714] px-6 text-sm font-semibold text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-900">
+                                <p class="mt-4 max-w-md text-sm leading-6 text-gray-600 sm:text-base sm:leading-7" x-text="slide.subtitle"></p>
+                                <a :href="slide.url" class="mt-5 inline-flex min-h-11 items-center gap-3 rounded-full bg-[#171714] px-6 text-sm font-semibold text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-900">
                                     <span x-text="slide.cta"></span><span aria-hidden="true">↗</span>
                                 </a>
                             </div>
                         </template>
 
-                        <div class="home-hero-controls mt-10 flex items-center gap-4 sm:mt-14">
+                        <div class="home-hero-controls mt-8 flex items-center gap-4 sm:mt-10">
                             <button type="button" @click="prev()" aria-label="Portada anterior" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
                                 <flux:icon name="chevron-left" class="size-5" />
                             </button>
@@ -69,13 +84,14 @@
                         </div>
                     </div>
 
-                    <div class="home-hero-image relative order-1 h-[250px] overflow-hidden bg-[#e6e0d4] sm:h-[360px] lg:order-2 lg:h-full lg:min-h-[540px]">
+                    <div class="home-hero-image relative order-1 h-[212px] overflow-hidden bg-[#e6e0d4] sm:h-[306px] lg:order-2 lg:h-full lg:min-h-[459px]">
                         <template x-for="(slide, i) in slides" :key="'image-' + i">
-                            <div x-show="i === active" x-transition.opacity.duration.700ms x-cloak class="absolute inset-0">
+                            <div x-show="i === active" x-transition.opacity.duration.500ms x-cloak class="absolute inset-0">
                                 <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" :class="i === active ? 'home-hero-photo-active' : ''" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="home-hero-photo h-full w-full object-cover">
                                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:to-black/[.04]"></div>
                             </div>
                         </template>
+                        <span class="home-hero-snow" aria-hidden="true"></span>
                         <span class="absolute bottom-4 right-4 rounded-full border border-white/50 bg-white/75 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.16em] text-gray-800 backdrop-blur-md sm:bottom-6 sm:right-6">Brevare · Perú</span>
                     </div>
                 </div>
@@ -83,16 +99,18 @@
         </section>
     @endif
 
-    {{-- Categorías en una vitrina de avance automático, sin controles ni scroll manual. --}}
+    {{-- Carrusel editorial: avance pausado en escritorio y navegación manual en táctil. --}}
     @if ($allCategories->isNotEmpty())
         <section x-data="{
             timer: null,
-            resumeTimer: null,
             paused: false,
+            userPaused: false,
+            active: 0,
+            total: @js($allCategories->count()),
+            progress: 0,
             reduced() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches },
             touchLayout() {
-                return window.matchMedia('(max-width: 639px)').matches
-                    || window.matchMedia('(pointer: coarse)').matches;
+                return window.matchMedia('(pointer: coarse)').matches;
             },
             step() {
                 const track = this.$refs.track;
@@ -100,6 +118,17 @@
                 if (!first) return 0;
                 const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
                 return first.getBoundingClientRect().width + gap;
+            },
+            sync() {
+                const viewport = this.$refs.viewport;
+                if (!viewport) return;
+                const step = this.step();
+                this.active = step > 0
+                    ? Math.min(this.total - 1, Math.max(0, Math.round(viewport.scrollLeft / step)))
+                    : 0;
+                this.progress = viewport.scrollWidth > 0
+                    ? Math.min(1, (viewport.scrollLeft + viewport.clientWidth) / viewport.scrollWidth)
+                    : 1;
             },
             move() {
                 const viewport = this.$refs.viewport;
@@ -117,24 +146,28 @@
             },
             start() {
                 this.stop();
-                if (this.touchLayout() || this.reduced() || !this.$refs.viewport) return;
-                this.timer = setInterval(() => { if (!this.paused) this.move() }, 6500);
+                if (this.userPaused || this.touchLayout() || this.reduced() || !this.$refs.viewport) return;
+                this.timer = setInterval(() => { if (!this.paused) this.move() }, 7000);
             },
             stop() { clearInterval(this.timer); this.timer = null },
+            toggleAutoplay() {
+                this.userPaused = !this.userPaused;
+                this.userPaused ? this.stop() : this.start();
+            },
             nudge(direction) {
                 const viewport = this.$refs.viewport;
                 if (!viewport) return;
-                this.paused = true;
+                this.userPaused = true;
+                this.stop();
                 viewport.scrollBy({
                     left: direction * viewport.clientWidth * 0.82,
                     behavior: this.reduced() ? 'auto' : 'smooth',
                 });
-                clearTimeout(this.resumeTimer);
-                this.resumeTimer = setTimeout(() => { this.paused = false }, 5000);
             }
         }"
-            x-init="start()" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
-            @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="start()"
+            x-init="$nextTick(() => { sync(); start(); })"
+            @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false"
+            @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="sync(); start()"
             @touchstart.passive="paused = true" @touchend.passive="paused = false"
             class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
@@ -144,11 +177,37 @@
                         <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl lg:text-[2.5rem]">Un buen hallazgo empieza aquí.</h2>
                         <p class="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">Explora colecciones elegidas para acompañar tus días.</p>
                     </div>
-                    <a href="{{ route('store.search') }}" class="mb-1 hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">Ver todas <span class="ml-1" aria-hidden="true">↗</span></a>
+                    <div class="hidden items-center gap-3 sm:flex">
+                        <div class="mr-2 text-right">
+                            <p class="text-[10px] font-bold uppercase tracking-[.16em] text-stone-500">
+                                <span x-text="String(active + 1).padStart(2, '0')">01</span>
+                                <span class="text-stone-400">/ {{ str_pad((string) $allCategories->count(), 2, '0', STR_PAD_LEFT) }}</span>
+                            </p>
+                            <span class="mt-2 block h-px w-24 overflow-hidden bg-stone-900/10" aria-hidden="true">
+                                <span class="block h-full origin-left bg-amber-700 transition-transform duration-500 ease-out"
+                                    :style="`transform: scaleX(${progress})`"></span>
+                            </span>
+                        </div>
+                        <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
+                            class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+                            <flux:icon name="chevron-left" class="size-4" />
+                        </button>
+                        <button type="button" @click="nudge(1)" aria-label="Categorías siguientes"
+                            class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+                            <flux:icon name="chevron-right" class="size-4" />
+                        </button>
+                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? 'Reanudar rotación' : 'Pausar rotación'"
+                            class="ml-1 min-h-11 rounded-full px-3 text-xs font-semibold text-stone-600 transition hover:text-stone-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+                            x-text="userPaused ? 'Reanudar' : 'Pausar'">Pausar</button>
+                        <a href="{{ route('store.search') }}" class="ml-1 text-sm font-semibold text-gray-700 transition hover:text-amber-800">Ver todas <span class="ml-1" aria-hidden="true">↗</span></a>
+                    </div>
                 </div>
 
                 <div x-ref="viewport" class="category-carousel-viewport" role="region"
-                    aria-label="Explora categorías" tabindex="0">
+                    aria-label="Explora categorías destacadas" tabindex="0"
+                    @scroll.debounce.100ms="sync()"
+                    @keydown.arrow-left.prevent="nudge(-1)"
+                    @keydown.arrow-right.prevent="nudge(1)">
                     <div x-ref="track" class="category-carousel flex gap-4 pb-2 sm:gap-5 lg:gap-6" data-direction="1">
                     @foreach ($allCategories as $category)
                         <a href="{{ route('store.category', ['path' => $category->path]) }}" class="home-category-card group relative isolate flex min-h-[270px] shrink-0 items-end overflow-hidden rounded-[1.5rem] bg-[#e8e3da] text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700 sm:min-h-[340px] sm:rounded-[1.8rem] lg:min-h-[390px]">
@@ -157,7 +216,7 @@
                             <span class="relative flex w-full items-end justify-between gap-3 p-5 sm:p-6 lg:p-7">
                                 <span class="min-w-0">
                                     <span class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-white/80">Colección Brevare</span>
-                                    <span class="block truncate text-2xl font-semibold tracking-[-.03em] sm:text-3xl">{{ $category->name }}</span>
+                                    <span class="block truncate text-2xl font-semibold tracking-[-.03em] sm:text-3xl">{{ $category->seo_label ?? $category->name }}</span>
                                 </span>
                                 <span class="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/15 text-white backdrop-blur-md transition group-hover:border-white group-hover:bg-white group-hover:text-gray-900" aria-hidden="true"><span class="text-xl leading-none">↗</span></span>
                             </span>
@@ -165,15 +224,25 @@
                     @endforeach
                     </div>
                 </div>
-                <div class="mt-3 flex items-center justify-between gap-3 sm:hidden">
-                    <div class="flex gap-2">
+                <div class="mt-4 flex items-center justify-between gap-3 sm:hidden">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-[.16em] text-stone-500">
+                            <span x-text="String(active + 1).padStart(2, '0')">01</span>
+                            <span class="text-stone-400">/ {{ str_pad((string) $allCategories->count(), 2, '0', STR_PAD_LEFT) }}</span>
+                        </p>
+                        <span class="mt-2 block h-px w-20 overflow-hidden bg-stone-900/10" aria-hidden="true">
+                            <span class="block h-full origin-left bg-amber-700 transition-transform duration-500 ease-out"
+                                :style="`transform: scaleX(${progress})`"></span>
+                        </span>
+                    </div>
+                    <div class="ml-auto flex gap-2">
                         <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
-                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-gray-800 shadow-sm active:scale-95">
-                            ←
+                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
+                            <flux:icon name="chevron-left" class="size-4" />
                         </button>
                         <button type="button" @click="nudge(1)" aria-label="Categorías siguientes"
-                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-gray-800 shadow-sm active:scale-95">
-                            →
+                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
+                            <flux:icon name="chevron-right" class="size-4" />
                         </button>
                     </div>
                     <a href="{{ route('store.search') }}" class="text-xs font-semibold text-gray-800">Ver todas ↗</a>
@@ -204,12 +273,12 @@
                         <span class="relative max-w-lg p-6 text-white sm:p-9 lg:p-11">
                             <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">Más para descubrir</span>
                             <span class="mt-2 block text-3xl font-semibold leading-tight tracking-[-.035em] sm:text-4xl">Pequeños detalles. Grandes momentos.</span>
-                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">Explora {{ $discoveryCategory->name }} <span aria-hidden="true">↗</span></span>
+                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">Explora {{ $discoveryCategory->seo_label ?? $discoveryCategory->name }} <span aria-hidden="true">↗</span></span>
                         </span>
                     </a>
                 </div>
             @else
-                <div class="home-product-grid grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+                <div class="home-product-grid grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                     @foreach ($featured as $product)
                         <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
                     @endforeach
@@ -224,7 +293,7 @@
                 <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Recién llegados</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2></div>
                 <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">Descubrir novedades ↗</a>
             </div>
-            <div class="home-product-grid grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+            <div class="home-product-grid grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                 @foreach ($latest as $product)
                     <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
                 @endforeach
