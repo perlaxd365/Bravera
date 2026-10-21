@@ -146,7 +146,7 @@
             start() {
                 this.stop();
                 if (this.userPaused || !this.visible || this.reduced() || !this.$refs.viewport) return;
-                this.timer = setInterval(() => { if (!this.paused) this.move() }, 7000);
+                this.timer = setInterval(() => { if (!this.paused) this.move() }, 3000);
             },
             stop() { clearInterval(this.timer); this.timer = null },
             observeVisibility() {
