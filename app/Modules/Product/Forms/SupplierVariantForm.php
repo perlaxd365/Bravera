@@ -18,21 +18,21 @@ class SupplierVariantForm extends Form
 
     public ?string $supplier_product_url = null;
 
-    public float $cost_price = 0;
+    public ?float $cost_price = 0;
 
-    public float $shipping_cost = 0;
+    public ?float $shipping_cost = 0;
 
-    public float $supplier_sale_price = 0;
+    public ?float $supplier_sale_price = 0;
 
-    public int $stock = 0;
+    public ?int $stock = 0;
 
-    public int $reserved_stock = 0;
+    public ?int $reserved_stock = 0;
 
-    public int $minimum_stock = 0;
+    public ?int $minimum_stock = 0;
 
     public ?array $extra_data = null;
 
-    public int $estimated_dispatch_days = 1;
+    public ?int $estimated_dispatch_days = 1;
 
     public bool $is_default = false;
 

@@ -17,6 +17,7 @@ for path in \
   "resources/views/store/layouts/partials/footer.blade.php" \
   "app/Livewire/Admin/Dashboard/Index.php" \
   "resources/views/livewire/admin/dashboard/index.blade.php" \
+  "app/Modules/Product/Forms/SupplierVariantForm.php" \
   "public/images/social" \
   "public/build"
 do
@@ -33,6 +34,7 @@ git restore --source="origin/${BRANCH}" --worktree -- \
   resources/views/store/layouts/partials/footer.blade.php \
   app/Livewire/Admin/Dashboard/Index.php \
   resources/views/livewire/admin/dashboard/index.blade.php \
+  app/Modules/Product/Forms/SupplierVariantForm.php \
   public/images/social \
   public/build
 
@@ -46,4 +48,4 @@ php artisan view:clear
 php artisan view:cache
 
 printf 'Respaldo: %s\n' "${BACKUP}"
-printf 'Redes sociales, indicador de integrantes y assets desplegados.\n'
+printf 'Redes sociales, dashboard y corrección de proveedores desplegados.\n'
