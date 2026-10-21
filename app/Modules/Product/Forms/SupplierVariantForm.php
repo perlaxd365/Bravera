@@ -4,6 +4,7 @@ namespace App\Modules\Product\Forms;
 
 use App\Models\SupplierVariant;
 use App\Modules\Product\DTO\SupplierVariantData;
+use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 class SupplierVariantForm extends Form
@@ -49,6 +50,12 @@ class SupplierVariantForm extends Form
             'supplier_id' => [
                 'required',
                 'exists:suppliers,id',
+                Rule::unique('supplier_variants', 'supplier_id')
+                    ->where(fn ($query) => $query->where(
+                        'product_variant_id',
+                        $this->product_variant_id,
+                    ))
+                    ->ignore($this->id),
             ],
 
             'product_variant_id' => [
@@ -138,6 +145,7 @@ class SupplierVariantForm extends Form
         return [
             'supplier_id.required' => 'El proveedor es obligatorio.',
             'supplier_id.exists' => 'El proveedor seleccionado no es válido.',
+            'supplier_id.unique' => 'Este proveedor ya está asociado a la variante.',
 
             'product_variant_id.required' => 'La variante es obligatoria.',
             'product_variant_id.exists' => 'La variante seleccionada no es válida.',

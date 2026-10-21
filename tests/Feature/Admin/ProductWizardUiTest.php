@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
+use App\Models\SupplierVariant;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\UserSeeder;
@@ -128,5 +129,97 @@ class ProductWizardUiTest extends TestCase
             'stock' => 12,
             'minimum_stock' => 1,
         ]);
+    }
+
+    public function test_full_product_registration_flow_saves_product_variant_and_supplier(): void
+    {
+        $this->actingAs(User::where('email', 'administracion@brevare.com')->firstOrFail());
+
+        $category = Category::create([
+            'name' => 'Hogar',
+            'slug' => 'hogar',
+            'path' => 'hogar',
+            'is_visible' => true,
+        ]);
+
+        $supplier = Supplier::create([
+            'code' => 'ENKASA-HOGAR-FULL',
+            'business_name' => 'Enkasa Hogar',
+            'status' => 'active',
+        ]);
+
+        $component = Livewire::test(Form::class)
+            ->call('create')
+            ->set('form.category_id', $category->id)
+            ->set('form.name', 'Juego de copas')
+            ->set('form.slug', 'juego-de-copas')
+            ->set('form.status', true)
+            ->set('form.is_visible', false)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('currentStep', 2);
+
+        $product = Product::where('slug', 'juego-de-copas')->firstOrFail();
+
+        $component
+            ->call('createVariant')
+            ->set('variantForm.sku', 'COPAS-001')
+            ->set('variantForm.cost_price', '30')
+            ->set('variantForm.sale_price', '100')
+            ->set('variantForm.retail_price', '100')
+            ->set('variantForm.discount_percent', '0')
+            ->call('saveVariant')
+            ->assertHasNoErrors();
+
+        $variant = ProductVariant::where('sku', 'COPAS-001')->firstOrFail();
+
+        $component
+            ->call('createSupplierVariant', $variant->id)
+            ->set('supplierVariantForm.supplier_id', $supplier->id)
+            ->set('supplierVariantForm.cost_price', '25.50')
+            ->set('supplierVariantForm.shipping_cost', '0')
+            ->set('supplierVariantForm.supplier_sale_price', '49.90')
+            ->set('supplierVariantForm.stock', '12')
+            ->set('supplierVariantForm.reserved_stock', '0')
+            ->set('supplierVariantForm.minimum_stock', '1')
+            ->set('supplierVariantForm.estimated_dispatch_days', '2')
+            ->call('saveSupplierVariant')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'name' => 'Juego de copas',
+        ]);
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $variant->id,
+            'sku' => 'COPAS-001',
+        ]);
+        $this->assertDatabaseHas('supplier_variants', [
+            'supplier_id' => $supplier->id,
+            'product_variant_id' => $variant->id,
+            'stock' => 12,
+        ]);
+
+        $component
+            ->call('createSupplierVariant', $variant->id)
+            ->set('supplierVariantForm.supplier_id', $supplier->id)
+            ->set('supplierVariantForm.cost_price', '25.50')
+            ->set('supplierVariantForm.shipping_cost', '0')
+            ->set('supplierVariantForm.supplier_sale_price', '49.90')
+            ->set('supplierVariantForm.stock', '8')
+            ->set('supplierVariantForm.reserved_stock', '0')
+            ->set('supplierVariantForm.minimum_stock', '1')
+            ->set('supplierVariantForm.estimated_dispatch_days', '2')
+            ->call('saveSupplierVariant')
+            ->assertHasErrors([
+                'supplierVariantForm.supplier_id' => ['unique'],
+            ]);
+
+        $this->assertSame(
+            1,
+            SupplierVariant::where('product_variant_id', $variant->id)
+                ->where('supplier_id', $supplier->id)
+                ->count(),
+        );
     }
 }
