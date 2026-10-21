@@ -203,6 +203,38 @@ class ProductWizardUiTest extends TestCase
         ]);
 
         $component
+            ->call('createVariant')
+            ->set('variantForm.sku', 'COPAS-002')
+            ->set('variantForm.cost_price', '30')
+            ->set('variantForm.sale_price', '100')
+            ->set('variantForm.retail_price', '100')
+            ->set('variantForm.discount_percent', '0')
+            ->call('saveVariant')
+            ->assertHasNoErrors();
+
+        $secondVariant = ProductVariant::where('sku', 'COPAS-002')->firstOrFail();
+
+        $component
+            ->call('createSupplierVariant', $secondVariant->id)
+            ->set('supplierVariantForm.supplier_id', $supplier->id)
+            ->set('supplierVariantForm.cost_price', '25.50')
+            ->set('supplierVariantForm.shipping_cost', '0')
+            ->set('supplierVariantForm.supplier_sale_price', '49.90')
+            ->set('supplierVariantForm.stock', '8')
+            ->set('supplierVariantForm.reserved_stock', '0')
+            ->set('supplierVariantForm.minimum_stock', '1')
+            ->set('supplierVariantForm.estimated_dispatch_days', '2')
+            ->call('saveSupplierVariant')
+            ->assertHasNoErrors();
+
+        $this->assertSame(
+            2,
+            SupplierVariant::where('supplier_id', $supplier->id)
+                ->distinct()
+                ->count('product_variant_id'),
+        );
+
+        $component
             ->call('createSupplierVariant', $variant->id)
             ->set('supplierVariantForm.supplier_id', $supplier->id)
             ->set('supplierVariantForm.cost_price', '25.50')
