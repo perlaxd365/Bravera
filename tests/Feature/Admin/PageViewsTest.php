@@ -65,7 +65,8 @@ class PageViewsTest extends TestCase
             ->assertSee('3 páginas vistas')
             ->assertViewHas('traffic', fn (array $traffic): bool => $traffic['visitorsToday'] === 2
                 && $traffic['visitorsYesterday'] === 1
-                && $traffic['pageViewsToday'] === 3);
+                && $traffic['pageViewsToday'] === 3
+                && $traffic['activeNow'] === 0);
     }
 
     public function test_dashboard_prefers_ga4_when_the_data_api_is_configured(): void
@@ -83,6 +84,7 @@ class PageViewsTest extends TestCase
                     'visitorsToday' => 18,
                     'visitorsYesterday' => 12,
                     'pageViewsToday' => 31,
+                    'activeNow' => 2,
                 ];
             }
         });
@@ -91,9 +93,11 @@ class PageViewsTest extends TestCase
 
         Livewire::test(DashboardIndex::class)
             ->assertSee('Google Analytics 4')
+            ->assertSee('2 personas activas ahora')
             ->assertViewHas('traffic', fn (array $traffic): bool => $traffic['visitorsToday'] === 18
                 && $traffic['visitorsYesterday'] === 12
-                && $traffic['pageViewsToday'] === 31)
+                && $traffic['pageViewsToday'] === 31
+                && $traffic['activeNow'] === 2)
             ->assertViewHas('trafficSource', 'ga4');
     }
 

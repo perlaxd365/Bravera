@@ -51,6 +51,15 @@ class GoogleAnalyticsServiceTest extends TestCase
                     ],
                 ],
             ]),
+            'https://analyticsdata.googleapis.com/v1beta/properties/123456789:runRealtimeReport' => Http::response([
+                'rows' => [
+                    [
+                        'metricValues' => [
+                            ['value' => '2'],
+                        ],
+                    ],
+                ],
+            ]),
         ]);
 
         $service = new class extends GoogleAnalyticsService
@@ -74,6 +83,7 @@ class GoogleAnalyticsServiceTest extends TestCase
         $this->assertSame(42, $traffic['visitorsToday']);
         $this->assertSame(35, $traffic['visitorsYesterday']);
         $this->assertSame(87, $traffic['pageViewsToday']);
+        $this->assertSame(2, $traffic['activeNow']);
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), ':runReport')
             && $request->hasHeader('Authorization', 'Bearer ga-test-token')
             && data_get($request->data(), 'metrics.0.name') === 'activeUsers'

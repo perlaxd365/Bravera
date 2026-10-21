@@ -76,6 +76,11 @@
             <p class="mt-1 text-xs text-sky-900/70">
                 {{ $traffic['pageViewsToday'] }} páginas vistas · ayer: {{ $traffic['visitorsYesterday'] }} personas
             </p>
+            @if ($trafficSource === 'ga4')
+                <p class="mt-1 text-xs font-semibold text-emerald-700">
+                    {{ $traffic['activeNow'] }} {{ $traffic['activeNow'] === 1 ? 'persona activa' : 'personas activas' }} ahora
+                </p>
+            @endif
             <p class="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-sky-800/75">
                 <span class="size-1.5 rounded-full {{ $trafficSource === 'ga4' ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
                 {{ $trafficSource === 'ga4' ? 'Google Analytics 4' : 'Contador local' }}

@@ -69,6 +69,7 @@ class Index extends Component
             'visitorsToday' => 0,
             'visitorsYesterday' => 0,
             'pageViewsToday' => 0,
+            'activeNow' => 0,
         ];
 
         if (Schema::hasTable('page_views')) {
@@ -86,6 +87,7 @@ class Index extends Component
                     ->distinct()
                     ->count('visitor_token'),
                 'pageViewsToday' => (clone $viewsToday)->count(),
+                'activeNow' => 0,
             ];
         }
 

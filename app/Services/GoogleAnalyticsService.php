@@ -27,7 +27,7 @@ class GoogleAnalyticsService
     }
 
     /**
-     * @return array{visitorsToday: int, visitorsYesterday: int, pageViewsToday: int}
+     * @return array{visitorsToday: int, visitorsYesterday: int, pageViewsToday: int, activeNow: int}
      */
     public function traffic(): array
     {
@@ -45,7 +45,7 @@ class GoogleAnalyticsService
     }
 
     /**
-     * @return array{visitorsToday: int, visitorsYesterday: int, pageViewsToday: int}
+     * @return array{visitorsToday: int, visitorsYesterday: int, pageViewsToday: int, activeNow: int}
      */
     private function requestTraffic(string $propertyId): array
     {
@@ -83,6 +83,7 @@ class GoogleAnalyticsService
             'visitorsToday' => 0,
             'visitorsYesterday' => 0,
             'pageViewsToday' => 0,
+            'activeNow' => 0,
         ];
 
         foreach ($response->json('rows', []) as $row) {
@@ -100,7 +101,41 @@ class GoogleAnalyticsService
             }
         }
 
+        try {
+            $traffic['activeNow'] = $this->realtimeActiveUsers($propertyId, $accessToken);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
         return $traffic;
+    }
+
+    private function realtimeActiveUsers(string $propertyId, string $accessToken): int
+    {
+        $response = Http::withToken($accessToken)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(10)
+            ->post(
+                sprintf(
+                    'https://analyticsdata.googleapis.com/v1beta/properties/%s:runRealtimeReport',
+                    $propertyId,
+                ),
+                [
+                    'metrics' => [
+                        ['name' => 'activeUsers'],
+                    ],
+                    'limit' => 1,
+                ],
+            );
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                'Google Analytics rechazó la consulta en tiempo real con estado '.$response->status().'.',
+            );
+        }
+
+        return (int) data_get($response->json(), 'rows.0.metricValues.0.value', 0);
     }
 
     /**
