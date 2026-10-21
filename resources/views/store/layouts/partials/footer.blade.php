@@ -100,28 +100,110 @@
                 <ul class="mt-4 space-y-3 text-sm">
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('claims') }}">Libro de Reclamaciones</a></li>
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}">Cambios y devoluciones</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('terms') }}">Información de compra</a></li>
                 </ul>
             </div>
             <div>
                 <p class="text-sm font-semibold text-gray-900">Legal</p>
                 <ul class="mt-4 space-y-3 text-sm">
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('terms') }}" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}" target="_blank" rel="noopener noreferrer">Política de Cambios y Devoluciones</a></li>
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('privacy') }}" target="_blank" rel="noopener noreferrer">Política de Privacidad</a></li>
                     <li><button type="button" onclick="window.BrevareConsent?.open()" class="text-gray-500 transition hover:text-gray-900">Preferencias de cookies</button></li>
-                    <li><a class="text-sm font-medium text-amber-600 transition hover:text-amber-700" href="{{ route('claims') }}" target="_blank" rel="noopener noreferrer">Libro de Reclamaciones</a></li>
                 </ul>
             </div>
         </div>
 
-        <div class="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 sm:flex-row">
+        <section class="mt-10 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#faf8f3]" aria-label="Métodos de pago">
+            <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[.8fr_1.4fr] lg:items-center lg:p-8">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-[.2em] text-amber-900/70">Compra protegida</p>
+                    <h3 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-stone-950 sm:text-3xl">Paga como prefieras.</h3>
+                    <p class="mt-2 max-w-md text-sm leading-6 text-stone-600">
+                        Procesamos tus pagos con Culqi y Mercado Pago. Tus datos bancarios viajan de forma segura y no se almacenan en Brevare.
+                    </p>
+                    <p class="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                        <flux:icon name="lock-closed" class="size-3.5" /> Pago cifrado y protegido
+                    </p>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_1px_0_rgba(28,25,23,.04)]">
+                        <div class="flex min-h-8 items-center">
+                            <img src="https://culqi.com/assets/images/shared/logos/culqiConNombre.svg"
+                                alt="Culqi"
+                                width="92"
+                                height="26"
+                                loading="lazy"
+                                decoding="async"
+                                referrerpolicy="no-referrer"
+                                class="h-6 w-auto max-w-24 object-contain">
+                        </div>
+                        <p class="mt-3 text-xs font-semibold text-stone-800">Tarjetas, Yape y Plin</p>
+                        <ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Medios de pago con Culqi">
+                            @foreach ([
+                                ['Visa', 'visa.svg'],
+                                ['Mastercard', 'masterCard.svg'],
+                                ['American Express', 'amex.svg'],
+                                ['Diners Club', 'diners.svg'],
+                                ['Yape', 'yape.svg'],
+                                ['Plin', 'plin.svg'],
+                            ] as [$method, $logo])
+                                <li class="flex h-9 w-14 items-center justify-center rounded-lg border border-stone-200 bg-white px-1.5">
+                                    <img src="https://culqi.com/assets/images/shared/logos/{{ $logo }}"
+                                        alt="{{ $method }}"
+                                        title="{{ $method }}"
+                                        width="52"
+                                        height="22"
+                                        loading="lazy"
+                                        decoding="async"
+                                        referrerpolicy="no-referrer"
+                                        class="max-h-5 w-auto max-w-full object-contain">
+                                </li>
+                            @endforeach
+                        </ul>
+                    </article>
+
+                    <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_1px_0_rgba(28,25,23,.04)]">
+                        <div class="flex min-h-8 items-center gap-2">
+                            <img src="https://cdn.simpleicons.org/mercadopago/00B1EA"
+                                alt=""
+                                width="26"
+                                height="26"
+                                loading="lazy"
+                                decoding="async"
+                                referrerpolicy="no-referrer"
+                                class="size-6 object-contain">
+                            <span class="text-[15px] font-bold tracking-tight text-stone-900">
+                                <span class="text-[#009ee3]">Mercado</span> <span class="text-[#f5a623]">Pago</span>
+                            </span>
+                        </div>
+                        <p class="mt-3 text-xs font-semibold text-stone-800">Tarjeta de crédito o débito</p>
+                        <ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Medios de pago con Mercado Pago">
+                            @foreach ([
+                                ['Visa', 'visa.svg'],
+                                ['Mastercard', 'masterCard.svg'],
+                                ['American Express', 'amex.svg'],
+                                ['Diners Club', 'diners.svg'],
+                            ] as [$method, $logo])
+                                <li class="flex h-9 w-14 items-center justify-center rounded-lg border border-stone-200 bg-white px-1.5">
+                                    <img src="https://culqi.com/assets/images/shared/logos/{{ $logo }}"
+                                        alt="{{ $method }}"
+                                        title="{{ $method }}"
+                                        width="52"
+                                        height="22"
+                                        loading="lazy"
+                                        decoding="async"
+                                        referrerpolicy="no-referrer"
+                                        class="max-h-5 w-auto max-w-full object-contain">
+                                </li>
+                            @endforeach
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <div class="mt-8 flex items-center justify-center border-t border-gray-100 pt-6">
             <p class="text-sm text-gray-400">&copy; {{ date('Y') }} {{ $company['legal_name'] }} · RUC {{ $company['ruc'] }}. Todos los derechos reservados.</p>
-            <p class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-gray-400">
-                <span class="flex items-center gap-1"><flux:icon name="credit-card" class="size-4" /> Tarjeta</span>
-                <span class="flex items-center gap-1"><flux:icon name="device-phone-mobile" class="size-4" /> Yape / Plin</span>
-                <span class="flex items-center gap-1"><flux:icon name="banknotes" class="size-4" /> Efectivo</span>
-            </p>
         </div>
     </div>
 </footer>
