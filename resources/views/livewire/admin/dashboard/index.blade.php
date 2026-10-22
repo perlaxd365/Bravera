@@ -46,20 +46,17 @@
         <a href="{{ route('admin.customers.index') }}"
             class="group rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
             <p class="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
-                <flux:icon name="user-plus" class="size-3.5" /> Nuevos registros en el día
+                <flux:icon name="user-plus" class="size-3.5" /> Último registro
             </p>
-            <p class="mt-2 text-2xl font-extrabold tracking-tight text-emerald-950">
-                {{ $newCustomers['today'] }}
-                <span class="text-sm font-medium text-emerald-800/70">hoy</span>
+            <p class="mt-2 truncate text-lg font-extrabold tracking-tight text-emerald-950" title="{{ $latestCustomer?->name ?? 'Sin registros' }}">
+                {{ $latestCustomer?->name ?? 'Sin registros' }}
             </p>
-            <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-                <span class="{{ $newCustomers['change'] > 0 ? 'font-semibold text-emerald-700' : ($newCustomers['change'] < 0 ? 'font-semibold text-amber-700' : 'text-gray-500') }}">
-                    @if ($newCustomers['change'] > 0)
-                        +{{ $newCustomers['change'] }} vs. ayer
-                    @elseif ($newCustomers['change'] < 0)
-                        {{ abs($newCustomers['change']) }} menos que ayer
+            <p class="mt-1 flex items-center gap-1.5 text-xs text-emerald-800/75">
+                <span class="truncate">
+                    @if ($latestCustomer)
+                        Registrado el {{ $latestCustomer->created_at->format('d/m/Y H:i') }}
                     @else
-                        Igual que ayer
+                        Aún no hay clientes registrados
                     @endif
                 </span>
                 <span class="ml-auto text-emerald-700 transition group-hover:translate-x-0.5" aria-hidden="true">→</span>

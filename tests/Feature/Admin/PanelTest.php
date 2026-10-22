@@ -69,27 +69,28 @@ class PanelTest extends TestCase
         $this->get(route('admin.discounts.coupons.index'))->assertOk();
     }
 
-    public function test_dashboard_reports_daily_customer_registrations(): void
+    public function test_dashboard_reports_latest_registered_customer(): void
     {
-        $this->travelTo(Carbon::parse('2026-10-21 12:00:00'));
+        $this->travelTo(Carbon::parse('2026-10-21 12:00:00', config('app.timezone')));
 
         $this->customerAt(today()->subDays(3), 'antiguo@test.com');
-        $this->customerAt(today()->subDay(), 'ayer@test.com');
-        $this->customerAt(today(), 'hoy-uno@test.com');
-        $this->customerAt(today(), 'hoy-dos@test.com');
-        $this->customerAt(today(), 'invitado@test.com', isGuest: true);
+        $latestCustomer = $this->customerAt(now()->subMinutes(5), 'ultimo@test.com');
+        $latestCustomer->forceFill(['name' => 'Cliente Más Reciente'])->saveQuietly();
+        $this->customerAt(now()->subMinute(), 'invitado@test.com', isGuest: true);
 
         $this->actingAs($this->admin());
 
         Livewire::test(DashboardIndex::class)
             ->assertSee('Nuevos ingresantes')
-            ->assertSee('Nuevos registros en el día')
-            ->assertSee('+1 vs. ayer')
+            ->assertSee('Último registro')
+            ->assertSee('Cliente Más Reciente')
+            ->assertSee('Registrado el 21/10/2026 11:55')
+            ->assertDontSee('Nuevos registros en el día')
+            ->assertDontSee('vs. ayer')
+            ->assertDontSee('Igual que ayer')
             ->assertSee('en total')
-            ->assertViewHas('newCustomers', fn (array $metric): bool => $metric['today'] === 2
-                && $metric['yesterday'] === 1
-                && $metric['total'] === 4
-                && $metric['change'] === 1);
+            ->assertViewHas('newCustomers', fn (array $metric): bool => $metric['total'] === 2)
+            ->assertViewHas('latestCustomer', fn (User $customer): bool => $customer->is($latestCustomer));
     }
 
     public function test_admin_can_open_order_detail(): void

@@ -50,20 +50,13 @@ class Index extends Component
             ->where('is_guest', false)
             ->whereHas('roles', fn ($query) => $query->where('name', 'Cliente'));
 
-        $customersToday = (clone $customers)
-            ->whereDate('created_at', today())
-            ->count();
-
-        $customersYesterday = (clone $customers)
-            ->whereDate('created_at', today()->subDay())
-            ->count();
-
         $newCustomers = [
-            'today' => $customersToday,
-            'yesterday' => $customersYesterday,
             'total' => (clone $customers)->count(),
-            'change' => $customersToday - $customersYesterday,
         ];
+
+        $latestCustomer = (clone $customers)
+            ->latest('created_at')
+            ->first();
 
         $traffic = [
             'visitorsToday' => 0,
@@ -143,6 +136,7 @@ class Index extends Component
                 'completed' => Order::where('status', OrderStatus::DELIVERED)->count(),
             ],
             'newCustomers' => $newCustomers,
+            'latestCustomer' => $latestCustomer,
             'traffic' => $traffic,
             'trafficSource' => $trafficSource,
             'lowStock' => $lowStock,
