@@ -69,22 +69,23 @@ class PanelTest extends TestCase
         $this->get(route('admin.discounts.coupons.index'))->assertOk();
     }
 
-    public function test_dashboard_reports_latest_registered_customer(): void
+    public function test_dashboard_reports_latest_customer_including_guests(): void
     {
         $this->travelTo(Carbon::parse('2026-10-21 12:00:00', config('app.timezone')));
 
         $this->customerAt(today()->subDays(3), 'antiguo@test.com');
-        $latestCustomer = $this->customerAt(now()->subMinutes(5), 'ultimo@test.com');
-        $latestCustomer->forceFill(['name' => 'Cliente Más Reciente'])->saveQuietly();
-        $this->customerAt(now()->subMinute(), 'invitado@test.com', isGuest: true);
+        $this->customerAt(now()->subMinutes(5), 'ultimo@test.com');
+
+        $latestCustomer = $this->customerAt(now()->subMinute(), 'invitado@test.com', isGuest: true);
+        $latestCustomer->forceFill(['name' => 'Cliente Invitado Reciente'])->saveQuietly();
 
         $this->actingAs($this->admin());
 
         Livewire::test(DashboardIndex::class)
             ->assertSee('Nuevos ingresantes')
             ->assertSee('Último registro')
-            ->assertSee('Cliente Más Reciente')
-            ->assertSee('Registrado el 21/10/2026 11:55')
+            ->assertSee('Cliente Invitado Reciente')
+            ->assertSee('Registrado el 21/10/2026 11:59')
             ->assertDontSee('Nuevos registros en el día')
             ->assertDontSee('vs. ayer')
             ->assertDontSee('Igual que ayer')

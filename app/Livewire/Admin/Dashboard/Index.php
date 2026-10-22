@@ -54,7 +54,8 @@ class Index extends Component
             'total' => (clone $customers)->count(),
         ];
 
-        $latestCustomer = (clone $customers)
+        $latestCustomer = User::query()
+            ->whereHas('roles', fn ($query) => $query->where('name', 'Cliente'))
             ->latest('created_at')
             ->first();
 
