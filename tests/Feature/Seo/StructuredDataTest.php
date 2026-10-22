@@ -83,7 +83,8 @@ class StructuredDataTest extends TestCase
         $this->get(route('home'))
             ->assertOk()
             ->assertSee('pexels-photo-1043474.jpeg', false)
-            ->assertSee('pexels-photo-2529148.jpeg', false);
+            ->assertSee('pexels-photo-2529148.jpeg', false)
+            ->assertDontSee('images.unsplash.com', false);
     }
 
     public function test_about_page_exposes_founders_founding_date_and_office(): void

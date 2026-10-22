@@ -99,7 +99,12 @@ class Home extends Component
                 default => 'general',
             };
 
-            $category->store_image = $category->image ?: $categoryFallbacks[$key];
+            $hasBlockedImage = filled($category->image)
+                && str_contains((string) $category->image, 'images.unsplash.com');
+
+            $category->store_image = filled($category->image) && ! $hasBlockedImage
+                ? $category->image
+                : $categoryFallbacks[$key];
             $category->store_image_fallback = $categoryFallbacks[$key];
         });
 

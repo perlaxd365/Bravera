@@ -6,6 +6,9 @@ use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Modules\Product\Repositories\StoreCatalogRepository;
+use App\Support\Seo\CatalogLinks;
+use App\Support\Seo\StructuredData;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -18,6 +21,9 @@ class Catalog extends Component
 
     #[Url(as: 'q')]
     public string $search = '';
+
+    #[Url]
+    public bool $offers = false;
 
     #[Url(history: true)]
     public ?string $categoryPath = null;
@@ -52,6 +58,8 @@ class Catalog extends Component
         if ($q) {
             $this->search = $q;
         }
+
+        $this->offers = $this->offers || request()->routeIs('store.offers');
     }
 
     public function updatedAttributeValues(): void
@@ -60,6 +68,11 @@ class Catalog extends Component
     }
 
     public function updatedBrandId(): void
+    {
+        $this->filtersChanged();
+    }
+
+    public function updatedOffers(): void
     {
         $this->filtersChanged();
     }
@@ -106,6 +119,7 @@ class Catalog extends Component
     {
         $products = $repository->paginate(
             search: $this->search,
+            offers: $this->offers,
             categoryPath: $this->categoryPath,
             brandId: $this->brandId,
             attributeValueIds: $this->selectedAttributeValueIds(),
@@ -114,8 +128,16 @@ class Catalog extends Component
             sort: $this->sort,
         );
 
+        $similarProducts = filled($this->search)
+            ? $repository->similar(
+                $this->search,
+                excludeIds: $products->getCollection()->modelKeys(),
+                limit: 8,
+            )
+            : new Collection;
+
         $currentCategory = $this->categoryPath
-            ? Category::where('path', $this->categoryPath)->first()
+            ? Category::with('parent')->where('path', $this->categoryPath)->first()
             : null;
 
         $subcategories = $currentCategory
@@ -125,10 +147,7 @@ class Catalog extends Component
                 ->get()
             : collect();
 
-        $categories = Category::where('is_visible', true)
-            ->whereNull('parent_id')
-            ->orderBy('position')
-            ->get();
+        $categories = CatalogLinks::home(12);
 
         $brands = Brand::active()->orderBy('sort_order')->get();
 
@@ -139,6 +158,108 @@ class Catalog extends Component
             ->orderBy('sort_order')
             ->get();
 
+        $hasActiveFilters = filled($this->search)
+            || filled($this->brandId)
+            || filled($this->minPrice)
+            || filled($this->maxPrice)
+            || $this->selectedAttributeValueIds() !== []
+            || $this->sort !== 'latest';
+
+        $label = $currentCategory
+            ? CatalogLinks::label($currentCategory)
+            : ($this->offers ? 'Ofertas' : ($this->search ? 'Resultados de búsqueda' : 'Catálogo completo'));
+
+        $seoTitle = $currentCategory?->meta_title
+            ?: ($currentCategory
+                ? $label.' en Brevare | Compra online'
+                : ($this->offers
+                    ? 'Ofertas | Brevare'
+                    : ($this->search ? 'Resultados de búsqueda | Brevare' : 'Catálogo completo | Brevare')));
+
+        $seoDescription = $currentCategory?->meta_description
+            ?: ($currentCategory?->description
+                ?: ($currentCategory
+                    ? 'Compra '.$label.' en Brevare. Envíos a todo el Perú, pagos seguros y atención cercana.'
+                    : ($this->offers
+                        ? 'Descubre los productos de Brevare con descuento y compra online con envío a todo el Perú.'
+                        : 'Explora moda, tecnología, hogar y regalos en Brevare. Envíos a todo el Perú.')));
+
+        $canonicalUrl = $currentCategory
+            ? route('store.category', ['path' => $currentCategory->path])
+            : ($this->offers ? route('store.offers') : route('store.search'));
+
+        if ($products->currentPage() > 1 && ! $hasActiveFilters) {
+            $canonicalUrl .= '?page='.$products->currentPage();
+        }
+
+        $breadcrumbs = [
+            ['name' => 'Inicio', 'url' => route('home')],
+            ['name' => 'Catálogo', 'url' => route('store.search')],
+        ];
+
+        if ($this->offers) {
+            $breadcrumbs = [
+                ['name' => 'Inicio', 'url' => route('home')],
+                ['name' => 'Ofertas', 'url' => route('store.offers')],
+            ];
+        }
+
+        if ($currentCategory?->parent) {
+            $breadcrumbs[] = [
+                'name' => CatalogLinks::label($currentCategory->parent),
+                'url' => route('store.category', ['path' => $currentCategory->parent->path]),
+            ];
+        }
+
+        if ($currentCategory) {
+            $breadcrumbs[] = [
+                'name' => $label,
+                'url' => route('store.category', ['path' => $currentCategory->path]),
+            ];
+        } elseif ($this->search) {
+            $breadcrumbs[] = [
+                'name' => 'Resultados para "'.$this->search.'"',
+                'url' => $canonicalUrl,
+            ];
+        }
+
+        $breadcrumbStructuredData = StructuredData::breadcrumbs(
+            $breadcrumbs,
+            $canonicalUrl.'#breadcrumb',
+        );
+
+        $itemListEntries = $products->getCollection()
+            ->take(24)
+            ->values()
+            ->map(fn ($product, int $index) => [
+                'name' => $product->name,
+                'url' => route('store.product', ['slug' => $product->slug]),
+                'position' => (($products->currentPage() - 1) * $products->perPage()) + $index + 1,
+            ])
+            ->all();
+
+        $itemList = StructuredData::itemList(
+            $itemListEntries,
+            $currentCategory ? 'Productos en '.$label : 'Catálogo de Brevare',
+            $canonicalUrl.'#itemlist',
+        );
+
+        $pageStructuredData = [
+            StructuredData::webPage(
+                'CollectionPage',
+                $canonicalUrl,
+                $seoTitle,
+                $seoDescription,
+                $canonicalUrl.'#breadcrumb',
+                $canonicalUrl.'#itemlist',
+            ),
+            $itemList,
+        ];
+
+        $seoImage = $currentCategory?->image && filter_var($currentCategory->image, FILTER_VALIDATE_URL)
+            ? $currentCategory->image
+            : asset('favicon-192.png');
+
         return view('livewire.store.catalog', compact(
             'products',
             'currentCategory',
@@ -146,7 +267,15 @@ class Catalog extends Component
             'categories',
             'brands',
             'attributes',
-        ));
+            'similarProducts',
+        ))->title($seoTitle)->layoutData([
+            'seoDescription' => $seoDescription,
+            'seoImage' => $seoImage,
+            'canonicalUrl' => $canonicalUrl,
+            'noIndex' => $hasActiveFilters,
+            'breadcrumbStructuredData' => $breadcrumbStructuredData,
+            'pageStructuredData' => $pageStructuredData,
+        ]);
     }
 
     /**

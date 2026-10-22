@@ -1,12 +1,12 @@
 <div class="home-editorial">
     {{-- Credenciales de la cuenta de prueba para las validaciones de Culqi. --}}
-    <div class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+    <div class="home-order-credentials mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
         <x-brevare.review-credentials />
     </div>
 
     {{-- Franja promocional animada con fotografías reales del catálogo navideño. --}}
     @if ($promoTickerItems !== [])
-        <section class="mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:mt-5 lg:px-10"
+        <section class="home-order-promo mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:mt-5 lg:px-10"
             aria-label="Ideas navideñas de Brevare">
             <div class="home-promo-ticker">
                 <div class="home-promo-track">
@@ -47,7 +47,7 @@
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
             @visibilitychange.window="document.hidden ? stop() : start()"
-            class="mx-auto mt-5 max-w-screen-2xl px-4 sm:mt-7 sm:px-6 lg:px-10">
+            class="home-order-hero mx-auto mt-5 max-w-screen-2xl px-4 sm:mt-7 sm:px-6 lg:px-10">
             <div class="home-hero relative overflow-hidden rounded-[1.75rem] bg-[#f5f2eb] sm:rounded-[2.25rem]">
                 <div class="home-hero-grid grid min-h-[459px] lg:grid-cols-[.9fr_1.1fr]">
                     <div class="home-hero-copy order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-9 lg:order-1 lg:px-14 lg:py-10 xl:px-[4.5rem]">
@@ -189,7 +189,7 @@
             x-init="$nextTick(() => { sync(); observeVisibility(); })"
             @focusin="paused = true" @focusout="paused = false"
             @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="sync(); start()"
-            class="home-category-section mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
+            class="home-category-section home-order-categories mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
                 <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
                     <div>
@@ -277,7 +277,7 @@
 
     {{-- Productos reales; el módulo editorial llena el espacio si hay poca selección. --}}
     @if ($featured->isNotEmpty())
-        <section class="mx-auto max-w-screen-2xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-10">
+        <section class="home-order-featured mx-auto max-w-screen-2xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-10">
             <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
                 <div>
                     <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Selección Brevare</p>
@@ -312,7 +312,7 @@
     @endif
 
     @if ($latest->isNotEmpty())
-        <section class="mx-auto max-w-screen-2xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-10">
+        <section class="home-order-latest mx-auto max-w-screen-2xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-10">
             <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
                 <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Recién llegados</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2></div>
                 <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">Descubrir novedades ↗</a>

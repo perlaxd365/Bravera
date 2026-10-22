@@ -8,6 +8,16 @@
 
         $currentSuppliers = $selectedVariant?->available_providers ?? collect();
 
+        $wholesaleActive = $currentVariant?->appliesWholesalePrice((int) $quantity) ?? false;
+
+        $currentUnitPrice = $currentVariant?->unitPriceForQuantity((int) $quantity);
+
+        $isFavorite = in_array(
+            $product->id,
+            app(\App\Services\FavoriteService::class)->productIdsFor(auth()->id()),
+            true
+        );
+
         $missingSelection = $requiresVariantSelection && ! $selectedVariant;
 
         // La imagen principal elegida en el panel debe ser la primera de la
@@ -62,6 +72,24 @@
                             ty: 0,
                             prev() { this.active = (this.active - 1 + this.images.length) % this.images.length; },
                             next() { this.active = (this.active + 1) % this.images.length; },
+                            touchStartX: null,
+                            touchStartY: null,
+                            startSwipe(event) {
+                                const touch = event.changedTouches?.[0];
+                                if (!touch) return;
+                                this.touchStartX = touch.clientX;
+                                this.touchStartY = touch.clientY;
+                            },
+                            endSwipe(event) {
+                                const touch = event.changedTouches?.[0];
+                                if (!touch || this.touchStartX === null) return;
+                                const dx = touch.clientX - this.touchStartX;
+                                const dy = touch.clientY - this.touchStartY;
+                                this.touchStartX = null;
+                                this.touchStartY = null;
+                                if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+                                dx < 0 ? this.next() : this.prev();
+                            },
                             parallax(e) {
                                 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
                                 const r = this.$refs.stage.getBoundingClientRect();
@@ -103,10 +131,12 @@
                         @keydown.arrow-left.window.prevent="if (lightbox) prev()"
                         @keydown.escape.window="lightbox = false">
 
-                        <div class="group relative aspect-square overflow-hidden rounded-2xl border border-gray-200 bg-white"
+                        <div class="group relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-gray-200 bg-white"
                                 x-ref="stage"
                                 @mousemove="parallax($event)"
-                                @mouseleave="resetParallax()">
+                                @mouseleave="resetParallax()"
+                                @touchstart.passive="startSwipe($event)"
+                                @touchend="endSwipe($event)">
                             <div class="absolute inset-0 p-8 transition-transform duration-700 ease-out"
                                 :style="{ transform: 'translate3d(' + tx + 'px, ' + ty + 'px, 0)' }">
                                 <img src="{{ $galleryUrls[0] }}" :src="images[active]" alt="{{ $product->name }}"
@@ -145,13 +175,16 @@
                                     </button>
                                 </template>
                             </div>
+                            <p class="mt-2 text-center text-[11px] text-gray-400 sm:hidden">Desliza la imagen para ver más fotos</p>
                         @endif
 
                         {{-- Lightbox --}}
                         <div x-show="lightbox" x-transition.opacity.duration.200ms x-cloak
                             @click.self="lightbox = false"
                             class="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-gray-950/85 p-4 backdrop-blur-sm">
-                            <div class="relative flex w-full max-w-4xl items-center justify-center">
+                            <div class="relative flex w-full max-w-4xl touch-pan-y items-center justify-center"
+                                @touchstart.passive="startSwipe($event)"
+                                @touchend="endSwipe($event)">
                                 <template x-for="(img, i) in images" :key="i">
                                     <img :src="img" x-show="i === active"
                                         x-transition.opacity.scale.origin.center.duration.250ms
@@ -210,17 +243,75 @@
                 {{-- Precio --}}
                 <div class="mt-5 flex flex-wrap items-baseline gap-3">
                     @if ($currentVariant)
-                        <span class="text-3xl font-extrabold tracking-tight text-gray-900">S/ {{ number_format((float) $currentVariant->sale_price, 2) }}</span>
-                        @if ($currentVariant->compare_price && $currentVariant->compare_price > $currentVariant->sale_price)
-                            <span class="text-lg text-gray-400 line-through">S/ {{ number_format((float) $currentVariant->compare_price, 2) }}</span>
+                        <span class="text-3xl font-extrabold tracking-tight text-gray-900">S/ {{ number_format($currentUnitPrice, 2) }}</span>
+                        @if ($wholesaleActive)
+                            <span class="text-lg text-gray-500 line-through">S/ {{ number_format((float) $currentVariant->sale_price, 2) }}</span>
+                            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                                Precio al por mayor
+                            </span>
+                        @elseif ($currentVariant->compare_price && $currentVariant->compare_price > $currentVariant->sale_price)
+                            <span class="text-lg text-gray-500 line-through">S/ {{ number_format((float) $currentVariant->compare_price, 2) }}</span>
                             <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700">
                                 -{{ round((1 - $currentVariant->sale_price / $currentVariant->compare_price) * 100) }}%
                             </span>
+                        @endif
+                        @if ($currentVariant->hasWholesalePrice())
+                            <p class="w-full text-sm font-medium text-emerald-700">
+                                @if ($wholesaleActive)
+                                    Estás comprando {{ $quantity }} unidades con precio al por mayor.
+                                @else
+                                    Precio al por mayor: S/ {{ number_format((float) $currentVariant->wholesale_price, 2) }}
+                                    desde {{ $currentVariant->wholesale_min_quantity }} unidades.
+                                @endif
+                            </p>
                         @endif
                     @else
                         <span class="text-3xl font-extrabold tracking-tight text-gray-900">{{ $product->priceRange() }}</span>
                     @endif
                 </div>
+
+                @if ($currentVariant && $currentVariant->total_available > 0)
+                    <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                        <span class="size-2 rounded-full bg-emerald-600"></span>
+                        En stock · {{ $currentVariant->total_available }} {{ $currentVariant->total_available === 1 ? 'unidad disponible' : 'unidades disponibles' }}
+                    </p>
+                @endif
+
+                @if ($product->allows_shalom_cod)
+                    <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                        <flux:icon name="truck" class="size-3.5" />
+                        Envío con pago contra entrega en Shalom disponible
+                    </p>
+                @endif
+
+                @auth
+                    <a href="{{ route('account.points') }}"
+                        class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-amber-800 transition hover:text-amber-950">
+                        <flux:icon name="gift" class="size-4" />
+                        @if ($currentVariant)
+                            Gana {{ number_format((int) floor($currentUnitPrice * max(1, $quantity))) }} Brevare Puntos con esta compra
+                        @else
+                            Gana Brevare Puntos en cada compra
+                        @endif
+                    </a>
+                @endauth
+
+                @auth
+                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" class="mt-4">
+                        @csrf
+                        <button type="submit"
+                            class="inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition {{ $isFavorite ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-gray-300 bg-white text-gray-700 hover:border-rose-200 hover:text-rose-600' }}">
+                            <flux:icon name="heart" class="size-4 {{ $isFavorite ? 'fill-current' : '' }}" />
+                            {{ $isFavorite ? 'En tus favoritos' : 'Guardar en favoritos' }}
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('login', ['redirect' => request()->fullUrl()]) }}"
+                        class="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition hover:border-rose-200 hover:text-rose-600">
+                        <flux:icon name="heart" class="size-4" />
+                        Guardar en favoritos
+                    </a>
+                @endauth
 
                 <form wire:submit="addToCart"
                     x-on:submit="window.dispatchEvent(new CustomEvent('brevare-fly-to-cart'))"
@@ -271,14 +362,22 @@
                     @endphp
 
                     @if ($selectedVariant && $dispatchDays > 0)
-                        <p class="flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                            <flux:icon name="truck" class="size-5 shrink-0 text-gray-400" />
-                            Envío estimado: {{ $dispatchDays }} día(s)
-                        </p>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                            <p class="flex items-center gap-2 font-semibold text-gray-900">
+                                <flux:icon name="truck" class="size-5 shrink-0 text-gray-600" />
+                                Envío estimado: {{ $dispatchDays }} día(s)
+                            </p>
+                            <p class="mt-1 pl-7 text-xs leading-5 text-gray-600">
+                                El costo y la fecha exacta se calculan con tu distrito en el checkout.
+                            </p>
+                            <a href="{{ route('returns') }}" class="mt-1 inline-flex pl-7 text-xs font-semibold text-amber-800 hover:text-amber-950">
+                                Consultar políticas de envío y devolución
+                            </a>
+                        </div>
                     @endif
 
                     {{-- Cantidad --}}
-                    <div class="flex items-center gap-4">
+                    <div class="flex flex-wrap items-center gap-4">
                         <label class="text-sm font-semibold text-gray-900">Cantidad</label>
                         <div class="flex items-center rounded-full border border-gray-300 bg-white">
                             <button type="button" wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
@@ -292,6 +391,11 @@
                                 <flux:icon name="plus" class="size-4" />
                             </button>
                         </div>
+                        @if ($currentVariant?->hasWholesalePrice() && ! $wholesaleActive)
+                            <p class="w-full text-xs text-gray-500 sm:w-auto">
+                                Agrega {{ max(0, (int) $currentVariant->wholesale_min_quantity - (int) $quantity) }} unidad(es) más para obtener el precio al por mayor.
+                            </p>
+                        @endif
                     </div>
 
                     @if ($missingAttributes->isNotEmpty())
@@ -323,6 +427,21 @@
                         <p class="text-center text-sm text-gray-500">Esa combinación no está disponible.</p>
                     @endif
                 </form>
+
+                <div class="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-3 text-center">
+                    <div class="px-1">
+                        <flux:icon name="shield-check" class="mx-auto size-4 text-emerald-700" />
+                        <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">Compra protegida</p>
+                    </div>
+                    <div class="border-x border-gray-200 px-1">
+                        <flux:icon name="arrow-path-rounded-square" class="mx-auto size-4 text-emerald-700" />
+                        <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">Cambios y devoluciones</p>
+                    </div>
+                    <div class="px-1">
+                        <flux:icon name="chat-bubble-left-right" class="mx-auto size-4 text-emerald-700" />
+                        <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">Soporte Brevare</p>
+                    </div>
+                </div>
 
                 {{-- Métodos de pago --}}
                 <x-brevare.payment-methods class="mt-6" />
@@ -395,6 +514,45 @@
             <section class="mt-10 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
                 <h2 class="mb-3 text-xl font-bold tracking-tight text-gray-900">Descripción</h2>
                 <div class="leading-relaxed text-gray-600">{!! nl2br(e($product->description)) !!}</div>
+            </section>
+        @endif
+
+        {{-- Especificaciones --}}
+        @php
+            $specifications = collect([
+                'Marca' => $product->brand?->name,
+                'Categoría' => $product->category?->name,
+                'SKU' => $currentVariant?->sku,
+                'Peso' => $currentVariant?->weight ? number_format((float) $currentVariant->weight, 2, '.', '').' kg' : null,
+                'Dimensiones' => $currentVariant && ($currentVariant->length || $currentVariant->width || $currentVariant->height)
+                    ? collect([$currentVariant->length, $currentVariant->width, $currentVariant->height])->filter()->implode(' × ').' cm'
+                    : null,
+            ]);
+
+            if ($currentVariant) {
+                foreach ($currentVariant->attributeValues as $attributeValue) {
+                    $name = $attributeValue->attribute?->name;
+                    $value = $attributeValue->value?->value;
+
+                    if (filled($name) && filled($value)) {
+                        $specifications->put($name, $value);
+                    }
+                }
+            }
+
+            $specifications = $specifications->filter(fn ($value) => filled($value));
+        @endphp
+        @if ($specifications->isNotEmpty())
+            <section class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+                <h2 class="text-xl font-bold tracking-tight text-gray-900">Especificaciones</h2>
+                <dl class="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                    @foreach ($specifications as $label => $value)
+                        <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">
+                            <dt class="text-gray-600">{{ $label }}</dt>
+                            <dd class="text-right font-semibold text-gray-900">{{ $value }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
             </section>
         @endif
 

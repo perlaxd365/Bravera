@@ -31,8 +31,12 @@
         </nav>
 
         <h1 id="catalog-top" class="mb-5 text-2xl font-bold tracking-tight text-gray-900">
-            {{ $currentCategory?->name ?? ($search ? 'Resultados de búsqueda' : 'Catálogo completo') }}
+            {{ $currentCategory?->name ?? ($offers ? 'Ofertas' : ($search ? 'Resultados de búsqueda' : 'Catálogo completo')) }}
         </h1>
+
+        @if ($currentCategory?->description)
+            <p class="mb-6 max-w-4xl text-sm leading-6 text-gray-600">{{ $currentCategory->description }}</p>
+        @endif
 
         @if ($subcategories->isNotEmpty())
             <div class="mb-6 flex flex-wrap gap-2">
@@ -95,12 +99,19 @@
                         @foreach ($categories as $cat)
                             <a href="{{ route('store.category', ['path' => $cat->path]) }}"
                                 class="mb-1 block text-sm transition {{ $categoryPath === $cat->path ? 'font-bold text-gray-900' : 'text-gray-600 hover:text-gray-900' }}">
-                                {{ $cat->name }}
+                                {{ $cat->seo_label ?? $cat->name }}
                             </a>
                         @endforeach
                     </div>
 
                     <hr class="my-4 border-gray-100">
+
+                    {{-- Ofertas --}}
+                    <label class="mb-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-800">
+                        <span>Solo productos en oferta</span>
+                        <input type="checkbox" wire:model.live="offers" @change="filtersOpen = false"
+                            class="size-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900/30">
+                    </label>
 
                     {{-- Marcas --}}
                     <div class="mb-4">
@@ -195,10 +206,17 @@
                 @if ($products->isEmpty())
                     <div class="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
                         <flux:icon name="magnifying-glass" class="mx-auto mb-3 size-10 text-gray-300" />
-                        <p class="text-sm font-medium text-gray-700">No encontramos productos con esos filtros.</p>
+                        <p class="text-base font-semibold text-gray-800">No encontramos una coincidencia exacta.</p>
+                        @if ($search)
+                            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
+                                No hay resultados exactos para “{{ $search }}”, pero encontramos productos que podrían interesarte.
+                            </p>
+                        @else
+                            <p class="mt-2 text-sm text-gray-500">Prueba quitando algún filtro o explora las alternativas de abajo.</p>
+                        @endif
                     </div>
                 @else
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         @foreach ($products as $product)
                             @include('store.components.product-card', ['product' => $product])
                         @endforeach
@@ -208,6 +226,31 @@
                             {{ $products->links() }}
                         </div>
                     @endif
+                @endif
+
+                @if ($similarProducts->isNotEmpty())
+                    <section class="mt-10 border-t border-gray-200 pt-8" aria-labelledby="similar-products-title">
+                        <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-bold uppercase tracking-[.18em] text-amber-800/75">Otras opciones</p>
+                                <h2 id="similar-products-title" class="mt-1 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+                                    También te puede interesar
+                                </h2>
+                                @if ($search)
+                                    <p class="mt-1 text-sm text-gray-500">Alternativas similares a “{{ $search }}”.</p>
+                                @endif
+                            </div>
+                            <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">
+                                Ver todo el catálogo <span aria-hidden="true">↗</span>
+                            </a>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($similarProducts as $product)
+                                @include('store.components.product-card', ['product' => $product])
+                            @endforeach
+                        </div>
+                    </section>
                 @endif
             </div>
         </div>

@@ -115,7 +115,7 @@
         <section class="mt-10 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#faf8f3]" aria-label="Métodos de pago">
             <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[.8fr_1.4fr] lg:items-center lg:p-8">
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[.2em] text-amber-900/70">Compra protegida</p>
+                    <p class="text-[10px] font-bold uppercase tracking-[.2em] text-amber-900">Compra protegida</p>
                     <h3 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-stone-950 sm:text-3xl">Paga como prefieras.</h3>
                     <p class="mt-2 max-w-md text-sm leading-6 text-stone-600">
                         Procesamos tus pagos con Culqi y Mercado Pago. Tus datos bancarios viajan de forma segura y no se almacenan en Brevare.
@@ -173,7 +173,7 @@
                                 referrerpolicy="no-referrer"
                                 class="size-6 object-contain">
                             <span class="text-[15px] font-bold tracking-tight text-stone-900">
-                                <span class="text-[#009ee3]">Mercado</span> <span class="text-[#f5a623]">Pago</span>
+                                <span>Mercado</span> <span>Pago</span>
                             </span>
                         </div>
                         <p class="mt-3 text-xs font-semibold text-stone-800">Tarjeta de crédito o débito</p>
@@ -203,7 +203,7 @@
         </section>
 
         <div class="mt-8 flex items-center justify-center border-t border-gray-100 pt-6">
-            <p class="text-sm text-gray-400">&copy; {{ date('Y') }} {{ $company['legal_name'] }} · RUC {{ $company['ruc'] }}. Todos los derechos reservados.</p>
+            <p class="text-sm text-gray-500">&copy; {{ date('Y') }} {{ $company['legal_name'] }} · RUC {{ $company['ruc'] }}. Todos los derechos reservados.</p>
         </div>
     </div>
 </footer>

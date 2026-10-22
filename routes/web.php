@@ -8,7 +8,10 @@ use App\Http\Controllers\MercadoPagoConfigController;
 use App\Http\Controllers\MercadoPagoReturnController;
 use App\Http\Controllers\Seo\SitemapController;
 use App\Http\Controllers\Seo\GoogleMerchantFeedController;
+use App\Http\Controllers\Store\CartRecoveryController;
+use App\Http\Controllers\Store\FavoriteController;
 use App\Http\Controllers\ShalomAgencyController;
+use App\Http\Controllers\Store\SearchSuggestionController;
 use App\Livewire\Account\Addresses;
 use App\Livewire\Account\OrderDetail;
 use App\Livewire\Account\Orders;
@@ -21,6 +24,7 @@ use App\Livewire\Store\Home;
 use App\Livewire\Store\MercadoPagoPayment;
 use App\Livewire\Store\OrderPlaced;
 use App\Livewire\Store\ProductDetail;
+use App\Livewire\Pages\About;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -71,6 +75,13 @@ Route::get('/', Home::class)
 Route::get('buscar', Catalog::class)
     ->name('store.search');
 
+Route::get('buscar/sugerencias', SearchSuggestionController::class)
+    ->middleware('throttle:60,1')
+    ->name('store.search.suggestions');
+
+Route::get('ofertas', Catalog::class)
+    ->name('store.offers');
+
 Route::get('categoria/{path}', Catalog::class)
     ->where('path', '.*')
     ->name('store.category');
@@ -78,8 +89,22 @@ Route::get('categoria/{path}', Catalog::class)
 Route::get('producto/{slug}', ProductDetail::class)
     ->name('store.product');
 
+Route::get('nosotros', About::class)
+    ->name('about');
+
 Route::get('carrito', CartIndex::class)
     ->name('store.cart');
+
+Route::get('carrito/recuperar/baja/{user}', App\Livewire\Pages\CartRecoveryOptOut::class)
+    ->middleware('signed')
+    ->name('cart.recovery.opt-out');
+
+Route::get('carrito/recuperar/{token}', CartRecoveryController::class)
+    ->name('cart.recover');
+
+Route::post('favoritos/{product}/toggle', [FavoriteController::class, 'toggle'])
+    ->middleware('auth')
+    ->name('favorites.toggle');
 
 Route::get('checkout', Checkout::class)
     ->middleware('verified.if.authenticated')
@@ -121,9 +146,15 @@ Route::middleware(['auth', 'verified'])->prefix('mi-cuenta')->name('account.')->
 
     Route::get('direcciones', Addresses::class)
         ->name('addresses');
+
+    Route::get('puntos', \App\Livewire\Account\Points::class)
+        ->name('points');
+
+    Route::get('favoritos', \App\Livewire\Account\Favorites::class)
+        ->name('favorites');
 });
 
-Route::view('dashboard', 'dashboard')
+Route::redirect('dashboard', '/')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 

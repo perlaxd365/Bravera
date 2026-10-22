@@ -15,7 +15,16 @@ mkdir -p "${BACKUP}"
 for path in \
   "config/seo.php" \
   "app/Livewire/Store/Home.php" \
+  "app/Livewire/Store/Catalog.php" \
+  "app/Http/Controllers/Store/SearchSuggestionController.php" \
+  "routes/web.php" \
+  "resources/views/components/brevare/search-autocomplete.blade.php" \
   "resources/views/livewire/store/home.blade.php" \
+  "resources/views/livewire/store/catalog.blade.php" \
+  "resources/views/livewire/store/product-detail.blade.php" \
+  "resources/views/store/components/product-card.blade.php" \
+  "resources/views/store/layouts/partials/header.blade.php" \
+  "resources/views/store/layouts/partials/mobile-nav.blade.php" \
   "resources/views/store/layouts/partials/footer.blade.php" \
   "app/Livewire/Admin/Dashboard/Index.php" \
   "resources/views/livewire/admin/dashboard/index.blade.php" \
@@ -44,7 +53,16 @@ git fetch origin "${BRANCH}"
 git restore --source="origin/${BRANCH}" --worktree -- \
   config/seo.php \
   app/Livewire/Store/Home.php \
+  app/Livewire/Store/Catalog.php \
+  app/Http/Controllers/Store/SearchSuggestionController.php \
+  routes/web.php \
+  resources/views/components/brevare/search-autocomplete.blade.php \
   resources/views/livewire/store/home.blade.php \
+  resources/views/livewire/store/catalog.blade.php \
+  resources/views/livewire/store/product-detail.blade.php \
+  resources/views/store/components/product-card.blade.php \
+  resources/views/store/layouts/partials/header.blade.php \
+  resources/views/store/layouts/partials/mobile-nav.blade.php \
   resources/views/store/layouts/partials/footer.blade.php \
   app/Livewire/Admin/Dashboard/Index.php \
   resources/views/livewire/admin/dashboard/index.blade.php \

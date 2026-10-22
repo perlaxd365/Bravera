@@ -333,6 +333,35 @@ main > * {
     background: linear-gradient(180deg, #f8f6f1 0%, #f4f1e9 100%);
 }
 
+.home-editorial {
+    display: flex;
+    flex-direction: column;
+}
+
+.home-order-credentials {
+    order: 1;
+}
+
+.home-order-promo {
+    order: 2;
+}
+
+.home-order-hero {
+    order: 3;
+}
+
+.home-order-featured {
+    order: 4;
+}
+
+.home-order-categories {
+    order: 5;
+}
+
+.home-order-latest {
+    order: 6;
+}
+
 .home-product-item > div > a,
 .home-featured-card > div > a {
     border-color: rgb(23 23 20 / 8%);

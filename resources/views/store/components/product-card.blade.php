@@ -1,14 +1,23 @@
 @php
     $coverImage = $product->coverImageModel()?->sizedUrl(900);
-    $cardVariants = $product->availableVariants()->get(['sale_price', 'compare_price']);
+    $cardVariants = $product->availableVariants()->get([
+        'id',
+        'sale_price',
+        'compare_price',
+        'wholesale_price',
+        'wholesale_min_quantity',
+    ]);
     $minVariant = $cardVariants->sortBy('sale_price')->first();
     $minPrice = $minVariant ? (float) $minVariant->sale_price : 0;
     $maxPrice = (float) ($cardVariants->max('sale_price') ?? 0);
+    $hasWholesale = $cardVariants->contains(fn ($variant) => $variant->hasWholesalePrice());
     $comparePrice = (float) ($minVariant?->compare_price ?? 0);
     $discountPercent = $comparePrice > $minPrice && $minPrice > 0
         ? (int) round((1 - ($minPrice / $comparePrice)) * 100)
         : 0;
     $filledReviewStars = min(5, max(0, (int) round((float) ($product->reviews_avg_rating ?? 0))));
+    $favoriteIds = app(\App\Services\FavoriteService::class)->productIdsFor(auth()->id());
+    $isFavorite = in_array($product->id, $favoriteIds, true);
     $availableColors = $product->variants
         ->filter(fn ($variant) => $variant->is_active && $variant->supplierVariants->contains(fn ($supplierVariant) => $supplierVariant->is_active && $supplierVariant->availableStock() > 0))
         ->flatMap(fn ($variant) => $variant->attributeValues
@@ -22,7 +31,7 @@
         ->values();
 @endphp
 
-<div>
+<div class="relative">
     <a href="{{ route('store.product', ['slug' => $product->slug]) }}"
         class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-950/10">
         <div class="product-card-media relative aspect-[4/3] max-h-[460px] overflow-hidden bg-[#f7f5ef]">
@@ -44,27 +53,33 @@
             @if ($product->is_featured ?? false)
                 <span class="absolute right-3 top-3 rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">Destacado</span>
             @endif
-            @if ($product->isSoldByBrevare())
-                <span class="absolute bottom-3 left-3 rounded-full border border-white/70 bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900 shadow-sm">Vendido por Brevare</span>
+            @if ($product->isSoldByBrevare() || $hasWholesale)
+                <div class="absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1.5">
+                    @if ($product->isSoldByBrevare())
+                        <span class="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-gray-900 shadow-sm sm:px-3 sm:text-[10px]">Vendido por Brevare</span>
+                    @endif
+                    @if ($hasWholesale)
+                        <span class="rounded-full bg-emerald-700 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-white shadow-sm sm:px-3 sm:text-[10px]">Mayorista</span>
+                    @endif
+                </div>
             @endif
         </div>
 
         <div class="flex flex-1 flex-col p-3.5 sm:p-4">
-            <p class="text-[10px] font-bold uppercase tracking-[.12em] text-gray-400 sm:text-xs">
+            <p class="text-[10px] font-bold uppercase tracking-[.12em] text-gray-600 sm:text-xs">
                 {{ $product->brand?->name ?? $product->category?->name }}
             </p>
             <p class="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-gray-900 group-hover:text-amber-950" title="{{ $product->name }}">
                 {{ $product->name }}
             </p>
 
-            <div class="mt-2 flex items-center gap-1.5" aria-label="{{ $product->reviews_count ?? 0 }} opiniones">
+            <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="{{ $product->reviews_count ?? 0 }} opiniones">
                 @if (($product->reviews_count ?? 0) > 0)
-                    <span class="text-sm leading-none tracking-[1px] text-amber-500" aria-label="{{ number_format((float) $product->reviews_avg_rating, 1) }} de 5 estrellas">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
+                    <span class="text-sm leading-none tracking-[1px] text-amber-600" aria-label="{{ number_format((float) $product->reviews_avg_rating, 1) }} de 5 estrellas">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
                     <span class="text-xs font-semibold text-gray-700">{{ number_format((float) $product->reviews_avg_rating, 1) }}</span>
-                    <span class="text-xs text-gray-400">({{ $product->reviews_count }})</span>
+                    <span class="text-xs text-gray-600">({{ $product->reviews_count }})</span>
                 @else
-                    <span class="text-sm leading-none tracking-[1px] text-amber-400" aria-hidden="true">★★★★★</span>
-                    <span class="text-[11px] text-gray-500">Sé el primero en opinar</span>
+                    <span class="text-[11px] font-medium text-emerald-700">Disponible para comprar</span>
                 @endif
             </div>
 
@@ -80,10 +95,10 @@
                 </div>
             @endif
 
-            <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-3">
+            <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pr-12 pt-3">
                 <x-brevare.price :amount="$minPrice" size="sm" />
                 @if ($discountPercent > 0)
-                    <span class="text-xs text-gray-400 line-through">S/ {{ number_format($comparePrice, 2) }}</span>
+                    <span class="text-xs text-gray-500 line-through">S/ {{ number_format($comparePrice, 2) }}</span>
                 @endif
                 @if ($maxPrice > $minPrice && $minPrice > 0)
                     <span class="w-full text-[11px] text-gray-500">Variantes hasta S/ {{ number_format($maxPrice, 2) }}</span>
@@ -91,4 +106,18 @@
             </div>
         </div>
     </a>
+    @auth
+        <form method="POST" action="{{ route('favorites.toggle', $product) }}" class="absolute bottom-4 right-4 z-30">
+            @csrf
+            <button type="submit" aria-label="{{ $isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos' }}"
+                class="flex size-10 items-center justify-center rounded-full border shadow-sm backdrop-blur transition {{ $isFavorite ? 'border-rose-200 bg-rose-600 text-white hover:bg-rose-700' : 'border-gray-200 bg-white/95 text-gray-600 hover:border-rose-200 hover:text-rose-600' }}">
+                <flux:icon name="heart" class="size-5 {{ $isFavorite ? 'fill-current' : '' }}" />
+            </button>
+        </form>
+    @else
+        <a href="{{ route('login', ['redirect' => route('store.product', ['slug' => $product->slug])]) }}" aria-label="Inicia sesión para guardar favoritos"
+            class="absolute bottom-4 right-4 z-30 flex size-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur transition hover:border-rose-200 hover:text-rose-600">
+            <flux:icon name="heart" class="size-5" />
+        </a>
+    @endauth
 </div>

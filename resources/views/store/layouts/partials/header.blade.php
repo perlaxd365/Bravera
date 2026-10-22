@@ -1,4 +1,4 @@
-<header x-data="{ navOpen: false }" class="relative z-40 border-b border-gray-200 bg-white/90 backdrop-blur-lg lg:sticky lg:top-0">
+<header class="relative z-40 border-b border-gray-200 bg-white/90 backdrop-blur-lg lg:sticky lg:top-0">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3">
             <a href="{{ route('home') }}" class="flex items-center gap-2 text-xl font-extrabold tracking-tight text-gray-950">
@@ -10,17 +10,16 @@
         </div>
 
         <div class="hidden flex-1 justify-center px-4 sm:flex lg:flex">
-            <form class="w-full max-w-md" action="{{ route('store.search') }}" method="GET" role="search">
-                <div class="relative">
-                    <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-                    <input type="search" name="q" value="{{ request('q') }}" placeholder="Buscar productos..."
-                        class="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-400/20 focus:outline-none" aria-label="Buscar">
-                </div>
-            </form>
+            <x-brevare.search-autocomplete />
         </div>
 
         <div class="flex items-center gap-2">
             <livewire:store.components.cart-badge />
+
+            <a href="{{ auth()->check() ? route('account.orders') : route('login', ['redirect' => route('account.orders')]) }}"
+                class="hidden items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-100 md:inline-flex">
+                <flux:icon name="cube" class="size-4" /> Mis pedidos
+            </a>
 
             @auth
                 @if (Auth::user()->hasVerifiedEmail())
@@ -43,6 +42,12 @@
                             <a href="{{ route('account.addresses') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
                                 <flux:icon name="map-pin" class="size-4 text-gray-400" /> Direcciones
                             </a>
+                            <a href="{{ route('account.points') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="gift" class="size-4 text-gray-400" /> Brevare Puntos
+                            </a>
+                            <a href="{{ route('account.favorites') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
+                                <flux:icon name="heart" class="size-4 text-gray-400" /> Favoritos
+                            </a>
                             <a href="{{ route('account.profile') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50">
                                 <flux:icon name="user" class="size-4 text-gray-400" /> Mi perfil
                             </a>
@@ -64,47 +69,14 @@
                 <a href="{{ route('register') }}" class="rounded-full bg-gray-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-800 sm:px-4 sm:text-sm">Crear cuenta</a>
             @endauth
 
-            <button type="button" class="rounded-full p-2.5 text-gray-600 transition hover:bg-amber-50 lg:hidden" @click="navOpen = !navOpen" aria-label="Abrir menú">
-                <flux:icon name="bars-3" class="size-5" />
-            </button>
         </div>
     </div>
 
     <div class="border-t border-gray-100 bg-white px-4 py-2 sm:hidden">
-        <form action="{{ route('store.search') }}" method="GET" role="search">
-            <div class="relative">
-                <flux:icon name="magnifying-glass" variant="mini" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-                <input type="search" name="q" value="{{ request('q') }}" placeholder="¿Qué estás buscando?"
-                    class="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:bg-white focus:outline-none" aria-label="Buscar productos">
-            </div>
-        </form>
+        <x-brevare.search-autocomplete mobile />
     </div>
 
-    <div x-cloak class="lg:hidden">
-        <div x-show="navOpen" x-transition.opacity.duration.150ms class="border-t border-gray-200 bg-white px-4 py-4">
-            <nav class="flex flex-col gap-1">
-                <a href="{{ route('home') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Inicio</a>
-                <a href="{{ route('store.search') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Catálogo</a>
-                @auth
-                    @if (Auth::user()->hasVerifiedEmail())
-                        <a href="{{ route('account.orders') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Mis pedidos</a>
-                        <a href="{{ route('account.addresses') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">Direcciones</a>
-                    @else
-                        <a href="{{ route('verification.notice') }}" class="rounded-lg px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50">Verificar correo</a>
-                    @endif
-                @endauth
-            </nav>
-        </div>
-    </div>
-
-    @php
-        $rootCategories = \App\Models\Category::query()
-            ->where('is_visible', true)
-            ->whereNull('parent_id')
-            ->orderBy('position')
-            ->limit(8)
-            ->get();
-    @endphp
+    @php($rootCategories = \App\Support\Seo\CatalogLinks::home(10))
     <nav class="hidden border-t border-gray-100 bg-gray-50/60 lg:block" aria-label="Categorías">
         <div class="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8">
             <a href="{{ route('home') }}"
@@ -114,9 +86,17 @@
             @foreach ($rootCategories as $category)
                 <a href="{{ route('store.category', ['path' => $category->path]) }}"
                     class="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:text-gray-900">
-                    {{ $category->name }}
+                    {{ $category->seo_label ?? $category->name }}
                 </a>
             @endforeach
+            <a href="{{ route('about') }}"
+                class="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:text-gray-900">
+                Nosotros
+            </a>
+            <a href="{{ route('store.offers') }}"
+                class="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-200">
+                Ofertas
+            </a>
         </div>
     </nav>
 </header>
