@@ -336,6 +336,12 @@ main > * {
 .home-editorial {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+}
+
+.home-editorial > * {
+    width: 100%;
+    min-width: 0;
 }
 
 .home-order-credentials {
