@@ -195,6 +195,8 @@
                         <select wire:model.live="sort"
                             class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-9 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                             <option value="latest">Más recientes</option>
+                            <option value="web_visits_desc">Más visitas web</option>
+                            <option value="meta_visits_desc">Más visitas desde Meta</option>
                             <option value="price_asc">Precio: menor a mayor</option>
                             <option value="price_desc">Precio: mayor a menor</option>
                             <option value="name">Nombre (A-Z)</option>

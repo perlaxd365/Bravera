@@ -22,9 +22,12 @@ class Product extends Model
         'description',
         'video_url',
         'video_public_id',
+        'meta_ad_video_url',
+        'meta_ad_video_public_id',
         'status',
         'is_featured',
         'is_visible',
+        'allows_shalom_cod',
         'seo_title',
         'seo_description',
     ];
@@ -33,6 +36,7 @@ class Product extends Model
         'status' => 'boolean',
         'is_featured' => 'boolean',
         'is_visible' => 'boolean',
+        'allows_shalom_cod' => 'boolean',
     ];
 
     /*
@@ -59,6 +63,21 @@ class Product extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function metaAds(): HasMany
+    {
+        return $this->hasMany(ProductMetaAd::class);
+    }
+
+    public function pageViews(): HasMany
+    {
+        return $this->hasMany(PageView::class);
     }
 
     public function scopeActive($query)

@@ -3,7 +3,9 @@
 namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
+use App\Models\Category;
 use App\Models\PageView;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\GoogleAnalyticsService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -67,6 +69,32 @@ class PageViewsTest extends TestCase
                 && $traffic['visitorsYesterday'] === 1
                 && $traffic['pageViewsToday'] === 3
                 && $traffic['activeNow'] === 0);
+    }
+
+    public function test_product_page_views_are_linked_to_the_product(): void
+    {
+        $category = Category::create([
+            'name' => 'Pruebas',
+            'slug' => 'pruebas',
+            'path' => 'pruebas',
+            'is_visible' => true,
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Producto visitado',
+            'slug' => 'producto-visitado',
+            'status' => true,
+            'is_visible' => true,
+        ]);
+
+        $this->withCookie('brevare_consent', 'all')
+            ->get(route('store.product', ['slug' => $product->slug]))
+            ->assertOk();
+
+        $this->assertDatabaseHas('page_views', [
+            'product_id' => $product->id,
+            'path' => '/producto/producto-visitado',
+        ]);
     }
 
     public function test_dashboard_prefers_ga4_when_the_data_api_is_configured(): void

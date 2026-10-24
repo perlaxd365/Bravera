@@ -18,3 +18,23 @@ Schedule::command('brevare:prune-cloudinary')->daily();
 */
 
 Schedule::command('brevare:expire-pending-orders')->hourly();
+
+/*
+| Las métricas de Meta se guardan localmente para que los listados no esperen
+| por la API externa. Quince minutos mantiene el dato útil sin saturar la API.
+*/
+
+Schedule::command('brevare:sync-meta-ads')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
+/*
+| El comando se ejecuta a diario, pero cada carrito recibe como máximo un
+| recordatorio cada `CART_RECOVERY_DAYS` días. Así el correo sale cada 3 días
+| sin necesidad de crear un cron distinto por carrito.
+*/
+
+Schedule::command('carts:send-recovery')
+    ->dailyAt('10:00')
+    ->timezone('America/Lima')
+    ->withoutOverlapping();

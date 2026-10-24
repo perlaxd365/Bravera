@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\PageView;
+use App\Models\Product;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -47,6 +48,7 @@ class TrackStorefrontView
 
         try {
             PageView::create([
+                'product_id' => $this->productId($request),
                 'visitor_token' => $visitorToken,
                 'path' => '/'.ltrim($request->path(), '/'),
                 'viewed_at' => now(),
@@ -102,5 +104,22 @@ class TrackStorefrontView
         }
 
         return true;
+    }
+
+    private function productId(Request $request): ?int
+    {
+        if ($request->route()?->getName() !== 'store.product') {
+            return null;
+        }
+
+        $slug = $request->route('slug');
+
+        if (! is_string($slug) || $slug === '') {
+            return null;
+        }
+
+        $productId = Product::query()->where('slug', $slug)->value('id');
+
+        return $productId === null ? null : (int) $productId;
     }
 }

@@ -23,7 +23,8 @@
                 </div>
 
                 <div class="relative">
-                    <select wire:model.live="categoryId"
+                    <select wire:model.live="categoryId" aria-label="Filtrar por categoría"
+                        wire:loading.attr="disabled" wire:target="search,categoryId,brandId,sort,perPage"
                         class="w-full appearance-none rounded-full border border-gray-300 bg-white py-2 pl-4 pr-9 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         <option value="">Todas las categorías</option>
                         @foreach ($categories as $category)
@@ -34,7 +35,8 @@
                 </div>
 
                 <div class="relative">
-                    <select wire:model.live="brandId"
+                    <select wire:model.live="brandId" aria-label="Filtrar por marca"
+                        wire:loading.attr="disabled" wire:target="search,categoryId,brandId,sort,perPage"
                         class="w-full appearance-none rounded-full border border-gray-300 bg-white py-2 pl-4 pr-9 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         <option value="">Todas las marcas</option>
                         @foreach ($brands as $brand)
@@ -44,8 +46,20 @@
                     <flux:icon name="chevron-down" variant="mini" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
                 </div>
 
+                <div class="relative">
+                    <select wire:model.live="sort" aria-label="Ordenar productos"
+                        wire:loading.attr="disabled" wire:target="search,categoryId,brandId,sort,perPage"
+                        class="w-full appearance-none rounded-full border border-gray-300 bg-white py-2 pl-4 pr-9 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                        <option value="latest">Más recientes</option>
+                        <option value="web_visits_desc">Más visitas web (30 d)</option>
+                        <option value="meta_visits_desc">Más visitas desde Meta (30 d)</option>
+                    </select>
+                    <flux:icon name="chevron-down" variant="mini" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                </div>
+
                 <div class="relative w-20">
-                    <select wire:model.live="perPage"
+                    <select wire:model.live="perPage" aria-label="Productos por página"
+                        wire:loading.attr="disabled" wire:target="search,categoryId,brandId,sort,perPage"
                         class="w-full appearance-none rounded-full border border-gray-300 bg-white py-2 pl-4 pr-9 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
                         <option value="10">10</option>
                         <option value="25">25</option>
@@ -53,6 +67,12 @@
                     </select>
                     <flux:icon name="chevron-down" variant="mini" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
                 </div>
+
+                <span wire:loading wire:target="search,categoryId,brandId,sort,perPage" role="status"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-gray-600">
+                    <span class="size-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" aria-hidden="true"></span>
+                    Actualizando…
+                </span>
             </div>
         </div>
 

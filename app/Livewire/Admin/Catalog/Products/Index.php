@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Modules\Product\Repositories\ProductRepository;
+use App\Modules\Product\Services\ProductReadinessService;
 use App\Modules\Product\Services\ProductService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -40,6 +41,11 @@ class Index extends Component
     public ?int $brandId = null;
 
     /**
+     * Orden del listado.
+     */
+    public string $sort = 'latest';
+
+    /**
      * Repositorio.
      */
     protected ProductRepository $repository;
@@ -49,17 +55,22 @@ class Index extends Component
      */
     protected ProductService $service;
 
+    protected ProductReadinessService $readiness;
+
     /**
      * Inicializar dependencias.
      */
     public function boot(
         ProductRepository $repository,
-        ProductService $service
+        ProductService $service,
+        ProductReadinessService $readiness
     ): void {
 
         $this->repository = $repository;
 
         $this->service = $service;
+
+        $this->readiness = $readiness;
     }
 
     /**
@@ -82,6 +93,14 @@ class Index extends Component
      * Reinicia la paginación cuando cambia la marca.
      */
     public function updatingBrandId(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reinicia la paginación cuando cambia el orden.
+     */
+    public function updatingSort(): void
     {
         $this->resetPage();
     }
@@ -113,15 +132,23 @@ class Index extends Component
      */
     public function render()
     {
+        $products = $this->repository->paginate(
+            perPage: $this->perPage,
+            search: $this->search,
+            categoryId: $this->categoryId,
+            brandId: $this->brandId,
+            sort: $this->sort,
+        );
+
         return view(
             'livewire.admin.catalog.products.index',
             [
-                'products' => $this->repository->paginate(
-                    perPage: $this->perPage,
-                    search: $this->search,
-                    categoryId: $this->categoryId,
-                    brandId: $this->brandId,
-                ),
+                'products' => $products,
+
+                'readinessByProduct' => $products->getCollection()
+                    ->mapWithKeys(fn (Product $product): array => [
+                        $product->id => $this->readiness->assess($product),
+                    ]),
 
                 'categories' => Category::query()
                     ->where('is_visible', true)

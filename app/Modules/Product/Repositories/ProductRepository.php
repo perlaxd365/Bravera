@@ -16,11 +16,25 @@ class ProductRepository
         string $search = '',
         ?int $categoryId = null,
         ?int $brandId = null,
-        int $perPage = 10
+        int $perPage = 10,
+        string $sort = 'latest'
     ): LengthAwarePaginator {
 
         return Product::query()
-            ->with(['category', 'brand', 'variants.images'])
+            ->with([
+                'category',
+                'brand',
+                'variants.images',
+                'variants.supplierVariants.supplier',
+            ])
+            ->withCount([
+                'metaAds as active_meta_ads_count' => fn ($query) => $query->where('status', 'active'),
+                'pageViews as web_visits_30d' => fn ($query) => $query
+                    ->where('viewed_at', '>=', now()->subDays(30)),
+            ])
+            ->withSum([
+                'metaAds as meta_visits_30d' => fn ($query) => $query->where('status', 'active'),
+            ], 'link_clicks_30d')
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -29,7 +43,17 @@ class ProductRepository
             })
             ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
             ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
-            ->latest()
+            ->when($sort === 'web_visits_desc', fn ($query) => $query
+                ->orderByDesc('web_visits_30d')
+                ->latest())
+            ->when($sort === 'meta_visits_desc', fn ($query) => $query
+                ->orderByDesc('meta_visits_30d')
+                ->latest())
+            ->when(
+                $sort === 'web_visits_desc' || $sort === 'meta_visits_desc',
+                fn ($query) => $query,
+                fn ($query) => $query->latest(),
+            )
             ->paginate($perPage);
     }
 
@@ -51,7 +75,8 @@ class ProductRepository
         return Product::with([
             'category',
             'brand',
-            'variants',
+            'variants.images',
+            'variants.supplierVariants.supplier',
         ])->findOrFail($id);
     }
 
