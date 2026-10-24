@@ -8,9 +8,9 @@
         <div class="h-1 overflow-hidden bg-amber-100">
             <div class="h-full w-2/3 animate-pulse rounded-r-full bg-amber-500"></div>
         </div>
-        <div class="fixed bottom-5 right-5 flex items-center gap-2.5 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-lg">
+        <div class="fixed left-1/2 top-4 flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-xl">
             <span class="size-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" aria-hidden="true"></span>
-            Cargando…
+            <span id="admin-loading-label">Cargando…</span>
         </div>
     </div>
 
@@ -46,20 +46,87 @@
     <script>
         document.addEventListener('livewire:init', () => {
             const loadingIndicator = document.getElementById('admin-loading-indicator');
+            const loadingLabel = document.getElementById('admin-loading-label');
             let activeCommits = 0;
+            let interactionTimer;
+
+            const clearInteractionState = () => {
+                clearTimeout(interactionTimer);
+
+                document.querySelectorAll('[data-admin-loading]').forEach((control) => {
+                    control.removeAttribute('data-admin-loading');
+                    control.removeAttribute('aria-busy');
+                    control.classList.remove('pointer-events-none', 'opacity-60', 'cursor-wait');
+                });
+            };
+
+            const hideWhenIdle = () => {
+                if (activeCommits === 0) {
+                    loadingIndicator.hidden = true;
+                    clearInteractionState();
+                }
+            };
+
+            const showLoading = (control = null, label = 'Cargando…') => {
+                clearTimeout(interactionTimer);
+                loadingLabel.textContent = label;
+                loadingIndicator.hidden = false;
+
+                if (control) {
+                    control.setAttribute('data-admin-loading', 'true');
+                    control.setAttribute('aria-busy', 'true');
+                    control.classList.add('pointer-events-none', 'opacity-60', 'cursor-wait');
+                }
+
+                interactionTimer = setTimeout(() => {
+                    if (activeCommits === 0) {
+                        hideWhenIdle();
+                    }
+                }, 1500);
+            };
 
             Livewire.hook('commit', ({ succeed, fail }) => {
                 activeCommits++;
-                loadingIndicator.hidden = false;
+                showLoading(null, 'Cargando…');
 
                 const finish = () => {
                     activeCommits = Math.max(0, activeCommits - 1);
-                    loadingIndicator.hidden = activeCommits === 0;
+                    hideWhenIdle();
                 };
 
                 succeed(finish);
                 fail(finish);
             });
+
+            document.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const control = target?.closest(
+                    'button, a[href], [role="button"], input[type="submit"], input[type="button"]',
+                );
+
+                if (!control || control.matches(':disabled, [aria-disabled="true"]')) {
+                    return;
+                }
+
+                const label = control.tagName === 'A' ? 'Abriendo…' : 'Procesando…';
+                showLoading(control, label);
+            }, true);
+
+            document.addEventListener('submit', (event) => {
+                const submitter = event.submitter;
+                showLoading(submitter instanceof HTMLElement ? submitter : null, 'Guardando…');
+            }, true);
+
+            document.addEventListener('change', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const control = target?.closest('select');
+
+                if (control && !control.matches(':disabled')) {
+                    showLoading(control, 'Actualizando…');
+                }
+            }, true);
+
+            window.addEventListener('pageshow', hideWhenIdle);
 
             Livewire.on('notify', (event) => {
                 const data = Array.isArray(event) ? event[0] : event;
