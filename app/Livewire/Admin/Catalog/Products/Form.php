@@ -229,7 +229,7 @@ class Form extends Component
 
     public function goToStep(int $step): void
     {
-        $this->currentStep = max(1, min(5, $step));
+        $this->currentStep = max(1, min(6, $step));
         $this->resetValidation();
         $this->dispatch('product-step-changed');
     }
@@ -546,7 +546,7 @@ class Form extends Component
     }
 
     /**
-     * Crea un anuncio en pausa con la foto principal o el video del producto.
+     * Crea un anuncio activo con la foto principal o el video del producto.
      */
     public function createMetaAd(): void
     {
@@ -586,7 +586,7 @@ class Form extends Component
         );
 
         try {
-            $record = $this->metaAdsService->createPausedAd($product, [
+            $record = $this->metaAdsService->createAd($product, [
                 'campaign_id' => $this->metaCampaignId,
                 'campaign_name' => $campaignName,
                 'ad_set_id' => $this->metaAdSetId,
@@ -602,7 +602,7 @@ class Form extends Component
             $this->metaAdsError = null;
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Anuncio creado en pausa (ID '.$record->ad_id.'). Actívalo en Meta Ads Manager cuando lo revises.',
+                'message' => 'Anuncio creado y activo (ID '.$record->ad_id.'). Meta comenzará a procesarlo.',
             ]);
         } catch (Throwable $exception) {
             report($exception);
@@ -1454,6 +1454,11 @@ class Form extends Component
             ],
         );
 
+        if ($this->currentStep === 6 && $product) {
+            $product->loadCount(['reviews' => fn ($query) => $query->approved()]);
+            $product->loadAvg(['reviews' => fn ($query) => $query->approved()], 'rating');
+        }
+
         return view(
             'livewire.admin.catalog.products.form',
             [
@@ -1477,6 +1482,8 @@ class Form extends Component
                 'galleryVariant' => $galleryVariant,
 
                 'product' => $product,
+
+                'previewProduct' => $this->currentStep === 6 ? $product : null,
 
                 'metaAds' => $metaAds,
 

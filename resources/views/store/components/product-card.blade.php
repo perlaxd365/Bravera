@@ -1,4 +1,5 @@
 @php
+    $preview = $preview ?? false;
     $coverImage = $product->coverImageModel()?->sizedUrl(900);
     $cardVariants = $product->availableVariants()->get([
         'id',
@@ -32,7 +33,8 @@
 @endphp
 
 <div class="relative">
-    <a href="{{ route('store.product', ['slug' => $product->slug]) }}"
+    <a href="{{ $preview ? '#' : route('store.product', ['slug' => $product->slug]) }}"
+        @if ($preview) @click.prevent tabindex="-1" aria-label="Vista previa de {{ $product->name }}" @endif
         class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-950/10">
         <div class="product-card-media relative aspect-[4/3] max-h-[460px] overflow-hidden bg-[#f7f5ef]">
             @if ($coverImage)
@@ -106,7 +108,12 @@
             </div>
         </div>
     </a>
-    @auth
+    @if ($preview)
+        <span aria-hidden="true"
+            class="absolute bottom-4 right-4 z-30 flex size-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur">
+            <flux:icon name="heart" class="size-5" />
+        </span>
+    @elseif (auth()->check())
         <form method="POST" action="{{ route('favorites.toggle', $product) }}" class="absolute bottom-4 right-4 z-30">
             @csrf
             <button type="submit" aria-label="{{ $isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos' }}"

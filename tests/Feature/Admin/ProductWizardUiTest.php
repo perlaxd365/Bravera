@@ -29,7 +29,7 @@ class ProductWizardUiTest extends TestCase
         ]);
     }
 
-    public function test_product_registration_uses_the_five_step_wizard(): void
+    public function test_product_registration_uses_the_six_step_wizard(): void
     {
         $this->actingAs(User::where('email', 'administracion@brevare.com')->firstOrFail());
 
@@ -38,11 +38,13 @@ class ProductWizardUiTest extends TestCase
             ->assertSet('show', true)
             ->assertSet('currentStep', 1)
             ->assertSee('Registrar producto')
-            ->assertSee('Paso 1 de 5')
+            ->assertSee('Paso 1 de 6')
             ->call('goToStep', 4)
             ->assertSet('currentStep', 4)
             ->call('goToStep', 9)
-            ->assertSet('currentStep', 5)
+            ->assertSet('currentStep', 6)
+            ->assertSee('Vista previa en la portada')
+            ->assertSee('Guarda primero el producto')
             ->call('goToStep', -2)
             ->assertSet('currentStep', 1);
     }
@@ -211,6 +213,12 @@ class ProductWizardUiTest extends TestCase
             ->set('variantForm.discount_percent', '0')
             ->call('saveVariant')
             ->assertHasNoErrors();
+
+        $component
+            ->call('goToStep', 6)
+            ->assertSet('currentStep', 6)
+            ->assertSee('Vista previa en la portada')
+            ->assertSee('Juego de copas');
 
         $secondVariant = ProductVariant::where('sku', 'COPAS-002')->firstOrFail();
 
