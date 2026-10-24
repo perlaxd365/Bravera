@@ -26,6 +26,7 @@ class ProductImage extends Model
         'is_primary',
         'sort_order',
         'is_active',
+        'alt',
     ];
 
     protected $casts = [

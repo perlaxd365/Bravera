@@ -20,6 +20,8 @@ class ProductVariant extends Model
         'barcode',
         'cost_price',
         'sale_price',
+        'wholesale_price',
+        'wholesale_min_quantity',
         'compare_price',
         'discount_percent',
         'weight',
@@ -34,6 +36,8 @@ class ProductVariant extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'wholesale_price' => 'decimal:2',
+        'wholesale_min_quantity' => 'integer',
         'compare_price' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'weight' => 'decimal:2',
@@ -77,5 +81,38 @@ class ProductVariant extends Model
     public function scopeDefault(Builder $query): Builder
     {
         return $query->where('is_default', true);
+    }
+
+    /**
+     * Indica si la variante tiene configurado un precio al por mayor válido.
+     */
+    public function hasWholesalePrice(): bool
+    {
+        return $this->wholesale_price !== null
+            && (int) $this->wholesale_min_quantity > 1;
+    }
+
+    /**
+     * Indica si la cantidad alcanza el mínimo para aplicar el precio mayorista.
+     */
+    public function appliesWholesalePrice(int $quantity): bool
+    {
+        return $this->hasWholesalePrice()
+            && $quantity >= (int) $this->wholesale_min_quantity;
+    }
+
+    /**
+     * Precio unitario vigente para una cantidad concreta.
+     *
+     * El precio mayorista se aplica a toda la línea cuando se alcanza el
+     * mínimo; por debajo del mínimo se mantiene el precio minorista.
+     */
+    public function unitPriceForQuantity(int $quantity): float
+    {
+        $price = $this->appliesWholesalePrice($quantity)
+            ? $this->wholesale_price
+            : $this->sale_price;
+
+        return round((float) $price, 2);
     }
 }
