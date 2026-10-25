@@ -29,14 +29,15 @@ class CourseCheckoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_course_page_hides_internal_stock_and_shows_digital_only_return_policy(): void
+    public function test_course_page_hides_internal_stock_without_embedding_legal_terms(): void
     {
         [$product] = $this->courseProduct();
 
         Livewire::test(ProductDetail::class, ['slug' => $product->slug])
             ->assertSee('Producto digital · Disponible en tu cuenta')
             ->assertDontSee('1000000')
-            ->assertSee('Producto digital sin devolución tras la entrega.')
+            ->assertDontSee('Producto digital sin devolución tras la entrega.')
+            ->assertDontSee('Ver condiciones')
             ->assertSee('Acceso digital');
 
         $this->get(route('terms'))

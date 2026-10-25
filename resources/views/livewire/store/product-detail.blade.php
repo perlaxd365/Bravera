@@ -318,16 +318,6 @@
                     </p>
                 @endif
 
-                @if ($product->isCourse())
-                    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-950">
-                        <p class="font-semibold">Producto digital sin devolución tras la entrega.</p>
-                        <p class="mt-0.5">
-                            Al recibir los archivos o habilitarse el acceso no se aceptan devoluciones, salvo defecto, contenido incompleto o falta de entrega.
-                            <a href="{{ route('terms') }}" target="_blank" rel="noopener noreferrer" class="font-semibold underline underline-offset-2">Ver condiciones</a>
-                        </p>
-                    </div>
-                @endif
-
                 @auth
                     <a href="{{ route('account.points') }}"
                         class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-amber-800 transition hover:text-amber-950">
