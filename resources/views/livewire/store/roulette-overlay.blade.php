@@ -1,5 +1,6 @@
 @php
-    $colors = ['#f6c85f', '#fff8e7', '#f2b544', '#fffdf7', '#d97706', '#fce7b2', '#fffdf7', '#f1b33c', '#fff3cf', '#f7d98a'];
+    $colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#facc15', '#14b8a6'];
+    $labelColors = ['#fff7ed', '#1c1917', '#ecfdf5', '#eff6ff', '#fff1f2', '#f5f3ff', '#292524', '#f0fdfa'];
     $segmentCount = count($segments);
     $segmentAngle = 360 / $segmentCount;
     $stops = [];
@@ -101,7 +102,7 @@
 
             <div class="relative z-10">
                 <div class="roulette-overlay-stage relative mx-auto aspect-square w-full">
-                    <div class="absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1">
+                    <div class="roulette-pointer absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1">
                         <div class="h-0 w-0 border-x-[16px] border-t-[28px] border-x-transparent border-t-stone-950 drop-shadow"></div>
                     </div>
                     <div class="roulette-overlay-wheel absolute inset-0 rounded-full border-[10px] border-[#40352b] shadow-[inset_0_0_0_5px_#fff8e7,0_25px_60px_-30px_rgba(41,37,36,.55)]"
@@ -110,7 +111,7 @@
                         @foreach ($segments as $index => $segment)
                             @php $angle = $index * $segmentAngle; @endphp
                             <span class="roulette-wheel-label absolute left-1/2 top-1/2 flex items-center justify-center text-center font-extrabold leading-3 text-stone-950"
-                                style="--label-angle: {{ $angle }}deg; --label-counter-angle: {{ -$angle }}deg;">
+                                style="--label-angle: {{ $angle }}deg; --label-counter-angle: {{ -$angle }}deg; color: {{ $labelColors[$index % count($labelColors)] }};">
                                 {{ $segment['result'] === 'none' ? 'Sigue' : $segment['label'] }}
                             </span>
                         @endforeach
@@ -249,6 +250,9 @@
             width: min(100%, 270px);
         }
         .roulette-wheel-label {
+            position: absolute;
+            left: 50%;
+            top: 50%;
             width: 54px;
             height: 24px;
             margin: -12px 0 0 -27px;
@@ -256,11 +260,24 @@
             transform: rotate(var(--label-angle)) translateY(-88px) rotate(var(--label-counter-angle));
         }
         .roulette-overlay-wheel {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
             overflow: hidden;
         }
         .roulette-center-button {
+            position: absolute;
+            left: 50%;
+            top: 50%;
             width: 78px;
             height: 78px;
+            transform: translate(-50%, -50%);
+        }
+        .roulette-pointer {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translate(-50%, -3px);
         }
         @media (min-width: 800px) {
             .roulette-overlay-panel {

@@ -30,6 +30,7 @@ class RouletteTest extends TestCase
         $service = app(RouletteService::class);
         $segments = collect($service->segments());
 
+        $this->assertCount(8, $segments);
         $this->assertTrue($segments->contains(fn ($segment) => $segment['percent'] === 15 && $segment['min'] === 100.0));
         $this->assertTrue($segments->contains(fn ($segment) => $segment['percent'] === 10 && $segment['min'] === 40.0));
         $this->assertTrue($segments->contains(fn ($segment) => $segment['percent'] === 5 && $segment['min'] === 0.0));

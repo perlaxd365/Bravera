@@ -14,7 +14,7 @@ use RuntimeException;
 class RouletteService
 {
     /**
-     * Diez segmentos con la misma probabilidad. Las repeticiones determinan
+     * Ocho segmentos con la misma probabilidad. Las repeticiones determinan
      * la frecuencia de cada premio sin ocultar las condiciones.
      *
      * @return array<int, array{result: string, label: string, percent: int, min: float}>
@@ -26,12 +26,10 @@ class RouletteService
             ['result' => '10', 'label' => '10%', 'percent' => 10, 'min' => 40.0],
             ['result' => '5', 'label' => '5%', 'percent' => 5, 'min' => 0.0],
             ['result' => 'none', 'label' => 'Sigue intentando', 'percent' => 0, 'min' => 0.0],
-            ['result' => '5', 'label' => '5%', 'percent' => 5, 'min' => 0.0],
-            ['result' => '15', 'label' => '15%', 'percent' => 15, 'min' => 100.0],
-            ['result' => 'none', 'label' => 'Sigue intentando', 'percent' => 0, 'min' => 0.0],
             ['result' => '10', 'label' => '10%', 'percent' => 10, 'min' => 40.0],
             ['result' => '5', 'label' => '5%', 'percent' => 5, 'min' => 0.0],
             ['result' => 'none', 'label' => 'Sigue intentando', 'percent' => 0, 'min' => 0.0],
+            ['result' => '15', 'label' => '15%', 'percent' => 15, 'min' => 100.0],
         ];
     }
 
