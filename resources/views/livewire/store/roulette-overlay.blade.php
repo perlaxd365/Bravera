@@ -67,7 +67,7 @@
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
     <button type="button" x-show="!open" @click="open = true"
-        class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-16 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-6"
+        class="roulette-floating-cta group fixed bottom-24 left-2 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-5 sm:left-4"
         aria-label="Girar y ganar un descuento gratis">
         <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)]">
             <flux:icon name="sparkles" class="size-[18px]" />
