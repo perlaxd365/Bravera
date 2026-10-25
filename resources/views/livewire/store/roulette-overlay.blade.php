@@ -109,13 +109,13 @@
                         :style="`transform: rotate(${rotation}deg); background: {{ $wheelGradient }}`">
                         @foreach ($segments as $index => $segment)
                             @php $angle = $index * $segmentAngle; @endphp
-                            <span class="roulette-wheel-label absolute left-1/2 top-1/2 flex w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-[9px] font-extrabold leading-3 text-stone-950 sm:w-24 sm:text-[10px]"
-                                style="--label-angle: {{ $angle }}deg;">
-                                {{ $segment['label'] }}
+                            <span class="roulette-wheel-label absolute left-1/2 top-1/2 flex items-center justify-center text-center font-extrabold leading-3 text-stone-950"
+                                style="--label-angle: {{ $angle }}deg; --label-counter-angle: {{ -$angle }}deg;">
+                                {{ $segment['result'] === 'none' ? 'Sigue' : $segment['label'] }}
                             </span>
                         @endforeach
                     </div>
-                    <div class="absolute left-1/2 top-1/2 z-20 flex size-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-[#fff8e7] bg-stone-950 shadow-xl sm:size-28">
+                    <div class="roulette-center-button absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[5px] border-[#fff8e7] bg-stone-950 shadow-xl">
                         <button type="button" wire:click="spin"
                             x-on:click="if ({{ $eligibility['allowed'] ? 'true' : 'false' }} && !spinning) { $nextTick(() => {}) }"
                             wire:loading.attr="disabled" wire:target="spin"
@@ -242,12 +242,25 @@
             display: grid;
             gap: 1rem;
             margin: auto;
+            background: #fffdf8;
+            box-shadow: 0 30px 90px -35px rgba(12, 10, 9, .7);
         }
         .roulette-overlay-stage {
             width: min(100%, 270px);
         }
         .roulette-wheel-label {
-            transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-104px) rotate(calc(var(--label-angle) * -1));
+            width: 54px;
+            height: 24px;
+            margin: -12px 0 0 -27px;
+            font-size: 8px;
+            transform: rotate(var(--label-angle)) translateY(-88px) rotate(var(--label-counter-angle));
+        }
+        .roulette-overlay-wheel {
+            overflow: hidden;
+        }
+        .roulette-center-button {
+            width: 78px;
+            height: 78px;
         }
         @media (min-width: 800px) {
             .roulette-overlay-panel {
@@ -260,7 +273,15 @@
                 width: 270px;
             }
             .roulette-wheel-label {
-                transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-106px) rotate(calc(var(--label-angle) * -1));
+                width: 60px;
+                height: 24px;
+                margin: -12px 0 0 -30px;
+                font-size: 9px;
+                transform: rotate(var(--label-angle)) translateY(-96px) rotate(var(--label-counter-angle));
+            }
+            .roulette-center-button {
+                width: 82px;
+                height: 82px;
             }
         }
         @media (max-height: 700px) and (min-width: 800px) {
@@ -268,7 +289,15 @@
                 width: 230px;
             }
             .roulette-wheel-label {
-                transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-88px) rotate(calc(var(--label-angle) * -1));
+                width: 54px;
+                height: 22px;
+                margin: -11px 0 0 -27px;
+                font-size: 8px;
+                transform: rotate(var(--label-angle)) translateY(-80px) rotate(var(--label-counter-angle));
+            }
+            .roulette-center-button {
+                width: 72px;
+                height: 72px;
             }
         }
     </style>
