@@ -13,7 +13,7 @@
                     <span class="flex size-9 items-center justify-center rounded-xl bg-amber-300 text-amber-950">
                         <flux:icon name="shopping-bag" class="size-4" />
                     </span>
-                    Brevare
+                    Brevare Perú
                 </a>
                 <p class="mt-3 max-w-sm text-sm leading-relaxed text-gray-500">
                     <span class="font-medium text-gray-700">Todo lo que buscas, en un solo lugar.</span><br>
@@ -87,6 +87,7 @@
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.orders') }}">Mis pedidos</a></li>
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.addresses') }}">Mis direcciones</a></li>
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.points') }}">Brevare Puntos</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.coupons') }}">Mis cupones</a></li>
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.favorites') }}">Favoritos</a></li>
                     @else
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('login') }}">Iniciar sesión</a></li>
@@ -100,6 +101,7 @@
                 <ul class="mt-4 space-y-3 text-sm">
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('claims') }}">Libro de Reclamaciones</a></li>
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}">Cambios y devoluciones</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.roulette') }}">Ruleta Brevare Perú</a></li>
                 </ul>
             </div>
             <div>

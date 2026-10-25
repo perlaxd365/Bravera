@@ -70,8 +70,6 @@ class OrderService
 
             $this->reserveStock($data);
 
-            $this->registerCouponUsage($order, $data);
-
             // $data->cart->update(['status' => 'converted']);
 
             return $order->fresh();
@@ -218,18 +216,4 @@ class OrderService
         });
     }
 
-    private function registerCouponUsage(Order $order, CheckoutData $data): void
-    {
-        if (! $data->coupon || $data->discountTotal <= 0) {
-            return;
-        }
-
-        CouponUsage::create([
-            'coupon_id' => $data->coupon->id,
-            'user_id' => $data->user->id,
-            'order_id' => $order->id,
-            'subtotal' => $data->subtotal,
-            'discount_amount' => $data->discountTotal,
-        ]);
-    }
 }

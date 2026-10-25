@@ -25,6 +25,7 @@ use App\Livewire\Store\Home;
 use App\Livewire\Store\MercadoPagoPayment;
 use App\Livewire\Store\OrderPlaced;
 use App\Livewire\Store\ProductDetail;
+use App\Livewire\Store\Roulette;
 use App\Livewire\Pages\About;
 use Illuminate\Support\Facades\Route;
 
@@ -89,6 +90,9 @@ Route::get('categoria/{path}', Catalog::class)
 
 Route::get('producto/{slug}', ProductDetail::class)
     ->name('store.product');
+
+Route::get('ruleta', Roulette::class)
+    ->name('store.roulette');
 
 Route::get('pedidos/{order}/curso/{asset}', CourseAssetController::class)
     ->middleware('auth')
@@ -157,6 +161,9 @@ Route::middleware(['auth', 'verified'])->prefix('mi-cuenta')->name('account.')->
 
     Route::get('favoritos', \App\Livewire\Account\Favorites::class)
         ->name('favorites');
+
+    Route::get('cupones', \App\Livewire\Account\Coupons::class)
+        ->name('coupons');
 });
 
 Route::redirect('dashboard', '/')

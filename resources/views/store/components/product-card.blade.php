@@ -61,7 +61,7 @@
             @if ($product->isSoldByBrevare() || $hasWholesale)
                 <div class="absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1.5">
                     @if ($product->isSoldByBrevare())
-                        <span class="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-gray-900 shadow-sm sm:px-3 sm:text-[10px]">Vendido por Brevare</span>
+                        <span class="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-gray-900 shadow-sm sm:px-3 sm:text-[10px]">Vendido por Brevare Perú</span>
                     @endif
                     @if ($hasWholesale)
                         <span class="rounded-full bg-emerald-700 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-white shadow-sm sm:px-3 sm:text-[10px]">Mayorista</span>

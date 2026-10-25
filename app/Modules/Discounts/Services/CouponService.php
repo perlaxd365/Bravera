@@ -22,7 +22,7 @@ class CouponService
     {
         $coupon = Coupon::active()->byCode($code)->first();
 
-        if (! $coupon) {
+        if (! $coupon || ($coupon->user_id && (int) $coupon->user_id !== (int) $user->id)) {
             throw ValidationException::withMessages([
                 'coupon_code' => 'El cupón ingresado no existe.',
             ]);

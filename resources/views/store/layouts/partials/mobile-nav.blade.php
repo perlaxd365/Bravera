@@ -11,12 +11,10 @@
             'active' => request()->routeIs('account.profile', 'account.password', 'login', 'register'),
         ],
         [
-            'label' => 'Puntos',
-            'url' => auth()->check()
-                ? route('account.points')
-                : route('login', ['redirect' => route('account.points')]),
-            'icon' => 'gift',
-            'active' => request()->routeIs('account.points'),
+            'label' => 'Ruleta',
+            'url' => route('store.roulette'),
+            'icon' => 'sparkles',
+            'active' => request()->routeIs('store.roulette'),
         ],
         [
             'label' => 'Ofertas',
@@ -55,7 +53,7 @@
 
         <div class="mx-auto max-h-[70vh] max-w-lg overflow-y-auto overscroll-contain rounded-3xl border border-amber-200 bg-white p-4 shadow-2xl shadow-gray-950/20">
             <div class="flex items-center justify-between gap-3">
-                <p class="text-xs font-bold uppercase tracking-[.18em] text-amber-800">Menú Brevare</p>
+                <p class="text-xs font-bold uppercase tracking-[.18em] text-amber-800">Menú Brevare Perú</p>
                 <button type="button" @click="menuOpen = false" aria-label="Cerrar menú"
                     class="flex size-10 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 hover:text-gray-900">
                     <flux:icon name="x-mark" class="size-5" />
@@ -74,6 +72,9 @@
                 </a>
                 <a href="{{ route('store.offers') }}" class="flex min-h-11 items-center rounded-xl bg-amber-50 px-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100">
                     Ofertas
+                </a>
+                <a href="{{ route('store.roulette') }}" class="col-span-2 flex min-h-11 items-center justify-between rounded-xl bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-amber-800">
+                    Girar y ganar <flux:icon name="sparkles" class="size-4 text-amber-300" />
                 </a>
             </nav>
 
@@ -104,6 +105,9 @@
                     <a href="{{ route('account.points') }}" class="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-950">
                         Brevare Puntos
                     </a>
+                    <a href="{{ route('account.coupons') }}" class="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-950">
+                        Mis cupones
+                    </a>
                     <a href="{{ route('account.favorites') }}" class="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-950">
                         Favoritos
                     </a>
@@ -127,7 +131,7 @@
                 </div>
             @endauth
 
-            <a href="https://wa.me/{{ $company['whatsapp'] }}?text={{ rawurlencode('Hola Brevare, quiero información sobre un producto.') }}"
+            <a href="https://wa.me/{{ $company['whatsapp'] }}?text={{ rawurlencode('Hola Brevare Perú, quiero información sobre un producto.') }}"
                 target="_blank" rel="noopener noreferrer"
                 class="mt-4 flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-[#25D366] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#1ebe5d]">
                 <span>Escríbenos por WhatsApp</span>
@@ -159,7 +163,7 @@
         </nav>
     </div>
 
-    <a x-show="!menuOpen" href="https://wa.me/{{ $company['whatsapp'] }}?text={{ rawurlencode('Hola Brevare, quiero información sobre un producto.') }}"
+    <a x-show="!menuOpen" href="https://wa.me/{{ $company['whatsapp'] }}?text={{ rawurlencode('Hola Brevare Perú, quiero información sobre un producto.') }}"
         target="_blank" rel="noopener noreferrer" aria-label="Escríbenos por WhatsApp"
         class="fixed bottom-24 right-4 z-[75] flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-2xl shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#1ebe5d]">
         <svg viewBox="0 0 32 32" class="size-7" fill="currentColor" aria-hidden="true">

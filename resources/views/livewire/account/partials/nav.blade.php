@@ -11,6 +11,9 @@
         ['route' => 'account.password', 'match' => 'account.password', 'label' => 'Contraseña', 'icon' => 'lock'],
         ['route' => 'account.orders', 'match' => 'account.orders*', 'label' => 'Mis pedidos', 'icon' => 'cube'],
         ['route' => 'account.addresses', 'match' => 'account.addresses', 'label' => 'Mis direcciones', 'icon' => 'map-pin'],
+        ['route' => 'account.points', 'match' => 'account.points', 'label' => 'Brevare Puntos', 'icon' => 'gift'],
+        ['route' => 'account.coupons', 'match' => 'account.coupons', 'label' => 'Mis cupones', 'icon' => 'ticket'],
+        ['route' => 'account.favorites', 'match' => 'account.favorites', 'label' => 'Favoritos', 'icon' => 'heart'],
     ];
 @endphp
 

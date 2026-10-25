@@ -12,6 +12,7 @@ use App\Modules\Ordering\Services\OrderService;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
 use App\Services\MetaConversionsService;
+use App\Services\CouponRedemptionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -323,6 +324,8 @@ class PaymentService
                 // comprados al volver a la tienda.
                 $cart->items()->delete();
             }
+
+            app(CouponRedemptionService::class)->recordPaidOrder($order);
 
             // Generar órdenes de compra a proveedores (dropshipping).
             $this->supplierOrderService->createForPaidOrder($order);

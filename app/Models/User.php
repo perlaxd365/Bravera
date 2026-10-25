@@ -13,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'avatar', 'provider', 'provider_id', 'last_login_at', 'email_verified_at'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'avatar', 'provider', 'provider_id', 'last_login_at', 'email_verified_at', 'is_guest', 'marketing_opt_out_at'])]
 #[Hidden(['password', 'remember_token', 'email_verification_code'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -96,6 +96,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_guest' => 'boolean',
+            'points_balance' => 'integer',
+            'marketing_opt_out_at' => 'datetime',
             'email_verification_code_expires_at' => 'datetime',
             'email_verification_code_sent_at' => 'datetime',
             'password' => 'hashed',
@@ -115,5 +118,30 @@ class User extends Authenticatable implements MustVerifyEmail
     public function productReviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
+    public function pointRedemptions(): HasMany
+    {
+        return $this->hasMany(PointRedemption::class);
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function rouletteSpins(): HasMany
+    {
+        return $this->hasMany(RouletteSpin::class);
+    }
+
+    public function coupons(): HasMany
+    {
+        return $this->hasMany(Coupon::class);
     }
 }

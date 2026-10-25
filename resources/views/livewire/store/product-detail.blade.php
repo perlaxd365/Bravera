@@ -415,13 +415,21 @@
                         </p>
                     @endif
 
-                    <button type="submit"
-                        data-add-to-cart
-                        @disabled(!$selectionComplete || !$selectedVariant || $currentSuppliers->isEmpty())
-                        class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        <flux:icon name="shopping-cart" class="size-4" />
-                        {{ $currentInCart ? 'Agregar más al carrito' : 'Agregar al carrito' }}
-                    </button>
+                    @if ($currentInCart)
+                        <a href="{{ route('checkout') }}" wire:navigate
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-700 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800">
+                            <flux:icon name="credit-card" class="size-4" />
+                            Ir al Checkout (Pagar ahora)
+                        </a>
+                    @else
+                        <button type="submit"
+                            data-add-to-cart
+                            @disabled(!$selectionComplete || !$selectedVariant || $currentSuppliers->isEmpty())
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
+                            <flux:icon name="shopping-cart" class="size-4" />
+                            Agregar al carrito
+                        </button>
+                    @endif
 
                     @if ($selectionComplete && $selectedVariant && $currentSuppliers->isEmpty())
                         <p class="text-center text-sm text-gray-500">Esa combinación no está disponible.</p>

@@ -16,7 +16,7 @@ return [
     */
 
     'company' => [
-        'name' => env('COMPANY_NAME', 'Brevare'),
+        'name' => 'Brevare Perú',
         'legal_name' => env('COMPANY_LEGAL_NAME', 'Inversiones La Breña S.A.C.'),
         'ruc' => env('COMPANY_RUC', '10738883123'),
         'email' => env('COMPANY_EMAIL', 'administracion@brevare.com'),

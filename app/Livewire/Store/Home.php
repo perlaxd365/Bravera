@@ -178,8 +178,8 @@ class Home extends Component
             ->values()
             ->all();
 
-        $seoTitle = 'Brevare | Moda, tecnología, hogar y regalos en Perú';
-        $seoDescription = 'Compra moda, tecnología, hogar y regalos en Brevare. Envíos a todo el Perú, pagos seguros y atención cercana.';
+        $seoTitle = 'Brevare Perú | Moda, tecnología, hogar y regalos';
+        $seoDescription = 'Compra moda, tecnología, hogar y regalos en Brevare Perú. Entrega garantizada y envíos a todo el Perú.';
         $seoImage = $heroSlides[0]['image'] ?? asset('favicon-192.png');
 
         return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'promoTickerItems', 'homeTexts'))

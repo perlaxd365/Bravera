@@ -6,6 +6,7 @@ use App\Enums\CouponAppliesTo;
 use App\Enums\CouponType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Coupon extends Model
@@ -25,6 +26,7 @@ class Coupon extends Model
         'applies_to_id',
         'is_active',
         'created_by',
+        'user_id',
     ];
 
     protected function casts(): array
@@ -46,6 +48,11 @@ class Coupon extends Model
     public function usages(): HasMany
     {
         return $this->hasMany(CouponUsage::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function scopeActive(Builder $query): Builder

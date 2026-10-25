@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Mi cuenta') · {{ config('app.name') }}</title>
+    <title>@yield('title', 'Mi cuenta') · Brevare Perú</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,8 +15,9 @@
     @livewireStyles
     @stack('styles')
 </head>
-<body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
+<body class="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900 antialiased lg:pb-0">
 
+    @include('store.layouts.partials.top-banner')
     @include('store.layouts.partials.header')
 
     @php
@@ -59,6 +60,8 @@
     </main>
 
     @include('store.layouts.partials.footer')
+
+    @include('store.layouts.partials.mobile-nav')
 
     <flux:toast position="bottom right" />
 
