@@ -77,38 +77,8 @@ class RouletteService
                 throw new RuntimeException($eligibility['message']);
             }
 
-            $segments = $this->segments();
-            $index = random_int(0, count($segments) - 1);
-            $segment = $segments[$index];
-            $coupon = null;
-
-            if ($segment['percent'] > 0) {
-                $coupon = Coupon::create([
-                    'code' => $this->uniqueCode(),
-                    'name' => 'Ruleta Brevare Perú · '.$segment['label'],
-                    'type' => CouponType::PERCENTAGE,
-                    'value' => $segment['percent'],
-                    'min_subtotal' => $segment['min'],
-                    'max_discount' => null,
-                    'starts_at' => now(),
-                    'ends_at' => null,
-                    'usage_limit' => 1,
-                    'per_user_limit' => 1,
-                    'applies_to' => CouponAppliesTo::ALL,
-                    'applies_to_id' => null,
-                    'is_active' => true,
-                    'user_id' => $user->id,
-                    'created_by' => null,
-                ]);
-            }
-
-            $spin = RouletteSpin::create([
-                'user_id' => $user->id,
-                'coupon_id' => $coupon?->id,
-                'result' => $segment['result'],
-                'discount_percent' => $segment['percent'],
-                'min_subtotal' => $segment['min'],
-            ]);
+            [$index, $segment] = $this->drawSegment();
+            $spin = $this->persistSpin($user, $segment);
 
             return [
                 'spin' => $spin->load('coupon'),
@@ -116,6 +86,78 @@ class RouletteService
                 'segment' => $segment,
             ];
         });
+    }
+
+    public function spinGuest(): array
+    {
+        [$index, $segment] = $this->drawSegment();
+
+        return [
+            'spin' => null,
+            'index' => $index,
+            'segment' => $segment,
+        ];
+    }
+
+    public function claimGuestSpin(User $user, array $guestSpin): RouletteSpin
+    {
+        return DB::transaction(function () use ($user, $guestSpin): RouletteSpin {
+            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if (! $this->eligibility($user)['allowed']) {
+                throw new RuntimeException(
+                    'Para reclamar este premio primero debes usar el cupón anterior de tu cuenta.'
+                );
+            }
+
+            return $this->persistSpin($user, [
+                'result' => (string) ($guestSpin['result'] ?? 'none'),
+                'label' => (string) ($guestSpin['label'] ?? 'Sigue intentando'),
+                'percent' => (int) ($guestSpin['percent'] ?? 0),
+                'min' => (float) ($guestSpin['min'] ?? 0),
+            ])->load('coupon');
+        });
+    }
+
+    private function drawSegment(): array
+    {
+        $segments = $this->segments();
+        $index = random_int(0, count($segments) - 1);
+
+        return [$index, $segments[$index]];
+    }
+
+    private function persistSpin(User $user, array $segment): RouletteSpin
+    {
+        $coupon = null;
+
+        if ($segment['percent'] > 0) {
+            $coupon = Coupon::create([
+                'code' => $this->uniqueCode(),
+                'name' => 'Ruleta Brevare Perú · '.$segment['label'],
+                'type' => CouponType::PERCENTAGE,
+                'value' => $segment['percent'],
+                'min_subtotal' => $segment['min'],
+                'max_discount' => null,
+                'starts_at' => now(),
+                'ends_at' => null,
+                'usage_limit' => 1,
+                'per_user_limit' => 1,
+                'applies_to' => CouponAppliesTo::ALL,
+                'applies_to_id' => null,
+                'is_active' => true,
+                'user_id' => $user->id,
+                'created_by' => null,
+            ]);
+        }
+
+        return RouletteSpin::create([
+            'user_id' => $user->id,
+            'coupon_id' => $coupon?->id,
+            'result' => $segment['result'],
+            'discount_percent' => $segment['percent'],
+            'min_subtotal' => $segment['min'],
+        ]);
     }
 
     private function uniqueCode(): string

@@ -100,10 +100,6 @@
                 class="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-200">
                 Ofertas
             </a>
-            <a href="{{ route('store.roulette') }}"
-                class="whitespace-nowrap rounded-full bg-gray-950 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-amber-800 {{ request()->routeIs('store.roulette') ? 'ring-2 ring-amber-400 ring-offset-2' : '' }}">
-                Girar y ganar
-            </a>
         </div>
     </nav>
 </header>

@@ -25,7 +25,6 @@ use App\Livewire\Store\Home;
 use App\Livewire\Store\MercadoPagoPayment;
 use App\Livewire\Store\OrderPlaced;
 use App\Livewire\Store\ProductDetail;
-use App\Livewire\Store\Roulette;
 use App\Livewire\Pages\About;
 use Illuminate\Support\Facades\Route;
 
@@ -91,7 +90,7 @@ Route::get('categoria/{path}', Catalog::class)
 Route::get('producto/{slug}', ProductDetail::class)
     ->name('store.product');
 
-Route::get('ruleta', Roulette::class)
+Route::redirect('ruleta', '/')
     ->name('store.roulette');
 
 Route::get('pedidos/{order}/curso/{asset}', CourseAssetController::class)

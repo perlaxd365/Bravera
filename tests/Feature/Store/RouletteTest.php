@@ -7,6 +7,7 @@ use App\Enums\CouponType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Livewire\Store\Roulette;
+use App\Livewire\Store\RouletteOverlay;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Payment;
@@ -102,6 +103,27 @@ class RouletteTest extends TestCase
             ->assertSee('Necesitas una cuenta')
             ->call('spin')
             ->assertSet('error', 'Inicia sesión para girar y guardar tu cupón.');
+    }
+
+    public function test_guest_spin_is_kept_in_session_and_claimed_after_login(): void
+    {
+        $user = User::factory()->create();
+
+        $guest = Livewire::test(RouletteOverlay::class)
+            ->assertSee('GIRA Y GANA DESCUENTO GRATIS')
+            ->call('spin')
+            ->assertSet('error', null);
+
+        $this->assertNotNull($guest->get('guestPrize'));
+        $this->assertSame(0, RouletteSpin::count());
+
+        $this->actingAs($user);
+
+        Livewire::test(RouletteOverlay::class)
+            ->call('claimPending')
+            ->assertSet('error', null);
+
+        $this->assertDatabaseHas('roulette_spins', ['user_id' => $user->id]);
     }
 
     private function couponFor(User $user, int $percent, float $minimum): Coupon

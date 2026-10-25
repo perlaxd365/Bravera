@@ -65,6 +65,8 @@
 
     <flux:toast position="bottom right" />
 
+    <livewire:store.roulette-overlay />
+
     @livewireScripts
     @fluxScripts
 

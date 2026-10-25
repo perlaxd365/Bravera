@@ -87,7 +87,7 @@ class ProductDetailTest extends TestCase
             ->assertDontSee('Proveedor Oficial')
             ->assertDontSee('Vendido por')
             ->assertSee('S/ 120.00')
-            ->assertSee('metodos-de-pago.svg', false)
+            ->assertSee('culqiConNombre.svg', false)
             ->assertSee('Pago 100% seguro');
     }
 
@@ -115,7 +115,8 @@ class ProductDetailTest extends TestCase
             ->set('selectedAttributes', [$tallaS->attribute_id => $tallaS->id])
             ->assertSet('selectedVariantId', $variantSmall->id)
             ->call('addToCart')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertSee('Ir al Checkout (Pagar ahora)');
 
         $this->assertSame(1, CartItem::count());
         $this->assertDatabaseHas('cart_items', [

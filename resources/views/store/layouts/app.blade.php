@@ -127,6 +127,10 @@
 
     <x-brevare.cookie-consent />
 
+    @unless (request()->routeIs('checkout', 'payments.*'))
+        <livewire:store.roulette-overlay />
+    @endunless
+
     @livewireScripts
     @fluxScripts
 

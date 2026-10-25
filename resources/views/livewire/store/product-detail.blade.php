@@ -42,6 +42,31 @@
     @endphp
 
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <style>
+        @media (min-width: 1024px) {
+            .product-gallery-grid {
+                grid-template-columns: 76px minmax(0, 1fr);
+                align-items: start;
+            }
+
+            .product-gallery-stage {
+                grid-column: 2;
+                grid-row: 1;
+                width: 100%;
+            }
+
+            .product-gallery-thumbs {
+                grid-column: 1;
+                grid-row: 1;
+                max-height: min(70vh, 620px);
+                flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+        }
+    </style>
+
         <nav aria-label="breadcrumb" class="mb-4 text-sm">
             <ol class="flex flex-wrap items-center gap-1.5 text-gray-500">
                 <li><a href="{{ route('home') }}" class="transition hover:text-gray-900">Inicio</a></li>
@@ -131,11 +156,8 @@
                         @keydown.arrow-left.window.prevent="if (lightbox) prev()"
                         @keydown.escape.window="lightbox = false">
 
-                        <div @class([
-                            'grid gap-2.5',
-                            'lg:grid-cols-[76px_minmax(0,1fr)]' => count($galleryUrls) > 1,
-                        ])>
-                        <div class="group relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-gray-200 bg-white lg:col-start-2 lg:row-start-1"
+                        <div class="product-gallery-grid grid gap-2.5">
+                        <div class="product-gallery-stage group relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-gray-200 bg-white"
                                 x-ref="stage"
                                 @mousemove="parallax($event)"
                                 @mouseleave="resetParallax()"
@@ -170,7 +192,7 @@
                         </div>
 
                         @if (count($galleryUrls) > 1)
-                            <div class="flex gap-2.5 overflow-x-auto pb-1 lg:col-start-1 lg:row-start-1 lg:max-h-[min(70vh,620px)] lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1">
+                            <div class="product-gallery-thumbs flex gap-2.5 overflow-x-auto pb-1">
                                 <template x-for="(img, i) in images" :key="i">
                                     <button type="button" @click="active = i" :aria-label="'Ver foto ' + (i + 1)"
                                         :class="i === active ? 'border-gray-900 ring-2 ring-gray-900/20' : 'border-gray-200 opacity-70 hover:opacity-100'"

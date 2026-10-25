@@ -101,7 +101,6 @@
                 <ul class="mt-4 space-y-3 text-sm">
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('claims') }}">Libro de Reclamaciones</a></li>
                     <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}">Cambios y devoluciones</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.roulette') }}">Ruleta Brevare Perú</a></li>
                 </ul>
             </div>
             <div>

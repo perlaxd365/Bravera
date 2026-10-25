@@ -11,10 +11,12 @@
             'active' => request()->routeIs('account.profile', 'account.password', 'login', 'register'),
         ],
         [
-            'label' => 'Ruleta',
-            'url' => route('store.roulette'),
-            'icon' => 'sparkles',
-            'active' => request()->routeIs('store.roulette'),
+            'label' => 'Puntos',
+            'url' => auth()->check()
+                ? route('account.points')
+                : route('login', ['redirect' => route('account.points')]),
+            'icon' => 'gift',
+            'active' => request()->routeIs('account.points'),
         ],
         [
             'label' => 'Ofertas',
@@ -72,9 +74,6 @@
                 </a>
                 <a href="{{ route('store.offers') }}" class="flex min-h-11 items-center rounded-xl bg-amber-50 px-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100">
                     Ofertas
-                </a>
-                <a href="{{ route('store.roulette') }}" class="col-span-2 flex min-h-11 items-center justify-between rounded-xl bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-amber-800">
-                    Girar y ganar <flux:icon name="sparkles" class="size-4 text-amber-300" />
                 </a>
             </nav>
 
