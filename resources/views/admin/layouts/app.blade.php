@@ -49,6 +49,8 @@
             const loadingLabel = document.getElementById('admin-loading-label');
             let activeCommits = 0;
             let interactionTimer;
+            const openDetails = new Map();
+            const restoringDetails = new WeakSet();
 
             const clearInteractionState = () => {
                 clearTimeout(interactionTimer);
@@ -84,6 +86,69 @@
                     }
                 }, 1500);
             };
+
+            const detailsKey = (details) => {
+                const component = details.closest('[wire\\:id]');
+
+                if (!component) {
+                    return null;
+                }
+
+                const path = [];
+                let node = details;
+
+                while (node && node !== component) {
+                    const parent = node.parentElement;
+
+                    if (!parent) {
+                        break;
+                    }
+
+                    path.unshift(Array.prototype.indexOf.call(parent.children, node));
+                    node = parent;
+                }
+
+                return `${component.getAttribute('wire:id')}:${path.join('.')}`;
+            };
+
+            const rememberDetails = (details) => {
+                const key = detailsKey(details);
+
+                if (key) {
+                    openDetails.set(key, details.open);
+                }
+            };
+
+            const restoreDetails = (details) => {
+                const key = detailsKey(details);
+
+                if (!key || !openDetails.has(key) || details.open === openDetails.get(key)) {
+                    return;
+                }
+
+                restoringDetails.add(details);
+                details.open = openDetails.get(key);
+
+                setTimeout(() => restoringDetails.delete(details), 0);
+            };
+
+            document.addEventListener('toggle', (event) => {
+                if (event.target instanceof HTMLDetailsElement && !restoringDetails.has(event.target)) {
+                    rememberDetails(event.target);
+                }
+            }, true);
+
+            Livewire.hook('morph.updating', ({ el }) => {
+                if (el instanceof HTMLDetailsElement) {
+                    rememberDetails(el);
+                }
+            });
+
+            Livewire.hook('morph.updated', ({ el }) => {
+                if (el instanceof HTMLDetailsElement) {
+                    restoreDetails(el);
+                }
+            });
 
             Livewire.hook('commit', ({ succeed, fail }) => {
                 activeCommits++;

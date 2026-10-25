@@ -436,17 +436,29 @@ class Form extends Component
         ]);
 
         $product = Product::findOrFail($this->form->id);
-        $data = $cloudinary->uploadAdVideo($this->metaAdVideo);
-        $previousPublicId = $product->meta_ad_video_public_id;
+        $data = null;
 
         try {
+            $data = $cloudinary->uploadAdVideo($this->metaAdVideo);
+            $previousPublicId = $product->meta_ad_video_public_id;
+
             $product->update([
                 'meta_ad_video_url' => $data['secure_url'],
                 'meta_ad_video_public_id' => $data['public_id'],
             ]);
         } catch (Throwable $exception) {
-            $cloudinary->delete($data['public_id'], 'video');
-            throw $exception;
+            if (is_array($data) && filled($data['public_id'] ?? null)) {
+                $cloudinary->delete($data['public_id'], 'video');
+            }
+
+            report($exception);
+            $this->addError('metaAdVideo', 'No se pudo subir el video. Revisa el archivo e inténtalo nuevamente.');
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'No se pudo subir el video para el anuncio.',
+            ]);
+
+            return;
         }
 
         if ($previousPublicId) {

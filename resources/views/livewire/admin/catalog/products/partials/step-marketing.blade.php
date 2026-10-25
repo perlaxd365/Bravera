@@ -122,7 +122,12 @@
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-dashed border-sky-300 bg-sky-50/40 p-4">
+                <div class="rounded-2xl border border-dashed border-sky-300 bg-sky-50/40 p-4"
+                    x-data="{ uploading: false, progress: 0, uploadError: null }"
+                    x-on:livewire-upload-start.window="uploading = true; progress = 0; uploadError = null"
+                    x-on:livewire-upload-progress.window="progress = Math.max(0, Math.min(100, Number($event.detail.progress || 0)))"
+                    x-on:livewire-upload-finish.window="uploading = false; progress = 100"
+                    x-on:livewire-upload-error.window="uploading = false; uploadError = 'No se pudo transferir el video. Inténtalo nuevamente.'">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-sm font-semibold text-stone-900">Video exclusivo para el anuncio</p>
@@ -137,16 +142,40 @@
                     </div>
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <input type="file" wire:model="metaAdVideo" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+                            x-bind:disabled="uploading"
+                            wire:loading.attr="disabled" wire:target="metaAdVideo"
                             class="block min-w-0 flex-1 cursor-pointer rounded-xl border border-stone-300 bg-white text-sm text-stone-700 file:mr-4 file:rounded-l-xl file:border-0 file:bg-sky-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-sky-900 hover:file:bg-sky-200">
                         <button type="button" wire:click="saveMetaAdVideo"
                             wire:loading.attr="disabled" wire:target="metaAdVideo,saveMetaAdVideo"
                             @disabled(! $metaAdVideo)
                             class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-stone-300">
                             <span wire:loading.remove wire:target="saveMetaAdVideo">Guardar video</span>
-                            <span wire:loading wire:target="saveMetaAdVideo">Subiendo…</span>
+                            <span wire:loading wire:target="saveMetaAdVideo" class="inline-flex items-center gap-2">
+                                <span class="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
+                                Guardando en Cloudinary…
+                            </span>
                         </button>
                     </div>
-                    @error('metaAdVideo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                    <div x-show="uploading" x-cloak class="mt-3" role="status" aria-live="polite">
+                        <div class="flex items-center justify-between gap-3 text-xs font-semibold text-sky-900">
+                            <span>Subiendo video…</span>
+                            <span x-text="`${progress}%`">0%</span>
+                        </div>
+                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-sky-100">
+                            <div class="h-full rounded-full bg-sky-600 transition-[width] duration-200"
+                                x-bind:style="`width: ${progress}%`"></div>
+                        </div>
+                    </div>
+
+                    <p x-show="! uploading && progress === 100 && ! uploadError" x-cloak
+                        class="mt-2 text-xs font-medium text-emerald-700" role="status">
+                        Video preparado. Ahora pulsa «Guardar video».
+                    </p>
+
+                    <p x-show="uploadError" x-text="uploadError" x-cloak
+                        class="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert"></p>
+                    @error('metaAdVideo') <p class="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{{ $message }}</p> @enderror
                     @if ($metaAdVideo)
                         <p class="mt-2 truncate text-xs text-stone-500">Seleccionado: {{ $metaAdVideo->getClientOriginalName() }}</p>
                     @endif

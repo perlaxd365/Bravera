@@ -215,6 +215,18 @@ class MetaAdsServiceTest extends TestCase
             ->assertSee('Meta Ads todavía no está configurado.');
     }
 
+    public function test_la_carga_del_video_de_anuncio_muestra_progreso_y_errores(): void
+    {
+        $product = $this->productWithMedia();
+
+        Livewire::test(ProductFormComponent::class)
+            ->call('edit', $product->id)
+            ->call('goToStep', 5)
+            ->assertSee('livewire-upload-progress', false)
+            ->assertSee('Guardando en Cloudinary…')
+            ->assertSee('No se pudo transferir el video');
+    }
+
     public function test_sincroniza_las_visitas_del_enlace_en_los_ultimos_treinta_dias(): void
     {
         Http::fake([
