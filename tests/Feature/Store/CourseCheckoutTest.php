@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ProductType;
 use App\Livewire\Store\Checkout;
+use App\Livewire\Store\ProductDetail;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
@@ -27,6 +28,26 @@ use Tests\TestCase;
 class CourseCheckoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_course_page_hides_internal_stock_and_shows_digital_only_return_policy(): void
+    {
+        [$product] = $this->courseProduct();
+
+        Livewire::test(ProductDetail::class, ['slug' => $product->slug])
+            ->assertSee('Producto digital · Disponible en tu cuenta')
+            ->assertDontSee('1000000')
+            ->assertSee('Producto digital sin devolución tras la entrega.')
+            ->assertSee('Acceso digital');
+
+        $this->get(route('terms'))
+            ->assertOk()
+            ->assertSee('Política de no devolución')
+            ->assertSee('archivos PDF');
+
+        $this->get(route('returns'))
+            ->assertOk()
+            ->assertSee('no admiten cambios ni devoluciones');
+    }
 
     public function test_course_purchase_completes_order_and_enables_private_assets(): void
     {

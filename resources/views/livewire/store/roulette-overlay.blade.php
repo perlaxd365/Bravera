@@ -67,12 +67,12 @@
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
     <button type="button" x-show="!open" @click="open = true"
-        class="roulette-floating-cta group fixed bottom-24 left-2 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-5 sm:left-4"
+        class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-16"
         aria-label="Girar y ganar un descuento gratis">
-        <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)]">
-            <flux:icon name="sparkles" class="size-[18px]" />
+        <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)] sm:size-11">
+            <flux:icon name="sparkles" class="size-[18px] sm:size-5" />
         </span>
-        <span class="relative z-10 text-[7px] font-extrabold uppercase leading-none tracking-[.16em] text-amber-200">Gira</span>
+        <span class="relative z-10 text-[7px] font-extrabold uppercase leading-none tracking-[.16em] text-amber-200 sm:text-[8px]">Gira</span>
         <span class="roulette-cta-badge" aria-hidden="true">15%</span>
         <span class="roulette-cta-copy">
             <span class="block text-[8px] font-bold uppercase tracking-[.18em] text-amber-300">Ruleta Brevare Perú</span>
@@ -124,7 +124,7 @@
 
                 <div class="roulette-overlay-stage relative mx-auto aspect-square w-full">
                     <div class="roulette-stage-halo pointer-events-none absolute inset-[-18px] rounded-full" aria-hidden="true"></div>
-                    <div class="roulette-pointer absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1">
+                    <div class="roulette-pointer absolute left-1/2 top-0 z-30">
                         <div class="relative h-0 w-0 border-x-[15px] border-t-[32px] border-x-transparent border-t-amber-300 drop-shadow-[0_5px_4px_rgba(41,37,36,.35)]">
                             <span class="absolute left-1/2 top-1.5 size-3 -translate-x-1/2 rounded-full border-[3px] border-stone-950 bg-amber-300"></span>
                         </div>
@@ -147,7 +147,7 @@
                             </span>
                         @endforeach
                     </div>
-                    <div class="roulette-spin-shell absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full">
+                    <div class="roulette-spin-shell absolute left-1/2 top-1/2 z-20 flex items-center justify-center rounded-full">
                         <div class="roulette-center-button flex items-center justify-center rounded-full border-[5px] border-[#fff5d4] bg-stone-950">
                             <button type="button" wire:click="spin"
                                 x-on:click="if ({{ $eligibility['allowed'] ? 'true' : 'false' }} && !spinning) { $nextTick(() => {}) }"

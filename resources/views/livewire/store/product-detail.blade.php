@@ -298,10 +298,17 @@
                 </div>
 
                 @if ($currentVariant && $currentVariant->total_available > 0)
-                    <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
-                        <span class="size-2 rounded-full bg-emerald-600"></span>
-                        En stock · {{ $currentVariant->total_available }} {{ $currentVariant->total_available === 1 ? 'unidad disponible' : 'unidades disponibles' }}
-                    </p>
+                    @if ($product->isCourse())
+                        <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800">
+                            <flux:icon name="document-arrow-down" class="size-3.5" />
+                            Producto digital · Disponible en tu cuenta
+                        </p>
+                    @else
+                        <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                            <span class="size-2 rounded-full bg-emerald-600"></span>
+                            En stock · {{ $currentVariant->total_available }} {{ $currentVariant->total_available === 1 ? 'unidad disponible' : 'unidades disponibles' }}
+                        </p>
+                    @endif
                 @endif
 
                 @if ($product->allows_shalom_cod)
@@ -309,6 +316,16 @@
                         <flux:icon name="truck" class="size-3.5" />
                         Envío con pago contra entrega en Shalom disponible
                     </p>
+                @endif
+
+                @if ($product->isCourse())
+                    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-950">
+                        <p class="font-semibold">Producto digital sin devolución tras la entrega.</p>
+                        <p class="mt-0.5">
+                            Al recibir los archivos o habilitarse el acceso no se aceptan devoluciones, salvo defecto, contenido incompleto o falta de entrega.
+                            <a href="{{ route('terms') }}" target="_blank" rel="noopener noreferrer" class="font-semibold underline underline-offset-2">Ver condiciones</a>
+                        </p>
+                    </div>
                 @endif
 
                 @auth
@@ -372,7 +389,10 @@
                                     <option value="">Selecciona una variante</option>
                                     @foreach ($variants as $variant)
                                         <option value="{{ $variant->id }}">
-                                            {{ $variant->sku }} ({{ $variant->total_available }} disp.)
+                                            {{ $variant->sku }}
+                                            @if (! $product->isCourse())
+                                                ({{ $variant->total_available }} disp.)
+                                            @endif
                                         </option>
                                     @endforeach
                                 </select>
@@ -469,8 +489,8 @@
                         <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">Compra protegida</p>
                     </div>
                     <div class="border-x border-gray-200 px-1">
-                        <flux:icon name="arrow-path-rounded-square" class="mx-auto size-4 text-emerald-700" />
-                        <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">Cambios y devoluciones</p>
+                        <flux:icon :name="$product->isCourse() ? 'document-arrow-down' : 'arrow-path-rounded-square'" class="mx-auto size-4 text-emerald-700" />
+                        <p class="mt-1 text-[10px] font-semibold leading-4 text-gray-700">{{ $product->isCourse() ? 'Acceso digital' : 'Cambios y devoluciones' }}</p>
                     </div>
                     <div class="px-1">
                         <flux:icon name="chat-bubble-left-right" class="mx-auto size-4 text-emerald-700" />

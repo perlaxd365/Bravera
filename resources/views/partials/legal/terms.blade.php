@@ -47,7 +47,28 @@
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-gray-900">6. Derechos del consumidor</h2>
+        <h2 class="text-lg font-semibold text-gray-900">6. Productos digitales y contenido descargable</h2>
+        <p class="mt-2">
+            Los productos digitales incluyen, entre otros, archivos PDF, e-books, manuales, plantillas,
+            videos, cursos, membresías y cualquier contenido descargable o habilitado por Brevare.
+            La entrega se realiza mediante descarga o acceso vinculado a la cuenta del comprador.
+        </p>
+        <p class="mt-2">
+            <strong>Política de no devolución:</strong> una vez entregado el archivo o habilitado el acceso,
+            no se aceptan cambios, devoluciones ni reembolsos por arrepentimiento, descarga, falta de uso,
+            compra accidental o incompatibilidad con expectativas, en la medida permitida por ley.
+            El comprador debe revisar antes del pago el formato, los requisitos y el alcance del contenido.
+        </p>
+        <p class="mt-2">
+            Esta política no limita los derechos que correspondan cuando el contenido no sea entregado,
+            esté incompleto o defectuoso, no corresponda a lo descrito o se haya producido un cobro duplicado.
+            En esos casos, Brevare evaluará la reposición del acceso, la corrección del contenido o el
+            reembolso que resulte aplicable conforme a la Ley N° 29571.
+        </p>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold text-gray-900">7. Derechos del consumidor</h2>
         <p class="mt-2">
             Como consumidor cuentas con los derechos reconocidos por el Código de Protección y Defensa del
             Consumidor (Ley N° 29571). Para cualquier consulta o reclamo puedes escribir a
@@ -57,7 +78,7 @@
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-gray-900">7. Propiedad intelectual</h2>
+        <h2 class="text-lg font-semibold text-gray-900">8. Propiedad intelectual</h2>
         <p class="mt-2">
             Todos los contenidos del sitio (marcas, logotipos, textos, imágenes y software) son propiedad de
             Brevare o de terceros que han autorizado su uso, y se encuentran protegidos por la legislación
@@ -66,7 +87,7 @@
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-gray-900">8. Modificaciones</h2>
+        <h2 class="text-lg font-semibold text-gray-900">9. Modificaciones</h2>
         <p class="mt-2">
             Brevare podrá actualizar estos Términos y Condiciones en cualquier momento. La versión vigente será
             siempre la publicada en esta página.
