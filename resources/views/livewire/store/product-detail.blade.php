@@ -131,7 +131,11 @@
                         @keydown.arrow-left.window.prevent="if (lightbox) prev()"
                         @keydown.escape.window="lightbox = false">
 
-                        <div class="group relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-gray-200 bg-white"
+                        <div @class([
+                            'grid gap-2.5',
+                            'lg:grid-cols-[76px_minmax(0,1fr)]' => count($galleryUrls) > 1,
+                        ])>
+                        <div class="group relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-gray-200 bg-white lg:col-start-2 lg:row-start-1"
                                 x-ref="stage"
                                 @mousemove="parallax($event)"
                                 @mouseleave="resetParallax()"
@@ -166,7 +170,7 @@
                         </div>
 
                         @if (count($galleryUrls) > 1)
-                            <div class="mt-2.5 flex gap-2.5 overflow-x-auto pb-1">
+                            <div class="flex gap-2.5 overflow-x-auto pb-1 lg:col-start-1 lg:row-start-1 lg:max-h-[min(70vh,620px)] lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1">
                                 <template x-for="(img, i) in images" :key="i">
                                     <button type="button" @click="active = i" :aria-label="'Ver foto ' + (i + 1)"
                                         :class="i === active ? 'border-gray-900 ring-2 ring-gray-900/20' : 'border-gray-200 opacity-70 hover:opacity-100'"
@@ -175,8 +179,9 @@
                                     </button>
                                 </template>
                             </div>
-                            <p class="mt-2 text-center text-[11px] text-gray-400 sm:hidden">Desliza la imagen para ver más fotos</p>
+                            <p class="text-center text-[11px] text-gray-400 sm:hidden lg:hidden">Desliza la imagen para ver más fotos</p>
                         @endif
+                        </div>
 
                         {{-- Lightbox --}}
                         <div x-show="lightbox" x-transition.opacity.duration.200ms x-cloak
