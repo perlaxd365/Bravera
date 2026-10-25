@@ -302,7 +302,7 @@
                     </a>
                 </div>
             @else
-                <div class="home-product-grid grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+                <div class="home-product-grid grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                     @foreach ($featured as $product)
                         <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
                     @endforeach
@@ -317,7 +317,7 @@
                 <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Recién llegados</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2></div>
                 <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">Descubrir novedades ↗</a>
             </div>
-            <div class="home-product-grid grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+            <div class="home-product-grid grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                 @foreach ($latest as $product)
                     <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
                 @endforeach

@@ -23,13 +23,16 @@
         ? (float) ($guestPrize['min'] ?? 0)
         : (float) ($lastSpin?->min_subtotal ?? 0);
     $spinCoupon = $lastSpin?->coupon;
+    $showPrizeLauncher = $isWinner && ! $eligibility['allowed'];
 @endphp
 
 <div x-data="{
         open: false,
         rotation: 0,
         spinning: false,
-        reveal: {{ ($lastSpin || $guestPrize) ? 'true' : 'false' }},
+        wheelVisible: {{ $showPrizeLauncher ? 'false' : 'true' }},
+        reveal: {{ $showPrizeLauncher ? 'true' : 'false' }},
+        segments: @js($segments),
         confetti() {
             if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
             const root = this.$refs.confetti;
@@ -49,10 +52,23 @@
         startSpin(index, result) {
             this.reveal = false;
             this.spinning = true;
-            this.rotation = (Math.floor(this.rotation / 360) + 7) * 360 - (index * {{ $segmentAngle }});
+            this.wheelVisible = true;
+
+            const candidates = this.segments
+                .map((segment, segmentIndex) => segment.result === result ? segmentIndex : null)
+                .filter(segmentIndex => segmentIndex !== null);
+            const landedIndex = candidates.length
+                ? candidates[Math.floor(Math.random() * candidates.length)]
+                : index;
+            const segmentAngle = 360 / this.segments.length;
+            const landingOffset = (Math.random() - .5) * segmentAngle * .45;
+            const fullTurns = Math.ceil((this.rotation + 1) / 360) + 7;
+
+            this.rotation = (fullTurns * 360) - (landedIndex * segmentAngle) + landingOffset;
             setTimeout(() => {
                 this.spinning = false;
                 this.reveal = true;
+                this.wheelVisible = false;
                 if (result !== 'none') this.confetti();
             }, 5000);
         },
@@ -66,25 +82,37 @@
     x-on:roulette-error.window="spinning = false"
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
-    <button type="button" x-show="!open" @click="open = true"
-        class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-16"
-        aria-label="Girar y ganar un descuento gratis">
-        <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)] sm:size-11">
-            <flux:icon name="sparkles" class="size-[18px] sm:size-5" />
-        </span>
-        <span class="relative z-10 text-[7px] font-extrabold uppercase leading-none tracking-[.16em] text-amber-200 sm:text-[8px]">Gira</span>
-        <span class="roulette-cta-badge" aria-hidden="true">15%</span>
-        <span class="roulette-cta-copy">
-            <span class="block text-[8px] font-bold uppercase tracking-[.18em] text-amber-300">Ruleta Brevare Perú</span>
-            <span class="mt-1 block text-sm font-extrabold leading-[1.2]">¡GIRA Y GANA DESCUENTO GRATIS!</span>
-        </span>
-    </button>
+    @if ($showPrizeLauncher)
+        <button type="button" x-show="!open" @click="open = true"
+            class="roulette-floating-prize group fixed bottom-24 left-3 z-[75] flex size-14 flex-col items-center justify-center rounded-full border-2 border-stone-950/75 bg-amber-300 text-stone-950 shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-[4.5rem]"
+            aria-label="Ver mi premio de {{ $winningPercent }}% de descuento">
+            <span class="roulette-prize-launcher-number leading-none">{{ $winningPercent }}<span class="text-[.52em]">%</span></span>
+            <span class="mt-0.5 text-[7px] font-extrabold uppercase tracking-[.14em] sm:text-[8px]">Ganaste</span>
+            <flux:icon name="sparkles" class="absolute -right-1 -top-1 size-4 rounded-full bg-stone-950 p-0.5 text-amber-300" />
+        </button>
+    @elseif ($eligibility['allowed'])
+        <button type="button" x-show="!open" @click="open = true"
+            class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-16"
+            aria-label="Girar y ganar un descuento gratis">
+            <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)] sm:size-11">
+                <flux:icon name="sparkles" class="size-[18px] sm:size-5" />
+            </span>
+            <span class="relative z-10 text-[7px] font-extrabold uppercase leading-none tracking-[.16em] text-amber-200 sm:text-[8px]">Gira</span>
+            <span class="roulette-cta-badge" aria-hidden="true">15%</span>
+            <span class="roulette-cta-copy">
+                <span class="block text-[8px] font-bold uppercase tracking-[.18em] text-amber-300">Ruleta Brevare Perú</span>
+                <span class="mt-1 block text-sm font-extrabold leading-[1.2]">¡GIRA Y GANA DESCUENTO GRATIS!</span>
+            </span>
+        </button>
+    @endif
 
     <div x-show="open" x-cloak x-transition.opacity.duration.250ms class="roulette-overlay-backdrop"
-        role="dialog" aria-modal="true" aria-labelledby="roulette-overlay-title"
+        role="dialog" aria-modal="true"
+        :aria-labelledby="wheelVisible ? 'roulette-overlay-title' : 'roulette-overlay-result-title'"
         @keydown.escape.window="open = false"
         @click.self="open = false">
-        <div class="roulette-overlay-panel relative overflow-hidden rounded-[1.75rem] border border-amber-200/80 bg-[#fffdf8] p-4 sm:rounded-[2.25rem] sm:p-6">
+        <div class="roulette-overlay-panel relative overflow-hidden rounded-[1.75rem] border border-amber-200/80 bg-[#fffdf8] p-4 sm:rounded-[2.25rem] sm:p-6"
+            :class="wheelVisible ? '' : 'roulette-overlay-panel--result'">
             <div x-ref="confetti" class="pointer-events-none absolute inset-0 z-40 overflow-hidden"></div>
 
             <button type="button" @click="open = false; sessionStorage.setItem('brevare-roulette-dismissed', '1')"
@@ -93,7 +121,7 @@
                 <flux:icon name="x-mark" class="size-5" />
             </button>
 
-            <div class="roulette-copy relative z-10">
+            <div x-show="wheelVisible" class="roulette-copy relative z-10">
                 <p class="inline-flex items-center gap-2 rounded-full bg-stone-950 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-amber-200 shadow-[0_8px_24px_-15px_rgba(41,37,36,.9)]">
                     <flux:icon name="ticket" class="size-3.5 text-amber-300" />
                     Premio inmediato
@@ -114,6 +142,7 @@
             </div>
 
             <div class="roulette-game relative z-10">
+                <div x-show="wheelVisible" x-transition.opacity.duration.200ms>
                 <div class="mb-3 flex items-center justify-between gap-3 px-1">
                     <p class="text-[9px] font-bold uppercase tracking-[.18em] text-stone-500">Tu suerte empieza aquí</p>
                     <p class="roulette-max-prize inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.12em] text-amber-950">
@@ -177,6 +206,7 @@
                 @if ($error)
                     <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700" role="alert">{{ $error }}</p>
                 @endif
+                </div>
 
                 <div x-show="!reveal" x-cloak class="roulette-prize-preview mt-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-white">
                     <span class="flex size-10 shrink-0 items-center justify-center rounded-full border border-amber-200/30 bg-amber-300 text-stone-950">
@@ -190,6 +220,7 @@
                 </div>
 
                 <div x-show="reveal" x-cloak class="roulette-prize-reveal mt-4" role="status" aria-live="polite">
+                    <h2 id="roulette-overlay-result-title" class="sr-only">Resultado de la ruleta</h2>
                     @if ($isWinner)
                         <section class="roulette-win-card relative overflow-hidden rounded-[1.4rem] px-4 pb-4 pt-3 text-center">
                             <div class="roulette-win-burst pointer-events-none absolute inset-0" aria-hidden="true"></div>
@@ -260,7 +291,7 @@
                 </div>
             </div>
 
-            <aside class="roulette-rules relative z-10 rounded-[1.35rem] border border-amber-200/75 bg-[#fff7df]/75 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
+            <aside x-show="wheelVisible" class="roulette-rules relative z-10 rounded-[1.35rem] border border-amber-200/75 bg-[#fff7df]/75 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
                 <div class="flex items-center justify-between gap-3 px-1">
                     <p class="text-[9px] font-extrabold uppercase tracking-[.2em] text-amber-900">Así funciona</p>
                     <span class="rounded-full bg-white/75 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-stone-500">Sin sorpresas</span>
@@ -335,6 +366,38 @@
         .roulette-floating-cta:focus-visible {
             outline: 3px solid #fbbf24;
             outline-offset: 4px;
+        }
+        .roulette-floating-prize {
+            isolation: isolate;
+            animation: roulette-float 2.8s cubic-bezier(.65, 0, .35, 1) infinite alternate;
+            box-shadow:
+                0 24px 46px -18px rgba(120, 53, 15, .7),
+                0 0 0 1px rgba(255, 248, 220, .75) inset,
+                0 7px 0 rgba(120, 53, 15, .16);
+        }
+        .roulette-floating-prize::before {
+            content: '';
+            position: absolute;
+            inset: -7px;
+            z-index: -1;
+            border: 1px solid rgba(217, 119, 6, .55);
+            border-radius: 9999px;
+            animation: roulette-spin-pulse 2.6s cubic-bezier(.65, 0, .35, 1) infinite;
+            pointer-events: none;
+        }
+        .roulette-floating-prize:focus-visible {
+            outline: 3px solid #b45309;
+            outline-offset: 4px;
+        }
+        .roulette-prize-launcher-number {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -.065em;
+        }
+        @media (min-width: 640px) {
+            .roulette-prize-launcher-number {
+                font-size: 1.75rem;
+            }
         }
         .roulette-cta-spark::after {
             content: '';
@@ -704,8 +767,36 @@
                 font-size: 3.4rem;
             }
         }
+        .roulette-overlay-panel.roulette-overlay-panel--result {
+            width: min(560px, calc(100vw - 24px));
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: 'game';
+            padding: clamp(1rem, 3vw, 1.5rem);
+        }
+        .roulette-overlay-panel--result .roulette-game {
+            grid-area: game;
+            width: 100%;
+            padding-top: 1.15rem;
+        }
+        .roulette-overlay-panel--result .roulette-prize-reveal {
+            margin-top: 0;
+        }
+        .roulette-overlay-panel--result .roulette-win-card {
+            border-radius: 1.8rem;
+            padding: clamp(1.35rem, 5vw, 2rem) clamp(1rem, 5vw, 1.6rem);
+        }
+        .roulette-overlay-panel--result .roulette-win-number {
+            font-size: clamp(5rem, 17vw, 7.25rem);
+            letter-spacing: -.095em;
+        }
+        .roulette-overlay-panel--result .roulette-win-card .roulette-prize-cta {
+            max-width: 22rem;
+            margin-inline: auto;
+        }
         @media (prefers-reduced-motion: reduce) {
             .roulette-floating-cta,
+            .roulette-floating-prize,
+            .roulette-floating-prize::before,
             .roulette-cta-spark::after,
             .roulette-cta-spark,
             .roulette-stage-halo,

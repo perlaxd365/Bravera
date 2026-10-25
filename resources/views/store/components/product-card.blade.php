@@ -70,11 +70,11 @@
             @endif
         </div>
 
-        <div class="flex flex-1 flex-col p-3.5 sm:p-4">
-            <p class="text-[10px] font-bold uppercase tracking-[.12em] text-gray-600 sm:text-xs">
+        <div class="flex flex-1 flex-col p-2.5 sm:p-4">
+            <p class="text-[9px] font-bold uppercase tracking-[.1em] text-gray-600 sm:text-xs">
                 {{ $product->brand?->name ?? $product->category?->name }}
             </p>
-            <p class="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-gray-900 group-hover:text-amber-950" title="{{ $product->name }}">
+            <p class="mt-1 line-clamp-2 min-h-9 text-[13px] font-semibold leading-[1.15rem] text-gray-900 group-hover:text-amber-950 sm:min-h-10 sm:text-sm sm:leading-5" title="{{ $product->name }}">
                 {{ $product->name }}
             </p>
 
@@ -100,7 +100,7 @@
                 </div>
             @endif
 
-            <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pr-12 pt-3">
+            <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pr-10 pt-2.5 sm:pr-12 sm:pt-3">
                 <x-brevare.price :amount="$minPrice" size="sm" />
                 @if ($discountPercent > 0)
                     <span class="text-xs text-gray-500 line-through">S/ {{ number_format($comparePrice, 2) }}</span>
@@ -113,21 +113,21 @@
     </a>
     @if ($preview)
         <span aria-hidden="true"
-            class="absolute bottom-4 right-4 z-30 flex size-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur">
+            class="absolute bottom-3 right-3 z-30 flex size-9 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur sm:bottom-4 sm:right-4 sm:size-10">
             <flux:icon name="heart" class="size-5" />
         </span>
     @elseif (auth()->check())
-        <form method="POST" action="{{ route('favorites.toggle', $product) }}" class="absolute bottom-4 right-4 z-30">
+        <form method="POST" action="{{ route('favorites.toggle', $product) }}" class="absolute bottom-3 right-3 z-30 sm:bottom-4 sm:right-4">
             @csrf
             <button type="submit" aria-label="{{ $isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos' }}"
-                class="flex size-10 items-center justify-center rounded-full border shadow-sm backdrop-blur transition {{ $isFavorite ? 'border-rose-200 bg-rose-600 text-white hover:bg-rose-700' : 'border-gray-200 bg-white/95 text-gray-600 hover:border-rose-200 hover:text-rose-600' }}">
+                class="flex size-9 items-center justify-center rounded-full border shadow-sm backdrop-blur transition sm:size-10 {{ $isFavorite ? 'border-rose-200 bg-rose-600 text-white hover:bg-rose-700' : 'border-gray-200 bg-white/95 text-gray-600 hover:border-rose-200 hover:text-rose-600' }}">
                 <flux:icon name="heart" class="size-5 {{ $isFavorite ? 'fill-current' : '' }}" />
             </button>
         </form>
     @else
         <a href="{{ route('login', ['redirect' => route('store.product', ['slug' => $product->slug])]) }}" aria-label="Inicia sesión para guardar favoritos"
-            class="absolute bottom-4 right-4 z-30 flex size-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur transition hover:border-rose-200 hover:text-rose-600">
+            class="absolute bottom-3 right-3 z-30 flex size-9 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-sm backdrop-blur transition hover:border-rose-200 hover:text-rose-600 sm:bottom-4 sm:right-4 sm:size-10">
             <flux:icon name="heart" class="size-5" />
         </a>
-    @endauth
+    @endif
 </div>

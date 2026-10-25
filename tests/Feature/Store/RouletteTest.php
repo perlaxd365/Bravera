@@ -98,6 +98,18 @@ class RouletteTest extends TestCase
         );
     }
 
+    public function test_guest_spin_keeps_the_selected_index_and_prize_in_sync(): void
+    {
+        $component = Livewire::test(RouletteOverlay::class)->call('spin');
+        $prize = $component->get('guestPrize');
+        $segments = app(RouletteService::class)->segments();
+
+        $this->assertNotNull($prize);
+        $this->assertArrayHasKey($prize['index'], $segments);
+        $this->assertSame($segments[$prize['index']]['result'], $prize['result']);
+        $this->assertSame($segments[$prize['index']]['percent'], $prize['percent']);
+    }
+
     public function test_guest_is_asked_to_sign_in_before_spinning(): void
     {
         Livewire::test(Roulette::class)

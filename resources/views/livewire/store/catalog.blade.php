@@ -218,7 +218,7 @@
                         @endif
                     </div>
                 @else
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                         @foreach ($products as $product)
                             @include('store.components.product-card', ['product' => $product])
                         @endforeach
@@ -247,7 +247,7 @@
                             </a>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                             @foreach ($similarProducts as $product)
                                 @include('store.components.product-card', ['product' => $product])
                             @endforeach
