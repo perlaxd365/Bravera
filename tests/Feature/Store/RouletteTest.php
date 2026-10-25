@@ -17,6 +17,7 @@ use App\Modules\Discounts\Services\CouponService;
 use App\Modules\Payments\Services\PaymentService;
 use App\Services\RouletteService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -108,6 +109,44 @@ class RouletteTest extends TestCase
         $this->assertArrayHasKey($prize['index'], $segments);
         $this->assertSame($segments[$prize['index']]['result'], $prize['result']);
         $this->assertSame($segments[$prize['index']]['percent'], $prize['percent']);
+        $component->assertDispatched(
+            'roulette-result',
+            index: $prize['index'],
+            result: $prize['result'],
+        );
+    }
+
+    public function test_guest_can_spin_again_after_a_result_without_prize(): void
+    {
+        $component = Livewire::test(RouletteOverlay::class)
+            ->set('guestPrize', [
+                'index' => 3,
+                'result' => 'none',
+                'label' => 'Sigue intentando',
+                'percent' => 0,
+                'min' => 0,
+            ]);
+
+        $component->assertSee('Volver a girar')
+            ->call('spin')
+            ->assertSet('error', null);
+
+        $this->assertNotNull(Session::get('brevare_roulette_guest_spin'));
+    }
+
+    public function test_guest_with_a_prize_must_claim_it_before_spinning_again(): void
+    {
+        $component = Livewire::test(RouletteOverlay::class)
+            ->set('guestPrize', [
+                'index' => 0,
+                'result' => '15',
+                'label' => '15%',
+                'percent' => 15,
+                'min' => 100,
+            ])
+            ->call('spin');
+
+        $component->assertSet('error', 'Ya giraste en esta sesión. Inicia sesión para reclamar tu resultado.');
     }
 
     public function test_guest_is_asked_to_sign_in_before_spinning(): void

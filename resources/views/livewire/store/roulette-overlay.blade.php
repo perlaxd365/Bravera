@@ -78,7 +78,10 @@
             }, 650);
         }
     }"
-    x-on:roulette-result.window="startSpin(Number($event.detail.index || 0), $event.detail.result)"
+    x-on:roulette-result.window="
+        const payload = Array.isArray($event.detail) ? ($event.detail[0] || {}) : ($event.detail || {});
+        startSpin(Number(payload.index || 0), payload.result)
+    "
     x-on:roulette-error.window="spinning = false"
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
@@ -282,7 +285,18 @@
                             </p>
                             <p class="mt-1 text-sm font-bold text-stone-900">Tu próximo giro puede ser el bueno.</p>
                             @if ($eligibility['allowed'])
-                                <p class="mt-1 text-xs text-stone-500">Puedes volver a girar ahora.</p>
+                                <button type="button" wire:click="spin" wire:loading.attr="disabled" wire:target="spin"
+                                    x-on:click="reveal = false; wheelVisible = true"
+                                    class="roulette-prize-cta mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-stone-950 px-5 text-sm font-bold text-white">
+                                    <span wire:loading.remove wire:target="spin" class="inline-flex items-center gap-2">
+                                        Volver a girar
+                                        <flux:icon name="arrow-path" class="size-4 text-amber-300" />
+                                    </span>
+                                    <span wire:loading wire:target="spin" class="inline-flex items-center gap-2">
+                                        <span class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>
+                                        Girando…
+                                    </span>
+                                </button>
                             @else
                                 <p class="mt-1 text-xs text-stone-500">Vuelve a intentarlo en una nueva visita.</p>
                             @endif
@@ -583,10 +597,12 @@
             position: absolute;
             left: 50%;
             top: 50%;
-            width: 54px;
-            height: 24px;
-            margin: -12px 0 0 -27px;
-            font-size: 8px;
+            width: 60px;
+            height: 26px;
+            margin: -13px 0 0 -30px;
+            font-size: 10px;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
             transform: rotate(var(--label-angle)) translateY(-86px) rotate(var(--label-counter-angle));
         }
         .roulette-spin-shell {
@@ -733,10 +749,10 @@
                 width: 300px;
             }
             .roulette-wheel-label {
-                width: 60px;
-                height: 24px;
-                margin: -12px 0 0 -30px;
-                font-size: 9px;
+                width: 68px;
+                height: 28px;
+                margin: -14px 0 0 -34px;
+                font-size: 12px;
                 transform: rotate(var(--label-angle)) translateY(-108px) rotate(var(--label-counter-angle));
             }
             .roulette-spin-shell {
@@ -753,10 +769,10 @@
                 width: 250px;
             }
             .roulette-wheel-label {
-                width: 54px;
-                height: 22px;
-                margin: -11px 0 0 -27px;
-                font-size: 8px;
+                width: 60px;
+                height: 24px;
+                margin: -12px 0 0 -30px;
+                font-size: 10px;
                 transform: rotate(var(--label-angle)) translateY(-89px) rotate(var(--label-counter-angle));
             }
             .roulette-spin-shell {

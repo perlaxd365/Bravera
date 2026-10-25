@@ -33,7 +33,10 @@ class RouletteOverlay extends Component
         $this->error = null;
 
         if (! Auth::check()) {
-            if ($this->guestPrize) {
+            $guestPrizeWon = $this->guestPrize
+                && (int) ($this->guestPrize['percent'] ?? 0) > 0;
+
+            if ($guestPrizeWon) {
                 $this->error = 'Ya giraste en esta sesión. Inicia sesión para reclamar tu resultado.';
                 $this->dispatch('roulette-error');
 
@@ -46,10 +49,11 @@ class RouletteOverlay extends Component
                 ...$result['segment'],
             ];
             Session::put(self::GUEST_PRIZE_KEY, $this->guestPrize);
-            $this->dispatch('roulette-result', [
-                'index' => $result['index'],
-                'result' => $result['segment']['result'],
-            ]);
+            $this->dispatch(
+                'roulette-result',
+                index: $result['index'],
+                result: $result['segment']['result'],
+            );
 
             return;
         }
@@ -64,10 +68,11 @@ class RouletteOverlay extends Component
         }
 
         $this->lastSpinId = $result['spin']->id;
-        $this->dispatch('roulette-result', [
-            'index' => $result['index'],
-            'result' => $result['segment']['result'],
-        ]);
+        $this->dispatch(
+            'roulette-result',
+            index: $result['index'],
+            result: $result['segment']['result'],
+        );
     }
 
     public function claimPending(RouletteService $roulette): void
@@ -134,9 +139,17 @@ class RouletteOverlay extends Component
     public function render(RouletteService $roulette)
     {
         $user = Auth::user();
+        $guestPrizeWon = $this->guestPrize
+            && (int) ($this->guestPrize['percent'] ?? 0) > 0;
         $eligibility = $user
             ? $roulette->eligibility($user)
-            : ['allowed' => ! $this->guestPrize, 'message' => 'Gira gratis y luego inicia sesión para reclamar tu premio.', 'coupon' => null];
+            : [
+                'allowed' => ! $guestPrizeWon,
+                'message' => $guestPrizeWon
+                    ? 'Inicia sesión para reclamar tu premio.'
+                    : 'Puedes volver a girar gratis.',
+                'coupon' => null,
+            ];
         $lastSpin = $user && $this->lastSpinId
             ? $user->rouletteSpins()->with('coupon')->find($this->lastSpinId)
             : null;
