@@ -66,11 +66,11 @@
         </span>
     </button>
 
-    <div x-show="open" x-cloak class="fixed inset-0 z-[95] overflow-y-auto bg-stone-950/75 p-3 backdrop-blur-md sm:p-6"
+    <div x-show="open" x-cloak class="roulette-overlay-backdrop"
         role="dialog" aria-modal="true" aria-labelledby="roulette-overlay-title"
-        @keydown.escape.window="open = false">
-        <div class="relative mx-auto my-2 grid min-h-[calc(100dvh-1.5rem)] max-w-5xl items-center gap-5 overflow-hidden rounded-[2rem] border border-amber-200 bg-[#fffdf8] p-4 shadow-2xl sm:my-0 sm:min-h-0 sm:grid-cols-[minmax(0,.75fr)_minmax(360px,1.25fr)] sm:p-7 lg:p-9"
-            @click.self="open = false">
+        @keydown.escape.window="open = false"
+        @click.self="open = false">
+        <div class="roulette-overlay-panel relative overflow-hidden rounded-[2rem] border border-amber-200 bg-[#fffdf8] p-4 shadow-2xl sm:p-6">
             <div x-ref="confetti" class="pointer-events-none absolute inset-0 z-40 overflow-hidden"></div>
 
             <button type="button" @click="open = false; sessionStorage.setItem('brevare-roulette-dismissed', '1')"
@@ -100,7 +100,7 @@
             </div>
 
             <div class="relative z-10">
-                <div class="relative mx-auto aspect-square w-full max-w-[500px]">
+                <div class="roulette-overlay-stage relative mx-auto aspect-square w-full">
                     <div class="absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1">
                         <div class="h-0 w-0 border-x-[16px] border-t-[28px] border-x-transparent border-t-stone-950 drop-shadow"></div>
                     </div>
@@ -109,8 +109,8 @@
                         :style="`transform: rotate(${rotation}deg); background: {{ $wheelGradient }}`">
                         @foreach ($segments as $index => $segment)
                             @php $angle = $index * $segmentAngle; @endphp
-                            <span class="absolute left-1/2 top-1/2 flex w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-[10px] font-extrabold leading-3 text-stone-950 sm:text-[11px]"
-                                style="transform: translate(-50%, -50%) rotate({{ $angle }}deg) translateY(-155px) rotate({{ -$angle }}deg);">
+                            <span class="roulette-wheel-label absolute left-1/2 top-1/2 flex w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-[9px] font-extrabold leading-3 text-stone-950 sm:w-24 sm:text-[10px]"
+                                style="--label-angle: {{ $angle }}deg;">
                                 {{ $segment['label'] }}
                             </span>
                         @endforeach
@@ -222,6 +222,54 @@
             .roulette-floating-cta, .roulette-cta-spark { animation: none; }
             .roulette-overlay-wheel { transition-duration: .01s; }
             .roulette-confetti-piece { display: none; }
+        }
+        .roulette-overlay-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 12px;
+            background: rgba(12, 10, 9, .82);
+            backdrop-filter: blur(8px);
+        }
+        .roulette-overlay-panel {
+            width: min(820px, calc(100vw - 24px));
+            max-height: calc(100dvh - 24px);
+            overflow-y: auto;
+            display: grid;
+            gap: 1rem;
+            margin: auto;
+        }
+        .roulette-overlay-stage {
+            width: min(100%, 270px);
+        }
+        .roulette-wheel-label {
+            transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-104px) rotate(calc(var(--label-angle) * -1));
+        }
+        @media (min-width: 800px) {
+            .roulette-overlay-panel {
+                grid-template-columns: minmax(0, .85fr) minmax(260px, 1fr);
+                align-items: center;
+                gap: 1.5rem;
+                padding: 1.75rem;
+            }
+            .roulette-overlay-stage {
+                width: 270px;
+            }
+            .roulette-wheel-label {
+                transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-106px) rotate(calc(var(--label-angle) * -1));
+            }
+        }
+        @media (max-height: 700px) and (min-width: 800px) {
+            .roulette-overlay-stage {
+                width: 230px;
+            }
+            .roulette-wheel-label {
+                transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-88px) rotate(calc(var(--label-angle) * -1));
+            }
         }
     </style>
 </div>
