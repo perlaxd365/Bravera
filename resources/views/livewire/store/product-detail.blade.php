@@ -252,18 +252,6 @@
                     </div>
                 @endif
 
-                {{-- El video forma parte del bloque visual y acompaña a la galería. --}}
-                @if ($product->video_url)
-                    <section class="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4" aria-labelledby="product-video-title">
-                        <div class="mb-2.5 flex items-center justify-between gap-3 px-1">
-                            <h2 id="product-video-title" class="text-sm font-bold tracking-tight text-gray-900">Video del producto</h2>
-                            <span class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400">Brevare</span>
-                        </div>
-                        <video src="{{ $product->video_url }}" controls controlsList="nodownload noremoteplayback" disablepictureinpicture autoplay muted preload="auto" playsinline oncontextmenu="return false" class="aspect-video w-full rounded-xl bg-gray-950 object-contain" aria-label="Video de {{ $product->name }}">
-                            Tu navegador no puede reproducir este video.
-                        </video>
-                    </section>
-                @endif
             </div>
 
             {{-- Información --}}
@@ -569,9 +557,22 @@
 
         {{-- Descripción --}}
         @if ($product->description)
-            <section class="mt-10 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
-                <h2 class="mb-3 text-xl font-bold tracking-tight text-gray-900">Descripción</h2>
+            <section class="mt-10 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="product-description-title">
+                <h2 id="product-description-title" class="mb-3 text-xl font-bold tracking-tight text-gray-900">Descripción</h2>
                 <div class="leading-relaxed text-gray-600">{!! nl2br(e($product->description)) !!}</div>
+            </section>
+        @endif
+
+        {{-- Video del producto, después de la descripción y antes de las especificaciones. --}}
+        @if ($product->video_url)
+            <section class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="product-video-title">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h2 id="product-video-title" class="text-xl font-bold tracking-tight text-gray-900">Video del producto</h2>
+                    <span class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400">Brevare</span>
+                </div>
+                <video src="{{ $product->video_url }}" controls controlsList="nodownload noremoteplayback" disablepictureinpicture autoplay muted preload="auto" playsinline oncontextmenu="return false" class="aspect-video w-full rounded-xl bg-gray-950 object-contain" aria-label="Video de {{ $product->name }}">
+                    Tu navegador no puede reproducir este video.
+                </video>
             </section>
         @endif
 
@@ -601,8 +602,8 @@
             $specifications = $specifications->filter(fn ($value) => filled($value));
         @endphp
         @if ($specifications->isNotEmpty())
-            <section class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
-                <h2 class="text-xl font-bold tracking-tight text-gray-900">Especificaciones</h2>
+            <section class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="product-specifications-title">
+                <h2 id="product-specifications-title" class="text-xl font-bold tracking-tight text-gray-900">Especificaciones</h2>
                 <dl class="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
                     @foreach ($specifications as $label => $value)
                         <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">

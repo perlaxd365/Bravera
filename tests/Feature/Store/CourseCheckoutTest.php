@@ -50,6 +50,24 @@ class CourseCheckoutTest extends TestCase
             ->assertSee('no admiten cambios ni devoluciones');
     }
 
+    public function test_course_video_is_rendered_between_description_and_specifications(): void
+    {
+        [$product] = $this->courseProduct();
+        $product->update(['video_url' => 'https://example.com/course-preview.mp4']);
+
+        $html = Livewire::test(ProductDetail::class, ['slug' => $product->slug])->html();
+        $descriptionPosition = strpos($html, 'product-description-title');
+        $videoPosition = strpos($html, 'product-video-title');
+        $specificationsPosition = strpos($html, 'product-specifications-title');
+
+        $this->assertNotFalse($descriptionPosition);
+        $this->assertNotFalse($videoPosition);
+        $this->assertNotFalse($specificationsPosition);
+        $this->assertLessThan($videoPosition, $descriptionPosition);
+        $this->assertLessThan($specificationsPosition, $videoPosition);
+        $this->assertSame(1, substr_count($html, 'id="product-video-title"'));
+    }
+
     public function test_course_purchase_completes_order_and_enables_private_assets(): void
     {
         Storage::fake('local');
