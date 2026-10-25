@@ -27,6 +27,10 @@ class SyncMetaAdsCommand extends Command
 
         ProductMetaAd::query()
             ->whereNotNull('ad_id')
+            ->where(function ($query): void {
+                $query->where('status', '!=', 'processing')
+                    ->orWhere('updated_at', '<=', now()->subMinutes(10));
+            })
             ->chunkById(50, function ($records) use ($metaAds, &$synced, &$failed): void {
                 foreach ($records as $record) {
                     try {

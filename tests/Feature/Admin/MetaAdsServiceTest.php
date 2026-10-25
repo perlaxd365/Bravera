@@ -89,6 +89,44 @@ class MetaAdsServiceTest extends TestCase
             && str_contains((string) $request['object_story_spec'], '"video_id":"video_123"'));
     }
 
+    public function test_reemplaza_un_anuncio_de_imagen_por_video_en_el_mismo_conjunto(): void
+    {
+        Http::fake([
+            'https://res.cloudinary.com/*' => Http::response('video-bytes', 200, ['Content-Type' => 'video/mp4']),
+            'https://graph.facebook.com/v23.0/act_123/advideos' => Http::response(['id' => 'video_replacement']),
+            'https://graph.facebook.com/v23.0/act_123/adcreatives' => Http::response(['id' => 'creative_replacement']),
+            'https://graph.facebook.com/v23.0/act_123/ads' => Http::response(['id' => 'ad_replacement']),
+            'https://graph.facebook.com/v23.0/ad_image_old' => Http::response(['success' => true]),
+        ]);
+
+        $product = $this->productWithMedia();
+        $product->update(['meta_ad_video_url' => 'https://res.cloudinary.com/demo/video/upload/v1/replacement.mp4']);
+        $record = ProductMetaAd::create([
+            'product_id' => $product->id,
+            'ad_account_id' => 'act_123',
+            'campaign_id' => 'campaign_123',
+            'ad_set_id' => 'adset_123',
+            'ad_id' => 'ad_image_old',
+            'creative_id' => 'creative_image_old',
+            'media_type' => 'image',
+            'status' => 'active',
+        ]);
+
+        $replacement = app(MetaAdsService::class)->createAd(
+            $product->fresh(),
+            $this->payload(['media_type' => 'video']),
+        );
+
+        $this->assertSame('ad_replacement', $replacement->ad_id);
+        $this->assertSame('creative_replacement', $replacement->creative_id);
+        $this->assertSame('video', $replacement->media_type);
+        $this->assertSame($record->id, $replacement->id);
+
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://graph.facebook.com/v23.0/ad_image_old'
+            && $request->method() === 'POST'
+            && $request['status'] === 'PAUSED');
+    }
+
     public function test_envia_instagram_user_id_con_el_nombre_actual_de_la_api(): void
     {
         config(['meta.ads.instagram_actor_id' => '17841400000000000']);

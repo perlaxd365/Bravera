@@ -136,10 +136,19 @@ class MetaAdsService
             ->where('ad_set_id', $adSetId)
             ->first();
 
+        $replaceAdId = null;
+        $replaceMediaType = null;
+
         if ($existing?->ad_id && $existing->status !== 'failed') {
-            throw new MetaAdsException(
-                'Este producto ya tiene un anuncio en ese conjunto de anuncios ('.$existing->ad_id.').'
-            );
+            if ($existing->media_type === $mediaType) {
+                throw new MetaAdsException(
+                    'Este producto ya tiene un anuncio '.$mediaType.' en ese conjunto ('.$existing->ad_id.'). '
+                    .'Selecciona otro formato, conjunto de anuncios o actualiza el anuncio existente.'
+                );
+            }
+
+            $replaceAdId = $existing->ad_id;
+            $replaceMediaType = $existing->media_type;
         }
 
         if ($existing?->status === 'processing'
@@ -164,6 +173,8 @@ class MetaAdsService
                         'input' => $input,
                     ],
                     $userId,
+                    $replaceAdId,
+                    $replaceMediaType,
                 )
             );
         } catch (LockTimeoutException) {
@@ -228,25 +239,32 @@ class MetaAdsService
         Product $product,
         array $data,
         ?int $userId,
+        ?string $replaceAdId = null,
+        ?string $replaceMediaType = null,
     ): ProductMetaAd {
+        $recordData = [
+            'created_by' => $userId,
+            'ad_account_id' => $this->adAccountId(),
+            'campaign_id' => $data['campaignId'],
+            'campaign_name' => $data['input']['campaign_name'] ?? null,
+            'ad_set_name' => $data['input']['ad_set_name'] ?? null,
+            'media_type' => $data['mediaType'],
+            'status' => 'processing',
+            'review_status' => null,
+            'error_message' => null,
+        ];
+
+        if ($replaceAdId === null) {
+            $recordData['ad_id'] = null;
+            $recordData['creative_id'] = null;
+        }
+
         $record = ProductMetaAd::updateOrCreate(
             [
                 'product_id' => $product->id,
                 'ad_set_id' => $data['adSetId'],
             ],
-            [
-                'created_by' => $userId,
-                'ad_account_id' => $this->adAccountId(),
-                'campaign_id' => $data['campaignId'],
-                'campaign_name' => $data['input']['campaign_name'] ?? null,
-                'ad_set_name' => $data['input']['ad_set_name'] ?? null,
-                'media_type' => $data['mediaType'],
-                'status' => 'processing',
-                'review_status' => null,
-                'error_message' => null,
-                'ad_id' => null,
-                'creative_id' => null,
-            ]
+            $recordData,
         );
 
         $product->loadMissing(['variants.images']);
@@ -274,6 +292,7 @@ class MetaAdsService
 
         $creativeId = null;
         $responsePayload = [];
+        $previousAdPaused = false;
 
         try {
             if ($data['mediaType'] === 'video') {
@@ -293,6 +312,16 @@ class MetaAdsService
             }
 
             $responsePayload['creative'] = ['id' => $creativeId];
+
+            if ($replaceAdId !== null) {
+                $pauseResponse = $this->graph()->post($replaceAdId, [
+                    'status' => 'PAUSED',
+                ]);
+
+                $this->ensureOk($pauseResponse, 'Meta no pudo pausar el anuncio anterior.');
+                $previousAdPaused = true;
+                $responsePayload['replaced_ad'] = ['id' => $replaceAdId];
+            }
 
             $adResponse = $this->graph()->post($this->adAccountId().'/ads', [
                 'name' => $data['input']['ad_name']
@@ -335,8 +364,26 @@ class MetaAdsService
                 $responsePayload['error'] = $exception->payload;
             }
 
+            $previousAdRestored = $replaceAdId !== null && ! $previousAdPaused;
+
+            if ($previousAdPaused && $replaceAdId !== null) {
+                try {
+                    $restoreResponse = $this->graph()->post($replaceAdId, [
+                        'status' => 'ACTIVE',
+                    ]);
+                    $this->ensureOk($restoreResponse, 'Meta no pudo reactivar el anuncio anterior.');
+                    $previousAdRestored = true;
+                    $responsePayload['restored_ad'] = ['id' => $replaceAdId];
+                } catch (Throwable $restoreException) {
+                    report($restoreException);
+                }
+            }
+
             $record->update([
-                'status' => 'failed',
+                'status' => $previousAdRestored ? 'active' : 'failed',
+                'media_type' => $previousAdRestored && $replaceMediaType
+                    ? $replaceMediaType
+                    : $data['mediaType'],
                 'error_message' => mb_substr($message, 0, 2000),
                 'response_payload' => $responsePayload,
                 'last_synced_at' => now(),
