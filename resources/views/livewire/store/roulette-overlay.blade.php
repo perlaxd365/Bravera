@@ -67,17 +67,16 @@
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
     <button type="button" x-show="!open" @click="open = true"
-        class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex max-w-[330px] items-center gap-3 overflow-hidden rounded-full border border-amber-300/45 bg-[#1b1713] px-3.5 py-3 text-left text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-6 sm:px-4 sm:py-3.5"
+        class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-16 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-6"
         aria-label="Girar y ganar un descuento gratis">
-        <span class="roulette-cta-spark flex size-11 shrink-0 items-center justify-center rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)]">
-            <flux:icon name="sparkles" class="size-5" />
+        <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)]">
+            <flux:icon name="sparkles" class="size-[18px]" />
         </span>
-        <span class="relative z-10 min-w-0">
-            <span class="block text-[9px] font-bold uppercase tracking-[.2em] text-amber-300">Ruleta Brevare Perú</span>
-            <span class="mt-0.5 block text-[13px] font-extrabold leading-[1.15]">¡GIRA Y GANA DESCUENTO GRATIS!</span>
-        </span>
-        <span class="relative z-10 ml-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-amber-200 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:bg-amber-300 group-hover:text-stone-950">
-            <flux:icon name="arrow-right" class="size-4" />
+        <span class="relative z-10 text-[7px] font-extrabold uppercase leading-none tracking-[.16em] text-amber-200">Gira</span>
+        <span class="roulette-cta-badge" aria-hidden="true">15%</span>
+        <span class="roulette-cta-copy">
+            <span class="block text-[8px] font-bold uppercase tracking-[.18em] text-amber-300">Ruleta Brevare Perú</span>
+            <span class="mt-1 block text-sm font-extrabold leading-[1.2]">¡GIRA Y GANA DESCUENTO GRATIS!</span>
         </span>
     </button>
 
@@ -331,8 +330,13 @@
                 0 22px 48px -20px rgba(120, 53, 15, .7),
                 0 0 0 1px rgba(251, 191, 36, .18),
                 inset 0 1px 0 rgba(255, 255, 255, .12);
+            touch-action: manipulation;
         }
-        .roulette-floating-cta::after {
+        .roulette-floating-cta:focus-visible {
+            outline: 3px solid #fbbf24;
+            outline-offset: 4px;
+        }
+        .roulette-cta-spark::after {
             content: '';
             position: absolute;
             inset: -70% auto -70% 0;
@@ -343,6 +347,59 @@
             animation: roulette-cta-shine 5.5s cubic-bezier(.16, 1, .3, 1) infinite;
         }
         .roulette-cta-spark { animation: roulette-spark 7s linear infinite; }
+        .roulette-cta-badge {
+            position: absolute;
+            top: -3px;
+            right: -4px;
+            z-index: 2;
+            display: flex;
+            min-width: 1.8rem;
+            height: 1.35rem;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #1b1713;
+            border-radius: 9999px;
+            background: #fcd34d;
+            padding: 0 .25rem;
+            color: #292524;
+            font-size: .5rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -.01em;
+            box-shadow: 0 2px 5px rgba(41, 37, 36, .3);
+        }
+        .roulette-cta-copy {
+            position: absolute;
+            top: 50%;
+            left: calc(100% + .65rem);
+            z-index: -1;
+            width: max-content;
+            max-width: min(17rem, calc(100vw - 6rem));
+            translate: -6px -50%;
+            border: 1px solid rgba(251, 191, 36, .28);
+            border-radius: 1rem;
+            background:
+                linear-gradient(110deg, rgba(255, 255, 255, .07), transparent 45%),
+                #1b1713;
+            padding: .7rem .9rem;
+            color: #fff;
+            text-align: left;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            box-shadow: 0 16px 36px -18px rgba(41, 37, 36, .82);
+            transition:
+                opacity .2s cubic-bezier(.16, 1, .3, 1),
+                translate .2s cubic-bezier(.16, 1, .3, 1),
+                visibility .2s;
+        }
+        .roulette-floating-cta:hover .roulette-cta-copy,
+        .roulette-floating-cta:focus-visible .roulette-cta-copy {
+            z-index: 1;
+            translate: 0 -50%;
+            opacity: 1;
+            visibility: visible;
+        }
         .roulette-confetti-piece {
             position: absolute;
             top: -12px;
@@ -649,12 +706,15 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .roulette-floating-cta,
-            .roulette-floating-cta::after,
+            .roulette-cta-spark::after,
             .roulette-cta-spark,
             .roulette-stage-halo,
             .roulette-spin-shell::before,
             .roulette-win-burst {
                 animation: none;
+            }
+            .roulette-cta-copy {
+                transition: none;
             }
             .roulette-overlay-panel,
             .roulette-prize-reveal > section {
