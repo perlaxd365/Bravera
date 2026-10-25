@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,8 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'brand_id',
+        'product_type',
+        'course_price',
         'name',
         'slug',
         'short_description',
@@ -37,6 +40,8 @@ class Product extends Model
         'is_featured' => 'boolean',
         'is_visible' => 'boolean',
         'allows_shalom_cod' => 'boolean',
+        'product_type' => ProductType::class,
+        'course_price' => 'decimal:2',
     ];
 
     /*
@@ -80,6 +85,14 @@ class Product extends Model
         return $this->hasMany(PageView::class);
     }
 
+    public function courseAssets(): HasMany
+    {
+        return $this->hasMany(CourseAsset::class)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', true);
@@ -93,6 +106,11 @@ class Product extends Model
     public function scopeFeatured($query)
     {
         return $query->where('is_featured', true);
+    }
+
+    public function isCourse(): bool
+    {
+        return $this->product_type === ProductType::COURSE;
     }
 
     /*

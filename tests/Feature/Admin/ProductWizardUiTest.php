@@ -69,6 +69,56 @@ class ProductWizardUiTest extends TestCase
         $this->assertSame(0, $xpath->query('ancestor::aside', $content)->length);
     }
 
+    public function test_course_product_creates_digital_variant_and_accepts_links(): void
+    {
+        $this->actingAs(User::where('email', 'administracion@brevare.com')->firstOrFail());
+
+        $category = Category::create([
+            'name' => 'Cursos digitales',
+            'slug' => 'cursos-digitales',
+            'path' => 'cursos-digitales',
+            'is_visible' => true,
+        ]);
+
+        $component = Livewire::test(Form::class)
+            ->call('create')
+            ->set('form.category_id', $category->id)
+            ->set('form.product_type', 'course')
+            ->set('form.course_price', '129.90')
+            ->set('form.name', 'Curso de fotografía')
+            ->set('form.slug', 'curso-de-fotografia')
+            ->set('form.status', true)
+            ->set('form.is_visible', false)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $product = Product::where('slug', 'curso-de-fotografia')->firstOrFail();
+
+        $this->assertDatabaseHas('product_variants', [
+            'product_id' => $product->id,
+            'sku' => 'CURSO-'.$product->id,
+            'sale_price' => 129.90,
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('suppliers', [
+            'code' => 'BREVARE-DIGITAL',
+            'is_internal' => true,
+        ]);
+
+        $component
+            ->set('courseAssetTitle', 'Clase introductoria')
+            ->set('courseAssetUrl', 'https://example.com/curso')
+            ->call('saveCourseLink')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('course_assets', [
+            'product_id' => $product->id,
+            'title' => 'Clase introductoria',
+            'type' => 'link',
+            'url' => 'https://example.com/curso',
+        ]);
+    }
+
     public function test_supplier_numeric_fields_can_be_cleared_before_entering_values(): void
     {
         $this->actingAs(User::where('email', 'administracion@brevare.com')->firstOrFail());

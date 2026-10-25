@@ -102,6 +102,7 @@ class CartService
             $guestCart->update([
                 'user_id' => Auth::id(),
                 'session_id' => null,
+                'last_activity_at' => now(),
             ]);
 
             Session::put(self::SESSION_KEY, $guestCart->id);
@@ -117,7 +118,14 @@ class CartService
                 ->first();
 
             if ($existing) {
-                $existing->increment('quantity', (int) $item->quantity);
+                $newQuantity = (int) $existing->quantity + (int) $item->quantity;
+
+                $existing->update([
+                    'quantity' => $newQuantity,
+                    'unit_price' => $existing->variant?->unitPriceForQuantity($newQuantity)
+                        ?? $existing->unit_price,
+                ]);
+
                 $item->delete();
 
                 continue;
@@ -127,6 +135,7 @@ class CartService
         }
 
         $guestCart->delete();
+        $this->touchActivity($userCart);
         Session::put(self::SESSION_KEY, $userCart->id);
 
         return $userCart;
@@ -230,6 +239,7 @@ class CartService
         $newCart = Cart::create([
             'user_id' => Auth::id(),
             'status' => 'active',
+            'last_activity_at' => now(),
         ]);
 
         Session::put(self::SESSION_KEY, $newCart->id);
@@ -252,6 +262,7 @@ class CartService
         $cart = Cart::create([
             'session_id' => Str::random(40),
             'status' => 'active',
+            'last_activity_at' => now(),
         ]);
 
         Session::put(self::SESSION_KEY, $cart->id);
@@ -273,6 +284,7 @@ class CartService
                 $sessionCart->update([
                     'user_id' => Auth::id(),
                     'session_id' => null,
+                    'last_activity_at' => now(),
                 ]);
 
                 /*
@@ -290,6 +302,7 @@ class CartService
         return Cart::create([
             'user_id' => Auth::id(),
             'status' => 'active',
+            'last_activity_at' => now(),
         ]);
     }
 
@@ -305,7 +318,12 @@ class CartService
 
         $variant = ProductVariant::query()
             ->where('is_active', true)
+            ->with('product')
             ->findOrFail($productVariantId);
+
+        if ($variant->product?->isCourse()) {
+            $quantity = 1;
+        }
 
         $supplierVariant = $this->resolveSupplierVariant(
             $variant,
@@ -318,7 +336,9 @@ class CartService
             ->where('supplier_variant_id', $supplierVariant->id)
             ->first();
 
-        $newQuantity = ($existing?->quantity ?? 0) + $quantity;
+        $newQuantity = $variant->product?->isCourse()
+            ? 1
+            : ($existing?->quantity ?? 0) + $quantity;
 
         $available = $supplierVariant->availableStock();
 
@@ -331,18 +351,22 @@ class CartService
             'product_variant_id' => $variant->id,
             'supplier_variant_id' => $supplierVariant->id,
             'quantity' => $newQuantity,
-            'unit_price' => round((float) $variant->sale_price, 2),
+            'unit_price' => $variant->unitPriceForQuantity($newQuantity),
             'unit_cost' => $supplierVariant->cost_price,
             'supplier_shipping_cost' => $supplierVariant->shipping_cost,
         ];
 
         if ($existing) {
             $existing->update($values);
+            $this->touchActivity($cart);
 
             return $existing->fresh();
         }
 
-        return CartItem::create($values);
+        $item = CartItem::create($values);
+        $this->touchActivity($cart);
+
+        return $item;
     }
 
     /**
@@ -398,6 +422,7 @@ class CartService
 
         if ($quantity <= 0) {
             $item->delete();
+            $this->touchActivity($cart);
 
             return;
         }
@@ -413,7 +438,10 @@ class CartService
 
         $item->update([
             'quantity' => $quantity,
+            'unit_price' => $item->variant?->unitPriceForQuantity($quantity)
+                ?? $item->unit_price,
         ]);
+        $this->touchActivity($cart);
     }
 
     public function remove(int $itemId): void
@@ -423,15 +451,16 @@ class CartService
         CartItem::where('cart_id', $cart->id)
             ->whereKey($itemId)
             ->delete();
+        $this->touchActivity($cart);
     }
 
     public function items()
     {
         $items = $this->currentCart()->activeItems()->get()->sortBy('created_at');
 
-        // El precio del carrito es una copia del precio de la variante. Si el
-        // catálogo cambia antes de pagar, el carrito debe reflejar el precio
-        // vigente y no conservar una cotización vieja que ya no está a la venta.
+        // El precio del carrito es una copia del precio vigente para la
+        // cantidad elegida. Si el catálogo cambia antes de pagar, el carrito
+        // debe reflejarlo y no conservar una cotización vieja.
         foreach ($items as $item) {
             $variant = $item->variant;
 
@@ -440,7 +469,7 @@ class CartService
             }
 
             $values = [];
-            $salePrice = round((float) $variant->sale_price, 2);
+            $salePrice = $variant->unitPriceForQuantity((int) $item->quantity);
 
             if (abs((float) $item->unit_price - $salePrice) > 0.001) {
                 $values['unit_price'] = $salePrice;
@@ -497,6 +526,12 @@ class CartService
         $cart = $this->writableCart();
 
         CartItem::where('cart_id', $cart->id)->delete();
+        $this->touchActivity($cart);
+    }
+
+    private function touchActivity(Cart $cart): void
+    {
+        $cart->forceFill(['last_activity_at' => now()])->saveQuietly();
     }
 
     /**

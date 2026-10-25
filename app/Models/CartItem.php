@@ -51,4 +51,9 @@ class CartItem extends Model
     {
         return round(($this->unit_cost + $this->supplier_shipping_cost) * $this->quantity, 2);
     }
+
+    public function isCourse(): bool
+    {
+        return (bool) $this->variant?->product?->isCourse();
+    }
 }

@@ -28,6 +28,11 @@
             'icon' => 'check-badge',
             'description' => 'Entregado',
         ],
+        'completed' => [
+            'label' => 'Completado',
+            'icon' => 'check-badge',
+            'description' => 'Proceso completado',
+        ],
     ];
 
     $currentKey = $status ?? '';
@@ -70,21 +75,21 @@
 
                 {{-- Línea base desktop --}}
                 <div
-                    class="absolute left-[12.5%] right-[12.5%] top-[18px] hidden h-px bg-gray-200 sm:block"
+                    class="absolute left-[10%] right-[10%] top-[18px] hidden h-px bg-gray-200 sm:block"
                     aria-hidden="true">
                 </div>
 
                 {{-- Línea de progreso desktop --}}
                 @if ($currentIndex > 0)
                     <div
-                        class="absolute left-[12.5%] top-[18px] hidden h-px bg-gray-900 transition-all duration-500 sm:block"
-                        style="width: {{ ($currentIndex / (count($steps) - 1)) * 75 }}%;"
+                        class="absolute left-[10%] top-[18px] hidden h-px bg-gray-900 transition-all duration-500 sm:block"
+                        style="width: {{ ($currentIndex / (count($steps) - 1)) * 80 }}%;"
                         aria-hidden="true">
                     </div>
                 @endif
 
                 {{-- Etapas --}}
-                <div class="grid w-full grid-cols-1 gap-0 sm:grid-cols-4 sm:gap-0">
+                <div class="grid w-full grid-cols-1 gap-0 sm:grid-cols-5 sm:gap-0">
 
                     @foreach ($steps as $key => $step)
 

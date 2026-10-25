@@ -11,6 +11,7 @@ use App\Modules\Ordering\Events\OrderPaid;
 use App\Modules\Ordering\Services\OrderService;
 use App\Modules\Payments\Contracts\PaymentGateway;
 use App\Modules\Payments\Exceptions\PaymentGatewayNotConfiguredException;
+use App\Services\MetaConversionsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -303,11 +304,16 @@ class PaymentService
                 'raw_response' => $raw,
             ], fn ($value) => $value !== null));
 
+            $digitalOnly = ! $order->hasPhysicalItems();
+
             $order->update([
-                'status' => OrderStatus::CONFIRMED,
+                'status' => $digitalOnly ? OrderStatus::COMPLETED : OrderStatus::CONFIRMED,
                 'payment_status' => PaymentStatus::PAID,
                 'paid_at' => now(),
-                'pickup_code' => $order->pickup_code ?: $this->pickupCode(),
+                'completed_at' => $digitalOnly ? now() : null,
+                'pickup_code' => $digitalOnly
+                    ? null
+                    : ($order->pickup_code ?: $this->pickupCode()),
             ]);
             $cart = $order->cart;
             if ($cart !== null) {
@@ -322,6 +328,11 @@ class PaymentService
             $this->supplierOrderService->createForPaidOrder($order);
 
             event(new OrderPaid($order));
+
+            // La CAPI se envía después del commit para no retener locks de la
+            // orden mientras se espera la respuesta de Meta.
+            DB::afterCommit(fn () => app(MetaConversionsService::class)
+                ->purchase($order->fresh('items')));
 
             return $payment->fresh();
         });

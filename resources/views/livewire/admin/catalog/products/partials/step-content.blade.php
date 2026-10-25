@@ -5,6 +5,99 @@
         <p class="mt-1 text-sm leading-6 text-stone-600">Prepara la información que ayuda a encontrar y entender el producto.</p>
     </div>
 
+    @if ($form->product_type === 'course')
+        <details class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm" open>
+            <summary class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+                <span class="flex items-center gap-3">
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><flux:icon name="document-arrow-down" class="size-4" /></span>
+                    <span>
+                        <span class="block text-sm font-bold text-stone-950">Materiales del curso</span>
+                        <span class="mt-0.5 block text-xs text-stone-500">Archivos privados y enlaces que recibirá el comprador.</span>
+                    </span>
+                </span>
+                <flux:icon name="chevron-down" class="size-4 shrink-0 text-stone-400" />
+            </summary>
+
+            <div class="space-y-5 border-t border-sky-100 p-5">
+                @if (! $form->id)
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        Guarda primero el curso para adjuntar archivos y enlaces.
+                        <button type="button" wire:click="goToStep(1)" class="ml-1 font-semibold underline">Volver al paso 1</button>
+                    </div>
+                @else
+                    <div class="grid gap-4 rounded-2xl bg-sky-50/60 p-4" x-data="{ uploading: false, progress: 0 }"
+                        x-on:livewire-upload-start.window="uploading = true; progress = 0"
+                        x-on:livewire-upload-progress.window="progress = Number($event.detail.progress || 0)"
+                        x-on:livewire-upload-finish.window="uploading = false; progress = 100"
+                        x-on:livewire-upload-error.window="uploading = false">
+                        <x-input label="Nombre visible del material" wire:model.blur="courseAssetTitle" maxlength="120" placeholder="Ej.: Guía completa en PDF" />
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-stone-800">Archivo privado</label>
+                                <input type="file" wire:model="courseFile" wire:loading.attr="disabled" wire:target="courseFile"
+                                    class="block w-full cursor-pointer rounded-xl border border-stone-300 bg-white text-sm text-stone-700 file:mr-4 file:rounded-l-xl file:border-0 file:bg-sky-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-sky-900">
+                                <div x-show="uploading" x-cloak class="mt-2">
+                                    <div class="flex justify-between text-xs font-medium text-sky-800"><span>Subiendo…</span><span x-text="`${progress}%`"></span></div>
+                                    <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-sky-100"><div class="h-full bg-sky-600" x-bind:style="`width: ${progress}%`"></div></div>
+                                </div>
+                                @error('courseFile') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                <button type="button" wire:click="saveCourseFile" wire:loading.attr="disabled" wire:target="courseFile,saveCourseFile"
+                                    @disabled(! $courseFile)
+                                    class="mt-2 inline-flex min-h-9 items-center rounded-full bg-sky-700 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-300">
+                                    Agregar archivo
+                                </button>
+                            </div>
+                            <div>
+                                <x-input label="O pega un enlace" type="url" wire:model.blur="courseAssetUrl" placeholder="https://..." />
+                                @error('courseAssetUrl') <p class="-mt-2 mb-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                                <button type="button" wire:click="saveCourseLink" wire:loading.attr="disabled" wire:target="saveCourseLink"
+                                    @disabled(blank($courseAssetUrl))
+                                    class="mt-2 inline-flex min-h-9 items-center rounded-full border border-sky-300 bg-white px-4 text-xs font-semibold text-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
+                                    Agregar enlace
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="mb-2 flex items-center justify-between">
+                            <h5 class="text-sm font-bold text-stone-900">Materiales adjuntos</h5>
+                            <span class="text-xs text-stone-500">{{ $courseAssets->count() }} elemento(s)</span>
+                        </div>
+                        @if ($courseAssets->isEmpty())
+                            <div class="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-sm text-stone-500">
+                                Agrega al menos un archivo o enlace antes de publicar el curso.
+                            </div>
+                        @else
+                            <ul class="divide-y divide-stone-100 rounded-2xl border border-stone-200">
+                                @foreach ($courseAssets as $asset)
+                                    <li wire:key="course-asset-{{ $asset->id }}" class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                                        <div class="flex min-w-0 items-center gap-3">
+                                            <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
+                                                <flux:icon :name="$asset->isFile() ? 'document' : 'link'" class="size-4" />
+                                            </span>
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-stone-900">{{ $asset->title }}</p>
+                                                <p class="text-xs text-stone-500">
+                                                    {{ $asset->isFile() ? ($asset->file_name.' · '.$asset->sizeLabel()) : $asset->url }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button type="button" wire:click="deleteCourseAsset({{ $asset->id }})"
+                                            wire:confirm="¿Eliminar este material del curso?"
+                                            class="inline-flex min-h-9 items-center gap-1 rounded-full border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50">
+                                            <flux:icon name="trash" class="size-3.5" /> Eliminar
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </details>
+    @endif
+
     <details class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm" open>
         <summary class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
             <span class="flex items-center gap-3">

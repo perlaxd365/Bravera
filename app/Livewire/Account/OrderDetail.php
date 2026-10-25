@@ -16,6 +16,7 @@ class OrderDetail extends Component
         $this->order = $order?->load([
             'items.variant.images',
             'items.product.variants.images',
+            'items.product.courseAssets',
             'items.supplierVariant.supplier',
             'payment',
             'supplierOrders.supplier',

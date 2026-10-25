@@ -22,7 +22,7 @@ class SupplierOrderService
     {
         return DB::transaction(function () use ($order) {
             $grouped = $order->items
-                ->filter(fn ($item) => $item->supplier_id !== null)
+                ->filter(fn ($item) => $item->supplier_id !== null && ! $item->isCourse())
                 ->groupBy('supplier_id');
 
             $created = collect();

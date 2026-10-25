@@ -33,25 +33,35 @@ class OrderService
                 'payment_intent' => $paymentIntent,
                 'subtotal' => $data->subtotal,
                 'shipping_total' => $data->shippingTotal,
+                'shipping_payment_method' => $data->shippingPaymentMethod,
+                'cod_shipping_amount' => $data->codShippingAmount,
                 'delivery_days' => $data->deliveryDays,
                 'discount_total' => $data->discountTotal,
                 'total' => $data->total,
                 'cost_total' => $data->costTotal,
                 'coupon_id' => $data->coupon?->id,
                 'coupon_code' => $data->coupon?->code,
+                'marketing_consent' => request()->cookie(config('meta.consent_cookie')) === 'all',
                 'customer_snapshot' => [
                     'name' => $data->user->name,
                     'email' => $data->user->email,
+                    'meta_fbc' => request()->cookie('_fbc'),
+                    'meta_fbp' => request()->cookie('_fbp'),
+                    'meta_client_ip' => request()->ip(),
+                    'meta_client_user_agent' => request()->userAgent(),
+                    'meta_event_source_url' => request()->fullUrl(),
                 ],
-                'address_snapshot' => [
+                'address_snapshot' => $data->address ? [
                     'full_name' => $data->address->full_name,
                     'phone' => $data->address->phone,
                     'address' => $data->address->address,
                     'reference' => $data->address->reference,
                     'location_label' => $data->address->locationLabel(),
                     'shipping_method' => 'shalom_pickup',
+                    'shipping_payment_method' => $data->shippingPaymentMethod,
+                    'shipping_due_at_pickup' => $data->codShippingAmount,
                     'pickup_agency' => $data->pickupAgency,
-                ],
+                ] : null,
                 'currency' => 'PEN',
                 'notes' => $data->notes,
             ]);
@@ -114,6 +124,10 @@ class OrderService
     private function reserveStock(CheckoutData $data): void
     {
         foreach ($data->items as $item) {
+            if ($item->isCourse()) {
+                continue;
+            }
+
             $supplierVariant = $item->supplierVariant;
 
             if (! $supplierVariant) {

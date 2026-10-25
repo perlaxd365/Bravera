@@ -10,6 +10,7 @@ use App\Http\Controllers\Seo\SitemapController;
 use App\Http\Controllers\Seo\GoogleMerchantFeedController;
 use App\Http\Controllers\Store\CartRecoveryController;
 use App\Http\Controllers\Store\FavoriteController;
+use App\Http\Controllers\Store\CourseAssetController;
 use App\Http\Controllers\ShalomAgencyController;
 use App\Http\Controllers\Store\SearchSuggestionController;
 use App\Livewire\Account\Addresses;
@@ -88,6 +89,10 @@ Route::get('categoria/{path}', Catalog::class)
 
 Route::get('producto/{slug}', ProductDetail::class)
     ->name('store.product');
+
+Route::get('pedidos/{order}/curso/{asset}', CourseAssetController::class)
+    ->middleware('auth')
+    ->name('course.assets.open');
 
 Route::get('nosotros', About::class)
     ->name('about');

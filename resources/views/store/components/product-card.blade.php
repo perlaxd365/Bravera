@@ -55,6 +55,9 @@
             @if ($product->is_featured ?? false)
                 <span class="absolute right-3 top-3 rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">Destacado</span>
             @endif
+            @if ($product->isCourse())
+                <span class="absolute bottom-3 right-3 z-20 rounded-full bg-sky-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">Curso digital</span>
+            @endif
             @if ($product->isSoldByBrevare() || $hasWholesale)
                 <div class="absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1.5">
                     @if ($product->isSoldByBrevare())

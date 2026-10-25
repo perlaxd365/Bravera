@@ -83,6 +83,7 @@
         {{-- Columna principal --}}
         <div class="min-w-0 space-y-4 lg:col-span-2">
 
+            @if ($requiresShipping)
             {{-- 1. Dirección de recojo --}}
             <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
@@ -313,7 +314,11 @@
                 @if ($quote)
                     <div class="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
                         <flux:icon name="truck" class="size-5 text-gray-500" />
-                        Costo de envío estimado: <strong>S/ {{ number_format($shippingTotal, 2) }}</strong>
+                        Costo de envío estimado:
+                        <strong>S/ {{ number_format($quotedShippingTotal, 2) }}</strong>
+                        <span class="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+                            {{ $shippingPaymentMethod === 'shalom_cod' ? 'Pago en Shalom' : 'Pago adelantado' }}
+                        </span>
                     </div>
                     <p class="mt-2 flex items-center gap-1.5 text-sm text-gray-600">
                         <flux:icon name="clock" class="size-4 text-emerald-600" />
@@ -331,16 +336,78 @@
                             Si tu pedido incluye productos de varios proveedores, mostramos el plazo más largo.
                         </p>
                     @endif
+
+                    @if ($awaitingPayment)
+                        <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                            <p class="font-semibold">
+                                {{ $shippingPaymentMethod === 'shalom_cod'
+                                    ? 'Envío a pagar al recoger en Shalom'
+                                    : 'Envío pagado por adelantado' }}
+                            </p>
+                            <p class="mt-1 text-emerald-800">
+                                {{ $shippingPaymentMethod === 'shalom_cod'
+                                    ? 'El pedido ya tiene reservado su envío por S/ '.number_format($codShippingAmount, 2).'.'
+                                    : 'El envío ya está incluido en el pago del pedido.' }}
+                            </p>
+                        </div>
+                    @else
+                        <div class="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                            <p class="text-sm font-bold text-gray-900">¿Cómo deseas pagar el envío?</p>
+
+                            @if ($codAvailable)
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                    <label class="flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition {{ $shippingPaymentMethod === 'prepaid' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300' }}">
+                                        <input type="radio" wire:model.live="shippingPaymentMethod" value="prepaid"
+                                            class="mt-0.5 size-4 border-gray-300 text-gray-900 focus:ring-gray-900/30">
+                                        <span>
+                                            <span class="block text-sm font-semibold text-gray-900">Pagar por adelantado</span>
+                                            <span class="mt-0.5 block text-xs leading-5 text-gray-500">El envío se cobra junto con tu compra.</span>
+                                        </span>
+                                    </label>
+                                    <label class="flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition {{ $shippingPaymentMethod === 'shalom_cod' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300' }}">
+                                        <input type="radio" wire:model.live="shippingPaymentMethod" value="shalom_cod"
+                                            class="mt-0.5 size-4 border-gray-300 text-emerald-600 focus:ring-emerald-600/30">
+                                        <span>
+                                            <span class="block text-sm font-semibold text-gray-900">Pagar al recoger en Shalom</span>
+                                            <span class="mt-0.5 block text-xs leading-5 text-gray-500">Pagas el envío en la agencia al recoger tu pedido.</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            @else
+                                <label class="mt-3 flex items-start gap-2 rounded-xl border border-gray-900 bg-gray-50 p-3">
+                                    <input type="radio" checked disabled
+                                        class="mt-0.5 size-4 border-gray-300 text-gray-900">
+                                    <span>
+                                        <span class="block text-sm font-semibold text-gray-900">Pago adelantado</span>
+                                        <span class="mt-0.5 block text-xs leading-5 text-gray-500">
+                                            Los productos de este carrito requieren que el envío se pague junto con la compra.
+                                        </span>
+                                    </span>
+                                </label>
+                            @endif
+                        </div>
+                    @endif
                 @else
                     <p class="text-sm text-gray-500">Selecciona una dirección para calcular el envío.</p>
                 @endif
             </section>
+            @else
+                <section class="min-w-0 rounded-2xl border border-sky-200 bg-sky-50/70 p-4 shadow-sm sm:p-6">
+                    <h2 class="flex items-center gap-2.5 font-bold text-sky-950">
+                        <flux:icon name="document-arrow-down" class="size-5" />
+                        Compra digital
+                    </h2>
+                    <p class="mt-2 text-sm leading-6 text-sky-900">
+                        Tu pedido contiene solo cursos. No necesita dirección ni envío; al confirmar el pago pasarás directamente a pedido completado y podrás descargar los materiales.
+                    </p>
+                </section>
+            @endif
 
             {{-- 3. Cupón de descuento --}}
             <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
-                        class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">3</span>
+                        class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">{{ $requiresShipping ? 3 : 1 }}</span>
                     Cupón de descuento
                 </h2>
                 @if ($couponApplied)
@@ -378,9 +445,45 @@
             <section class="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-4 flex items-center gap-2.5 font-bold text-gray-900">
                     <span
-                        class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">4</span>
+                        class="flex size-6 items-center justify-center rounded-full bg-gray-900 text-xs text-white">{{ $requiresShipping ? 4 : 2 }}</span>
                     Método de pago
                 </h2>
+
+                @if (array_key_exists('culqi', $availableGateways)
+                    && ($gatewayChoice === '' || $gatewayChoice === 'culqi'))
+                    <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <label for="culqi-identification" class="flex items-center gap-2 text-sm font-bold text-gray-900">
+                                <flux:icon name="identification" class="size-4 text-amber-800" />
+                                DNI del titular
+                                <span class="text-red-600" aria-hidden="true">*</span>
+                            </label>
+                            <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-inset ring-amber-200">
+                                Obligatorio para Culqi
+                            </span>
+                        </div>
+                        <input id="culqi-identification" type="text" wire:model.live.debounce.400ms="culqiIdentification"
+                            inputmode="numeric" autocomplete="off" maxlength="8" required aria-required="true"
+                            aria-describedby="culqi-identification-help culqi-identification-error"
+                            placeholder="8 dígitos (ej. 12345678)"
+                            @class([
+                                'mt-3 min-h-12 w-full rounded-xl border bg-white px-4 py-3 text-base font-semibold tracking-[0.08em] text-gray-900 shadow-sm focus:outline-none focus:ring-2',
+                                'border-gray-300 focus:border-gray-900 focus:ring-gray-900/10' => ! $errors->has('culqiIdentification'),
+                                'border-red-400 focus:border-red-500 focus:ring-red-500/15' => $errors->has('culqiIdentification'),
+                            ])>
+                        <div class="mt-2 flex items-start justify-between gap-3">
+                            <p id="culqi-identification-help" class="text-xs leading-5 text-gray-600">
+                                Necesario para autorizar el pago. Si ya compraste antes, lo completamos automáticamente.
+                            </p>
+                            <span class="shrink-0 text-[10px] font-medium text-gray-400">{{ strlen($culqiIdentification) }}/8</span>
+                        </div>
+                        @error('culqiIdentification')
+                            <p id="culqi-identification-error" class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-700" role="alert">
+                                <flux:icon name="exclamation-circle" class="size-3.5" /> {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                @endif
 
                 @if (count($availableGateways) > 0)
                         <div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Pasarela de pago">
@@ -430,17 +533,6 @@
                             </p>
                         </div>
                         <x-brevare.payment-methods compact class="mt-4" />
-
-                        <div class="mt-4">
-                            <label for="culqi-identification"
-                                class="mb-1.5 block text-xs font-semibold text-gray-700">DNI del titular</label>
-                            <input id="culqi-identification" type="text" wire:model="culqiIdentification"
-                                inputmode="numeric" maxlength="8" placeholder="8 dígitos (ej. 12345678)"
-                                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10">
-                            <p class="mt-1.5 text-xs text-gray-500">
-                                Culqi valida el DNI de 8 dígitos para autorizar el pago.
-                            </p>
-                        </div>
 
                         <p class="mt-3 flex items-start gap-2 text-xs text-gray-500">
                             <flux:icon name="lock-closed" class="size-4 shrink-0" />
@@ -545,9 +637,15 @@
                         <dd class="text-gray-900">S/ {{ number_format($subtotal, 2) }}</dd>
                     </div>
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">Envío</dt>
+                        <dt class="text-gray-500">Envío pagado ahora</dt>
                         <dd class="text-gray-900">S/ {{ number_format($shippingTotal, 2) }}</dd>
                     </div>
+                    @if ($codShippingAmount > 0)
+                        <div class="flex justify-between text-emerald-800">
+                            <dt>Envío a pagar en Shalom</dt>
+                            <dd>S/ {{ number_format($codShippingAmount, 2) }}</dd>
+                        </div>
+                    @endif
                     @if ($deliveryDays)
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Entrega</dt>
@@ -563,10 +661,17 @@
                 </dl>
 
                 <div class="mt-4 flex flex-wrap items-end justify-between gap-2 border-t border-gray-100 pt-4">
-                    <span class="font-bold text-gray-900">Total</span>
+                    <span class="font-bold text-gray-900">
+                        {{ $shippingPaymentMethod === 'shalom_cod' ? 'Total a pagar ahora' : 'Total' }}
+                    </span>
                     <span class="text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl">S/
                         {{ number_format($total, 2) }}</span>
                 </div>
+                @if ($codShippingAmount > 0)
+                    <p class="mt-2 text-xs leading-5 text-emerald-800">
+                        El envío de S/ {{ number_format($codShippingAmount, 2) }} se paga directamente en Shalom al recoger el pedido.
+                    </p>
+                @endif
 
                 @if ($selectedShalomAgency)
                     <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
@@ -631,7 +736,7 @@
                 @if ($gatewayChoice !== '' && $usesProviderModal && $culqiPublicKey && !$settledOrderNumber)
                     @if ($culqiSession === [])
                         <button wire:click="startCulqiCheckout" wire:loading.attr="disabled"
-                            wire:target="startCulqiCheckout" @if (!$selectedAddressId || !$selectedShalomAgencyId) disabled @endif
+                            wire:target="startCulqiCheckout" @if ($requiresShipping && (!$selectedAddressId || !$selectedShalomAgencyId)) disabled @endif
                             class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                             <span wire:loading.remove wire:target="startCulqiCheckout"
                                 class="inline-flex items-center gap-2">
@@ -650,7 +755,7 @@
                     @endif
                 @elseif ($gatewayChoice !== '' && !$usesProviderModal && !$settledOrderNumber)
                     <button wire:click="placeOrder" wire:loading.attr="disabled"
-                        @if (!$selectedAddressId || !$selectedShalomAgencyId) disabled @endif
+                        @if ($requiresShipping && (!$selectedAddressId || !$selectedShalomAgencyId)) disabled @endif
                         class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
                         <span wire:loading.remove>
                             {{ match ($selectedGateway) {

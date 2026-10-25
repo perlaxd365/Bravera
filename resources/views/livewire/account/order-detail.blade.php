@@ -91,6 +91,8 @@
                     </div>
                 </section>
 
+                @include('partials.course-materials', ['order' => $order])
+
                 @if (auth()->user()?->isStaff())
                 <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                     <header class="border-b border-gray-100 px-6 py-4 font-bold text-gray-900">Envío a los proveedores</header>
@@ -127,9 +129,15 @@
                             <dd class="text-gray-900">S/ {{ number_format((float) $order->subtotal, 2) }}</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Envío</dt>
+                            <dt class="text-gray-500">Envío pagado ahora</dt>
                             <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
                         </div>
+                        @if ((float) $order->cod_shipping_amount > 0)
+                            <div class="flex justify-between text-emerald-800">
+                                <dt>Envío a pagar en Shalom</dt>
+                                <dd>S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</dd>
+                            </div>
+                        @endif
                         @if ($order->delivery_days)
                             <div class="flex justify-between">
                                 <dt class="text-gray-500">Entrega</dt>
@@ -151,6 +159,7 @@
                     </div>
                 </section>
 
+                @if (! empty($order->address_snapshot))
                 <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h2 class="font-bold text-gray-900">Recojo</h2>
                     @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
@@ -178,6 +187,7 @@
                         <p class="text-gray-500">{{ $order->address_snapshot['phone'] ?? '' }}</p>
                     </div>
                 </section>
+                @endif
             </aside>
         </div>
 </div>

@@ -106,6 +106,15 @@ class ProductReadinessService
             ],
         ];
 
+        if ($product->isCourse()) {
+            $checks['course_assets'] = [
+                'label' => 'Materiales del curso',
+                'description' => 'Al menos un archivo o enlace privado.',
+                'step' => 2,
+                'complete' => $product->exists && $product->courseAssets()->exists(),
+            ];
+        }
+
         $completed = count(array_filter($checks, fn (array $check): bool => $check['complete']));
         $total = count($checks);
 

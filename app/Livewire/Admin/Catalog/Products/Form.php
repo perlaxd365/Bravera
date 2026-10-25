@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Admin\Catalog\Products;
 
+use App\Enums\ProductType;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\CourseAsset;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
@@ -13,6 +15,7 @@ use App\Modules\Product\Forms\ProductForm;
 use App\Modules\Product\Forms\ProductVariantForm;
 use App\Modules\Product\Forms\SupplierVariantForm;
 use App\Modules\Product\Repositories\ProductRepository;
+use App\Modules\Product\Services\CourseProductService;
 use App\Modules\Product\Services\ProductReadinessService;
 use App\Modules\Product\Services\ProductService;
 use App\Modules\Product\Services\ProductVariantService;
@@ -20,6 +23,8 @@ use App\Modules\Product\Services\SupplierVariantService;
 use App\Services\CloudinaryImageService;
 use App\Services\MetaAdsService;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -72,6 +77,12 @@ class Form extends Component
     public ?string $metaAdVideoUrl = null;
 
     public ?string $metaAdVideoPublicId = null;
+
+    public $courseFile;
+
+    public string $courseAssetTitle = '';
+
+    public string $courseAssetUrl = '';
 
     /**
      * Configuración del anuncio de Meta para este producto.
@@ -177,6 +188,9 @@ class Form extends Component
             'metaAdVideo',
             'metaAdVideoUrl',
             'metaAdVideoPublicId',
+            'courseFile',
+            'courseAssetTitle',
+            'courseAssetUrl',
         ]);
 
         $this->resetMetaForm();
@@ -236,6 +250,10 @@ class Form extends Component
 
     public function updated(string $property, mixed $value): void
     {
+        if ($property === 'form.product_type' && $value === ProductType::COURSE->value) {
+            $this->form->allows_shalom_cod = false;
+        }
+
         $pricingField = match ($property) {
             'variantForm.cost_price' => 'cost',
             'variantForm.sale_price' => 'base',
@@ -315,6 +333,17 @@ class Form extends Component
             $this->dispatch('product-step-changed');
         }
 
+        $freshProduct = $product->fresh();
+        app(CourseProductService::class)->ensureDigitalVariant($freshProduct);
+
+        if ($freshProduct->isCourse()
+            && $this->form->is_visible
+            && ! $freshProduct->courseAssets()->exists()) {
+            $freshProduct->update(['is_visible' => false]);
+            $this->form->is_visible = false;
+            $this->addError('form.is_visible', 'Agrega al menos un archivo o enlace antes de publicar el curso.');
+        }
+
         $this->dispatch('notify', [
             'type' => 'success',
             'message' => $message,
@@ -323,6 +352,110 @@ class Form extends Component
         $this->dispatch('product-saved');
 
         $this->resetValidation();
+    }
+
+    public function saveCourseFile(): void
+    {
+        $product = $this->courseProduct();
+
+        if (! $product) {
+            return;
+        }
+
+        $this->validate([
+            'courseAssetTitle' => ['required', 'string', 'max:120'],
+            'courseFile' => ['required', 'file', 'max:51200'],
+        ], [
+            'courseAssetTitle.required' => 'Escribe un nombre para el archivo.',
+            'courseFile.required' => 'Selecciona un archivo.',
+            'courseFile.max' => 'El archivo no puede superar los 50 MB.',
+        ]);
+
+        $originalName = $this->courseFile->getClientOriginalName();
+        $extension = strtolower($this->courseFile->getClientOriginalExtension());
+        $safeName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) ?: 'material';
+        $storedName = Str::uuid().'-'.$safeName.($extension !== '' ? '.'.$extension : '');
+        $path = Storage::disk('local')->putFileAs(
+            'courses/'.$product->id,
+            $this->courseFile,
+            $storedName,
+        );
+
+        if (! $path) {
+            $this->addError('courseFile', 'No se pudo guardar el archivo. Inténtalo nuevamente.');
+
+            return;
+        }
+
+        CourseAsset::create([
+            'product_id' => $product->id,
+            'title' => trim($this->courseAssetTitle),
+            'type' => 'file',
+            'file_path' => $path,
+            'file_name' => $originalName,
+            'mime_type' => $this->courseFile->getMimeType(),
+            'size_bytes' => $this->courseFile->getSize(),
+            'sort_order' => (int) $product->courseAssets()->max('sort_order') + 1,
+            'is_active' => true,
+        ]);
+
+        $this->reset('courseFile', 'courseAssetTitle');
+        $this->resetValidation();
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Archivo del curso agregado.']);
+    }
+
+    public function saveCourseLink(): void
+    {
+        $product = $this->courseProduct();
+
+        if (! $product) {
+            return;
+        }
+
+        $validated = $this->validate([
+            'courseAssetTitle' => ['required', 'string', 'max:120'],
+            'courseAssetUrl' => ['required', 'url', 'max:2048'],
+        ], [
+            'courseAssetTitle.required' => 'Escribe un nombre para el enlace.',
+            'courseAssetUrl.required' => 'Escribe la URL del contenido.',
+            'courseAssetUrl.url' => 'La URL del contenido no es válida.',
+        ]);
+
+        CourseAsset::create([
+            'product_id' => $product->id,
+            'title' => trim($validated['courseAssetTitle']),
+            'type' => 'link',
+            'url' => trim($validated['courseAssetUrl']),
+            'sort_order' => (int) $product->courseAssets()->max('sort_order') + 1,
+            'is_active' => true,
+        ]);
+
+        $this->reset('courseAssetTitle', 'courseAssetUrl');
+        $this->resetValidation();
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Enlace del curso agregado.']);
+    }
+
+    public function deleteCourseAsset(int $assetId): void
+    {
+        $product = $this->courseProduct();
+        $asset = $product?->courseAssets()->find($assetId);
+
+        if (! $asset) {
+            return;
+        }
+
+        $asset->deleteStoredFile();
+        $asset->delete();
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Material del curso eliminado.']);
+    }
+
+    private function courseProduct(): ?Product
+    {
+        if (! $this->form->id || $this->form->product_type !== ProductType::COURSE->value) {
+            return null;
+        }
+
+        return Product::query()->find($this->form->id);
     }
 
     public function updatedProductVideo(): void
@@ -415,6 +548,8 @@ class Form extends Component
             'metaAdVideo.mimetypes' => 'El video del anuncio debe estar en formato MP4, MOV o WebM.',
             'metaAdVideo.max' => 'El video del anuncio no puede superar los 50 MB.',
         ]);
+
+        $this->metaMediaType = 'video';
     }
 
     public function saveMetaAdVideo(CloudinaryImageService $cloudinary): void
@@ -1443,6 +1578,9 @@ class Form extends Component
         $galleryVariant = $this->galleryVariant();
 
         $metaAds = $product?->metaAds()->latest()->get() ?? collect();
+        $courseAssets = $product?->isCourse()
+            ? $product->courseAssets()->get()
+            : collect();
         $metaImage = $product?->coverImage();
         $metaVideo = $product?->meta_ad_video_url ?: $product?->video_url;
         $metaAdsReady = $product !== null
@@ -1498,6 +1636,8 @@ class Form extends Component
                 'previewProduct' => $this->currentStep === 6 ? $product : null,
 
                 'metaAds' => $metaAds,
+
+                'courseAssets' => $courseAssets,
 
                 'metaImage' => $metaImage,
 

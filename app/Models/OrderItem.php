@@ -95,6 +95,11 @@ class OrderItem extends Model
         return $this->status === OrderItemStatus::ACTIVE;
     }
 
+    public function isCourse(): bool
+    {
+        return (bool) $this->product?->isCourse();
+    }
+
     public function attributesLabel(): string
     {
         $attrs = $this->variant_attributes ?? [];

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Product\DTO;
 
+use App\Enums\ProductType;
 use App\Models\Product;
 
 readonly class ProductData
@@ -10,6 +11,8 @@ readonly class ProductData
         public ?int $id,
         public int $category_id,
         public ?int $brand_id,
+        public ProductType $product_type,
+        public ?float $course_price,
         public string $name,
         public string $slug,
         public ?string $short_description,
@@ -17,6 +20,7 @@ readonly class ProductData
         public bool $status,
         public bool $is_featured,
         public bool $is_visible,
+        public bool $allows_shalom_cod,
         public ?string $seo_title,
         public ?string $seo_description,
     ) {}
@@ -30,6 +34,9 @@ readonly class ProductData
             id: $data['id'] ?? null,
             category_id: (int) $data['category_id'],
             brand_id: isset($data['brand_id']) ? (int) $data['brand_id'] : null,
+            product_type: ProductType::tryFrom((string) ($data['product_type'] ?? 'physical'))
+                ?? ProductType::PHYSICAL,
+            course_price: filled($data['course_price'] ?? null) ? (float) $data['course_price'] : null,
             name: trim($data['name']),
             slug: trim($data['slug']),
             short_description: $data['short_description'] ?? null,
@@ -37,6 +44,7 @@ readonly class ProductData
             status: (bool) ($data['status'] ?? true),
             is_featured: (bool) ($data['is_featured'] ?? false),
             is_visible: (bool) ($data['is_visible'] ?? true),
+            allows_shalom_cod: (bool) ($data['allows_shalom_cod'] ?? false),
             seo_title: $data['seo_title'] ?? null,
             seo_description: $data['seo_description'] ?? null,
         );
@@ -51,6 +59,8 @@ readonly class ProductData
             id: $product->id,
             category_id: $product->category_id,
             brand_id: $product->brand_id,
+            product_type: $product->product_type,
+            course_price: $product->course_price !== null ? (float) $product->course_price : null,
             name: $product->name,
             slug: $product->slug,
             short_description: $product->short_description,
@@ -58,6 +68,7 @@ readonly class ProductData
             status: $product->status,
             is_featured: $product->is_featured,
             is_visible: $product->is_visible,
+            allows_shalom_cod: (bool) $product->allows_shalom_cod,
             seo_title: $product->seo_title,
             seo_description: $product->seo_description,
         );
@@ -71,6 +82,8 @@ readonly class ProductData
         return [
             'category_id' => $this->category_id,
             'brand_id' => $this->brand_id,
+            'product_type' => $this->product_type->value,
+            'course_price' => $this->course_price,
             'name' => $this->name,
             'slug' => $this->slug,
             'short_description' => $this->short_description,
@@ -78,6 +91,7 @@ readonly class ProductData
             'status' => $this->status,
             'is_featured' => $this->is_featured,
             'is_visible' => $this->is_visible,
+            'allows_shalom_cod' => $this->allows_shalom_cod,
             'seo_title' => $this->seo_title,
             'seo_description' => $this->seo_description,
         ];

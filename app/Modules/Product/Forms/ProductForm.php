@@ -15,6 +15,10 @@ class ProductForm extends Form
 
     public ?int $brand_id = null;
 
+    public string $product_type = 'physical';
+
+    public ?string $course_price = null;
+
     public string $name = '';
 
     public string $slug = '';
@@ -28,6 +32,8 @@ class ProductForm extends Form
     public bool $is_featured = false;
 
     public bool $is_visible = false;
+
+    public bool $allows_shalom_cod = false;
 
     public ?string $seo_title = null;
 
@@ -47,6 +53,18 @@ class ProductForm extends Form
             'brand_id' => [
                 'nullable',
                 'exists:brands,id',
+            ],
+
+            'product_type' => [
+                'required',
+                'in:physical,course',
+            ],
+
+            'course_price' => [
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'required_if:product_type,course',
             ],
 
             'name' => [
@@ -85,6 +103,10 @@ class ProductForm extends Form
                 'boolean',
             ],
 
+            'allows_shalom_cod' => [
+                'boolean',
+            ],
+
             'seo_title' => [
                 'nullable',
                 'string',
@@ -111,6 +133,10 @@ class ProductForm extends Form
 
             'brand_id.exists' => 'La marca seleccionada no es válida.',
 
+            'course_price.required_if' => 'Ingresa el precio del curso.',
+            'course_price.numeric' => 'El precio del curso debe ser numérico.',
+            'course_price.min' => 'El precio del curso debe ser mayor a cero.',
+
             'name.required' => 'El nombre del producto es obligatorio.',
 
             'name.max' => 'El nombre del producto no puede superar los 255 caracteres.',
@@ -133,6 +159,8 @@ class ProductForm extends Form
         return [
             'category_id' => 'categoría',
             'brand_id' => 'marca',
+            'product_type' => 'tipo de producto',
+            'course_price' => 'precio del curso',
             'name' => 'nombre',
             'slug' => 'slug',
             'short_description' => 'descripción corta',
@@ -140,6 +168,7 @@ class ProductForm extends Form
             'status' => 'estado',
             'is_featured' => 'producto destacado',
             'is_visible' => 'visible en tienda',
+            'allows_shalom_cod' => 'envío contra entrega en Shalom',
             'seo_title' => 'título SEO',
             'seo_description' => 'descripción SEO',
         ];
@@ -156,6 +185,10 @@ class ProductForm extends Form
 
         $this->brand_id = $product->brand_id;
 
+        $this->product_type = $product->product_type->value;
+
+        $this->course_price = $product->course_price !== null ? (string) $product->course_price : null;
+
         $this->name = $product->name;
 
         $this->slug = $product->slug;
@@ -169,6 +202,8 @@ class ProductForm extends Form
         $this->is_featured = (bool) $product->is_featured;
 
         $this->is_visible = (bool) $product->is_visible;
+
+        $this->allows_shalom_cod = (bool) $product->allows_shalom_cod;
 
         $this->seo_title = $product->seo_title;
 
@@ -192,6 +227,8 @@ class ProductForm extends Form
             'id' => $this->id,
             'category_id' => $this->category_id,
             'brand_id' => $this->brand_id,
+            'product_type' => $this->product_type,
+            'course_price' => $this->course_price,
             'name' => $this->name,
             'slug' => $this->slug,
             'short_description' => $this->short_description,
@@ -199,6 +236,7 @@ class ProductForm extends Form
             'status' => $this->status,
             'is_featured' => $this->is_featured,
             'is_visible' => $this->is_visible,
+            'allows_shalom_cod' => $this->allows_shalom_cod,
             'seo_title' => $this->seo_title,
             'seo_description' => $this->seo_description,
         ]);
@@ -217,6 +255,10 @@ class ProductForm extends Form
 
         $this->brand_id = null;
 
+        $this->product_type = 'physical';
+
+        $this->course_price = null;
+
         $this->name = '';
 
         $this->slug = '';
@@ -234,5 +276,7 @@ class ProductForm extends Form
         $this->is_featured = false;
 
         $this->is_visible = false;
+
+        $this->allows_shalom_cod = false;
     }
 }

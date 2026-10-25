@@ -77,15 +77,23 @@
                     @endforeach
                 </ul>
 
+                @include('partials.course-materials', ['order' => $order])
+
                 <dl class="mt-3 space-y-1.5 border-t border-gray-100 pt-4 text-sm">
                     <div class="flex justify-between">
                         <dt class="text-gray-500">Subtotal</dt>
                         <dd class="text-gray-900">S/ {{ number_format((float) $order->subtotal, 2) }}</dd>
                     </div>
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">Envío</dt>
+                        <dt class="text-gray-500">Envío pagado ahora</dt>
                         <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
                     </div>
+                    @if ((float) $order->cod_shipping_amount > 0)
+                        <div class="flex justify-between text-emerald-800">
+                            <dt>Envío a pagar en Shalom</dt>
+                            <dd>S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</dd>
+                        </div>
+                    @endif
                     @if ($order->delivery_days)
                         <div class="flex justify-between">
                             <dt class="text-gray-500">Tiempo de entrega</dt>
@@ -101,10 +109,17 @@
                         </div>
                     @endif
                     <div class="flex justify-between border-t border-gray-100 pt-2">
-                        <dt class="font-bold text-gray-900">Total</dt>
+                        <dt class="font-bold text-gray-900">
+                            {{ (float) $order->cod_shipping_amount > 0 ? 'Total pagado ahora' : 'Total' }}
+                        </dt>
                         <dd class="font-extrabold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</dd>
                     </div>
                 </dl>
+                @if ((float) $order->cod_shipping_amount > 0)
+                    <p class="mt-2 text-xs leading-5 text-emerald-800">
+                        El envío de S/ {{ number_format((float) $order->cod_shipping_amount, 2) }} se paga en Shalom al recoger tu pedido.
+                    </p>
+                @endif
             </div>
 
             <div class="mt-6 space-y-3 border-t border-gray-100 pt-6 text-left text-sm text-gray-700">
@@ -139,15 +154,17 @@
                         </p>
                     @endif
                 @endif
-                <p class="flex items-start gap-2">
-                    <flux:icon name="map-pin" class="mt-0.5 size-4 shrink-0 text-gray-400" />
-                    <span>
-                        <strong class="text-gray-900">Dirección de contacto:</strong>
-                        {{ $order->address_snapshot['full_name'] ?? '' }} —
-                        {{ $order->address_snapshot['address'] ?? '' }},
-                        {{ $order->address_snapshot['location_label'] ?? '' }}
-                    </span>
-                </p>
+                @if (! empty($order->address_snapshot))
+                    <p class="flex items-start gap-2">
+                        <flux:icon name="map-pin" class="mt-0.5 size-4 shrink-0 text-gray-400" />
+                        <span>
+                            <strong class="text-gray-900">Dirección de contacto:</strong>
+                            {{ $order->address_snapshot['full_name'] ?? '' }} —
+                            {{ $order->address_snapshot['address'] ?? '' }},
+                            {{ $order->address_snapshot['location_label'] ?? '' }}
+                        </span>
+                    </p>
+                @endif
                 @if (auth()->user()?->isStaff())
                     <p class="flex items-start gap-2">
                         <flux:icon name="cube" class="mt-0.5 size-4 shrink-0 text-gray-400" />

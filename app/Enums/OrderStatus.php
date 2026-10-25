@@ -9,6 +9,7 @@ enum OrderStatus: string
     case PROCESSING = 'processing';
     case SHIPPED = 'shipped';
     case DELIVERED = 'delivered';
+    case COMPLETED = 'completed';
     case CANCELLED = 'cancelled';
     case REFUNDED = 'refunded';
 
@@ -20,6 +21,7 @@ enum OrderStatus: string
             self::PROCESSING => 'En preparación',
             self::SHIPPED => 'Enviado',
             self::DELIVERED => 'Entregado',
+            self::COMPLETED => 'Completado',
             self::CANCELLED => 'Cancelado',
             self::REFUNDED => 'Reembolsado',
         };
@@ -38,6 +40,7 @@ enum OrderStatus: string
             self::PROCESSING => 'primary',
             self::SHIPPED => 'neutral',
             self::DELIVERED => 'success',
+            self::COMPLETED => 'success',
             self::CANCELLED => 'danger',
             self::REFUNDED => 'dark',
         };
@@ -53,6 +56,7 @@ enum OrderStatus: string
             self::CONFIRMED,
             self::PROCESSING,
             self::SHIPPED,
+            self::COMPLETED,
         ], true);
     }
 }

@@ -10,6 +10,7 @@ use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ShalomAgency;
+use App\Models\User;
 use App\Modules\Discounts\Services\CouponService;
 use App\Modules\Location\Services\LocationService;
 use App\Modules\Ordering\Data\CheckoutData;
@@ -24,7 +25,9 @@ use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Shipping\Services\ShippingQuoteService;
 use App\Services\CartService;
 use App\Services\CustomerAddressService;
+use App\Services\MetaConversionsService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -42,6 +45,12 @@ class Checkout extends Component
     use ProcessesMercadoPagoPayment;
 
     public bool $authRequired = false;
+
+    public string $guestName = '';
+
+    public string $guestEmail = '';
+
+    public string $guestPhone = '';
 
     public ?int $selectedAddressId = null;
 
@@ -98,6 +107,12 @@ class Checkout extends Component
 
     public ?int $selectedShalomAgencyId = null;
 
+    /**
+     * Forma de pagar el envío: por adelantado o al recoger en Shalom.
+     * La disponibilidad real se recalcula en el servidor desde los productos.
+     */
+    public string $shippingPaymentMethod = 'prepaid';
+
     public bool $showMercadoPagoModal = false;
 
     /**
@@ -151,9 +166,10 @@ class Checkout extends Component
     public function mount(CartService $cart, ?string $pagar = null)
     {
         $configuredDefault = config('payments.default_gateway', 'culqi');
-        $this->selectedGateway = is_string($configuredDefault) && in_array($configuredDefault, $this->availableGatewayNames(), true)
+        $availableGateways = $this->availableGatewayNames();
+        $this->selectedGateway = is_string($configuredDefault) && in_array($configuredDefault, $availableGateways, true)
             ? $configuredDefault
-            : 'culqi';
+            : ($availableGateways[0] ?? '');
         $this->syncPaymentMethodToGateway();
 
         $requestedGateway = request()->query('gateway');
@@ -176,6 +192,8 @@ class Checkout extends Component
 
             return;
         }
+
+        $this->restoreCulqiIdentification();
 
         // "Pagar ahora" desde la cuenta entra por query (?pagar=...), no por
         // parámetro de ruta. Livewire no garantiza que los pase a mount(), así
@@ -231,6 +249,8 @@ class Checkout extends Component
         // Hay artículos nuevos: no permitir que una intención de pago anterior
         // reemplace el resumen del checkout actual.
         session()->forget('mercadopago_pending_order');
+        $this->trackMetaInitiateCheckout($cart);
+        $this->prepareGuestAddress();
 
         $supported = $this->supportedMethods();
 
@@ -241,6 +261,105 @@ class Checkout extends Component
         }
 
         $this->addresses = new Collection;
+    }
+
+    public function updatedCulqiIdentification($value): void
+    {
+        $dni = substr(preg_replace('/\D+/', '', (string) $value) ?? '', 0, 8);
+
+        if ($this->culqiIdentification !== $dni) {
+            $this->culqiIdentification = $dni;
+        }
+
+        if (strlen($dni) === 8) {
+            session(['checkout_culqi_identification' => $dni]);
+        } else {
+            session()->forget('checkout_culqi_identification');
+        }
+
+        $this->resetValidation('culqiIdentification');
+    }
+
+    public function continueAsGuest(): void
+    {
+        $validated = $this->validate([
+            'guestName' => ['required', 'string', 'max:150'],
+            'guestEmail' => ['required', 'email', 'max:255'],
+            'guestPhone' => ['required', 'string', 'max:30'],
+        ], [
+            'guestName.required' => 'Escribe tu nombre completo.',
+            'guestName.max' => 'El nombre no puede superar los 150 caracteres.',
+            'guestEmail.required' => 'Escribe tu correo para enviarte el comprobante.',
+            'guestEmail.email' => 'El correo no tiene un formato válido.',
+            'guestPhone.required' => 'Escribe un teléfono de contacto.',
+            'guestPhone.max' => 'El teléfono no puede superar los 30 caracteres.',
+        ]);
+
+        $email = mb_strtolower(trim($validated['guestEmail']));
+        $existing = User::query()->where('email', $email)->first();
+
+        if ($existing && ! $existing->is_guest) {
+            $this->addError(
+                'guestEmail',
+                'Este correo ya tiene una cuenta. Inicia sesión para continuar.'
+            );
+
+            return;
+        }
+
+        if ($existing) {
+            $existing->update([
+                'name' => trim($validated['guestName']),
+                'phone' => trim($validated['guestPhone']),
+                'is_guest' => true,
+                'email_verified_at' => $existing->email_verified_at ?: now(),
+            ]);
+            $user = $existing;
+        } else {
+            $user = User::create([
+                'name' => trim($validated['guestName']),
+                'email' => $email,
+                'phone' => trim($validated['guestPhone']),
+                'password' => bcrypt(Str::random(40)),
+                'is_guest' => true,
+                'email_verified_at' => now(),
+            ]);
+
+            try {
+                $user->assignCustomerRole();
+            } catch (\Throwable) {
+                Log::warning('No se pudo asignar el rol Cliente al invitado.', [
+                    'user_id' => $user->id,
+                ]);
+            }
+        }
+
+        auth()->login($user);
+        session()->regenerate();
+        session([
+            'guest_checkout_name' => $user->name,
+            'guest_checkout_phone' => $user->phone,
+        ]);
+
+        $this->authRequired = false;
+        $this->redirect(route('checkout'), navigate: true);
+    }
+
+    private function prepareGuestAddress(): void
+    {
+        $user = auth()->user();
+
+        if (! $user?->is_guest || $user->customerAddresses()->exists()) {
+            return;
+        }
+
+        $this->showNewAddress = true;
+        $this->newFullName = (string) session('guest_checkout_name', $user->name);
+        $this->newPhone = (string) session('guest_checkout_phone', $user->phone);
+
+        if ($this->departments === []) {
+            $this->departments = app(LocationService::class)->getDepartments()->toArray();
+        }
     }
 
     private function resumeLatestPendingModalOrder(): bool
@@ -292,6 +411,10 @@ class Checkout extends Component
         }
 
         if ($lastGateway !== null && $lastGateway !== 'culqi') {
+            return false;
+        }
+
+        if (! $this->canUseCulqi()) {
             return false;
         }
 
@@ -372,6 +495,10 @@ class Checkout extends Component
         }
 
         if ($lastGateway !== null && $lastGateway !== 'culqi') {
+            return false;
+        }
+
+        if (! $this->canUseCulqi()) {
             return false;
         }
 
@@ -462,6 +589,15 @@ class Checkout extends Component
         $this->dispatch('shalom:refresh');
     }
 
+    public function updatedShippingPaymentMethod($value): void
+    {
+        if (! is_string($value) || ! in_array($value, ['prepaid', 'shalom_cod'], true)) {
+            $this->shippingPaymentMethod = 'prepaid';
+        }
+
+        $this->refreshQuote();
+    }
+
     public function applyCoupon(): void
     {
         $this->couponError = null;
@@ -483,6 +619,24 @@ class Checkout extends Component
     private function subtotal($items): float
     {
         return round($items->sum(fn ($item) => (float) $item->unit_price * $item->quantity), 2);
+    }
+
+    /**
+     * El contra entrega solo se ofrece cuando TODOS los productos del carrito
+     * lo permiten. Un carrito mixto se mantiene con envío prepagado para no
+     * trasladar al cliente un costo que el comercio no autorizó.
+     */
+    private function supportsShalomCod(Collection $items): bool
+    {
+        if ($items->isEmpty()) {
+            return false;
+        }
+
+        return $items->every(function ($item) {
+            $product = $item->variant?->product;
+
+            return $product !== null && (bool) $product->allows_shalom_cod;
+        });
     }
 
     /**
@@ -589,18 +743,33 @@ class Checkout extends Component
      * cliente (#[Locked]): el navegador no puede alterarlas, y aunque lo
      * intentara, el pedido se persiste con los valores de esta función.
      *
-     * @return array{items: Collection, subtotal: float, shippingTotal: float, shippingPerItem: array<int, float>, deliveryDays: int|null, discount: float, coupon: ?Coupon, total: float}
+     * @return array{items: Collection, subtotal: float, shippingTotal: float, codShippingAmount: float, shippingPaymentMethod: string, codAvailable: bool, quotedShippingTotal: float, shippingPerItem: array<int, float>, deliveryDays: int|null, discount: float, coupon: ?Coupon, total: float}
      */
     private function resolveTotals(?CustomerAddress $address): array
     {
         $items = app(CartService::class)->items();
         $subtotal = $this->subtotal($items);
+        $requiresShipping = $items->contains(fn ($item): bool => ! $item->isCourse());
+        $codAvailable = $this->supportsShalomCod($items);
 
-        $this->quote = $address?->location
+        if (! $codAvailable) {
+            $this->shippingPaymentMethod = 'prepaid';
+        } elseif (! in_array($this->shippingPaymentMethod, ['prepaid', 'shalom_cod'], true)) {
+            $this->shippingPaymentMethod = 'prepaid';
+        }
+
+        $this->quote = $requiresShipping && $address?->location
             ? app(ShippingQuoteService::class)->quoteForCart($items, $address->location)
             : null;
 
-        $shippingTotal = (float) ($this->quote['total'] ?? 0);
+        $quotedShippingTotal = (float) ($this->quote['total'] ?? 0);
+        $shippingPaymentMethod = $this->shippingPaymentMethod;
+        $codShippingAmount = $shippingPaymentMethod === 'shalom_cod'
+            ? $quotedShippingTotal
+            : 0.0;
+        $shippingTotal = $shippingPaymentMethod === 'shalom_cod'
+            ? 0.0
+            : $quotedShippingTotal;
         $deliveryDays = $this->quote['deliveryDays'] ?? null;
 
         $this->couponError = null;
@@ -624,8 +793,13 @@ class Checkout extends Component
 
         return [
             'items' => $items,
+            'requiresShipping' => $requiresShipping,
             'subtotal' => $subtotal,
             'shippingTotal' => $shippingTotal,
+            'codShippingAmount' => $codShippingAmount,
+            'shippingPaymentMethod' => $shippingPaymentMethod,
+            'codAvailable' => $codAvailable,
+            'quotedShippingTotal' => $quotedShippingTotal,
             'shippingPerItem' => $this->quote['items'] ?? [],
             'deliveryDays' => $deliveryDays,
             'discount' => $discount,
@@ -821,6 +995,10 @@ class Checkout extends Component
 
     public function switchToCulqi(CartService $cart, OrderService $orders): void
     {
+        if (! $this->canUseCulqi()) {
+            return;
+        }
+
         $order = $this->sessionOrder()?->fresh();
 
         if ($order !== null
@@ -961,6 +1139,15 @@ class Checkout extends Component
      */
     public function startCulqiCheckout(): void
     {
+        if (! $this->canUseCulqi()) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'El pago con Culqi no está disponible para esta cuenta.',
+            ]);
+
+            return;
+        }
+
         $this->releaseOrderForGatewaySwitch();
 
         if (! $this->usesProviderModal()) {
@@ -972,6 +1159,11 @@ class Checkout extends Component
         $identification = $this->culqiIdentificationNumber();
 
         if ($identification === '') {
+            $this->addError(
+                'culqiIdentification',
+                'Ingresa tu DNI de 8 dígitos para continuar con el pago.',
+            );
+
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'Ingresa un DNI válido de 8 dígitos para pagar con Culqi.',
@@ -979,6 +1171,8 @@ class Checkout extends Component
 
             return;
         }
+
+        session(['checkout_culqi_identification' => $identification]);
 
         // Reintento dentro de la misma sesión: el pedido y su orden ya existen,
         // así que se vuelve a abrir el modal en vez de crear un segundo pedido.
@@ -1081,7 +1275,7 @@ class Checkout extends Component
         }
 
         if ($order?->payment_status !== PaymentStatus::PAID) {
-            $order?->cart?->update(['status' => 'active']);
+            $this->restoreCartForEditing($order);
         }
 
         $this->culqiOrderId = null;
@@ -1108,6 +1302,8 @@ class Checkout extends Component
     #[On('culqi:complete-card')]
     public function completeCulqiCard($payload): void
     {
+        abort_unless($this->canUseCulqi(), 403);
+
         $token = is_string($payload) ? $payload : ($payload['token'] ?? '');
 
         if (! str_starts_with($token, 'tkn_')) {
@@ -1163,6 +1359,8 @@ class Checkout extends Component
     #[On('culqi:complete-async')]
     public function completeCulqiAsync(string $culqiMethod): void
     {
+        abort_unless($this->canUseCulqi(), 403);
+
         $order = $this->payableModalOrder();
 
         if ($order === null) {
@@ -1354,14 +1552,20 @@ class Checkout extends Component
             return null;
         }
 
+        $requiresShipping = app(CartService::class)->items()
+            ->contains(fn ($item): bool => ! $item->isCourse());
+
         $this->validate(array_merge([
-            'selectedAddressId' => ['required', 'integer'],
+            'selectedAddressId' => [$requiresShipping ? 'required' : 'nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], $extraRules));
 
-        $address = CustomerAddress::find($this->selectedAddressId);
+        $address = $this->selectedAddressId
+            ? CustomerAddress::find($this->selectedAddressId)
+            : null;
 
-        abort_if(! $address || $address->user_id !== auth()->id(), 403);
+        abort_if($requiresShipping && ! $address, 422);
+        abort_if($address && $address->user_id !== auth()->id(), 403);
 
         $totals = $this->resolveTotals($address);
 
@@ -1371,7 +1575,7 @@ class Checkout extends Component
             return null;
         }
 
-        if (! $address->location) {
+        if ($requiresShipping && ! $address?->location) {
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'No pudimos calcular el envío para tu dirección. Revísala e inténtalo otra vez.',
@@ -1397,9 +1601,11 @@ class Checkout extends Component
 
         $cart = app(CartService::class);
 
-        $pickupAgency = $this->resolveShalomAgency($address);
+        $pickupAgency = $requiresShipping && $address
+            ? $this->resolveShalomAgency($address)
+            : null;
 
-        if ($pickupAgency === null) {
+        if ($requiresShipping && $pickupAgency === null) {
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'No encontramos agencias Shalom disponibles para tu ubicación. Escríbenos para ayudarte.',
@@ -1415,6 +1621,8 @@ class Checkout extends Component
             address: $address,
             subtotal: $totals['subtotal'],
             shippingTotal: $totals['shippingTotal'],
+            shippingPaymentMethod: $totals['shippingPaymentMethod'],
+            codShippingAmount: $totals['codShippingAmount'],
             discountTotal: $totals['discount'],
             total: $totals['total'],
             costTotal: $cart->costTotal(),
@@ -1422,7 +1630,7 @@ class Checkout extends Component
             deliveryDays: $totals['deliveryDays'] ?? null,
             coupon: $totals['coupon'],
             notes: $this->notes ?: null,
-            pickupAgency: $this->pickupAgencySnapshot($pickupAgency),
+            pickupAgency: $pickupAgency ? $this->pickupAgencySnapshot($pickupAgency) : null,
         );
 
         // 0. Si la pasarela no puede cobrar, no se crea el pedido: un fallo
@@ -1610,6 +1818,55 @@ class Checkout extends Component
         return '';
     }
 
+    /**
+     * Recupera el DNI más reciente del comprador para no pedirlo de nuevo.
+     * También conserva lo escrito en esta sesión si aún no completó un pedido.
+     */
+    private function restoreCulqiIdentification(): void
+    {
+        if (filled($this->culqiIdentification)) {
+            return;
+        }
+
+        $sessionDni = preg_replace(
+            '/\D+/',
+            '',
+            (string) session('checkout_culqi_identification', ''),
+        ) ?? '';
+
+        if (strlen($sessionDni) === 8) {
+            $this->culqiIdentification = $sessionDni;
+
+            return;
+        }
+
+        if (! auth()->check()) {
+            return;
+        }
+
+        $recentOrders = Order::query()
+            ->where('user_id', auth()->id())
+            ->latest('id')
+            ->limit(30)
+            ->get(['customer_snapshot']);
+
+        foreach ($recentOrders as $order) {
+            $snapshotDni = preg_replace(
+                '/\D+/',
+                '',
+                (string) data_get($order->customer_snapshot, 'identification_number', ''),
+            ) ?? '';
+            $type = (string) data_get($order->customer_snapshot, 'identification_type', '');
+
+            if (strlen($snapshotDni) === 8 && ($type === '' || strtoupper($type) === 'DNI')) {
+                $this->culqiIdentification = $snapshotDni;
+                session(['checkout_culqi_identification' => $snapshotDni]);
+
+                return;
+            }
+        }
+    }
+
     private function isPending(Payment $payment): bool
     {
         return $payment->status === PaymentStatus::PENDING;
@@ -1693,7 +1950,7 @@ class Checkout extends Component
     public function updatedSelectedGateway(): void
     {
         if (! in_array($this->selectedGateway, $this->availableGatewayNames(), true)) {
-            $this->selectedGateway = 'culqi';
+            $this->selectedGateway = $this->availableGatewayNames()[0] ?? '';
         }
 
         $this->gatewayChoice = $this->selectedGateway;
@@ -1712,6 +1969,84 @@ class Checkout extends Component
         $this->selectedGateway = $value;
         $this->releaseOrderForGatewaySwitch();
         $this->syncPaymentMethodToGateway();
+
+        $cart = app(CartService::class);
+        $cartId = (int) $cart->currentCart()->id;
+        $sessionKey = 'meta_add_payment_info_'.$cartId;
+
+        if (session()->has($sessionKey)) {
+            return;
+        }
+
+        $metaData = $this->metaCartData($cart);
+
+        if (($metaData['content_ids'] ?? []) !== []) {
+            $eventId = 'add_payment_info_'.$cartId;
+            session()->put($sessionKey, $eventId);
+
+            $this->dispatch('brevare-meta-event', [
+                'name' => 'AddPaymentInfo',
+                'data' => $metaData,
+                'event_id' => $eventId,
+            ]);
+            app(MetaConversionsService::class)->track('AddPaymentInfo', $eventId, $metaData);
+        }
+    }
+
+    private function trackMetaInitiateCheckout(CartService $cart): void
+    {
+        $cartId = $cart->currentCart()->id;
+        $sessionKey = 'meta_initiate_checkout_'.$cartId;
+
+        if (session()->has($sessionKey)) {
+            return;
+        }
+
+        $metaData = $this->metaCartData($cart);
+
+        if (($metaData['content_ids'] ?? []) === []) {
+            return;
+        }
+
+        $eventId = 'initiate_checkout_'.$cartId;
+        session()->put($sessionKey, $eventId);
+
+        $this->dispatch('brevare-meta-event', [
+            'name' => 'InitiateCheckout',
+            'data' => $metaData,
+            'event_id' => $eventId,
+        ]);
+        app(MetaConversionsService::class)->track('InitiateCheckout', $eventId, $metaData);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metaCartData(CartService $cart): array
+    {
+        $items = $cart->items();
+
+        return [
+            'content_ids' => $items
+                ->map(fn ($item) => $item->variant?->sku ?: (string) $item->product_variant_id)
+                ->filter()
+                ->values()
+                ->all(),
+            'contents' => $items
+                ->map(fn ($item) => [
+                    'id' => $item->variant?->sku ?: (string) $item->product_variant_id,
+                    'quantity' => (int) $item->quantity,
+                    'item_price' => round((float) $item->unit_price, 2),
+                ])
+                ->values()
+                ->all(),
+            'content_type' => 'product',
+            'num_items' => (int) $items->sum('quantity'),
+            'value' => round($items->sum(
+                fn ($item) => (float) $item->unit_price * (int) $item->quantity
+            ), 2),
+            'currency' => 'PEN',
+        ];
     }
 
     /**
@@ -1810,7 +2145,7 @@ class Checkout extends Component
     /** @return list<string> */
     private function availableGatewayNames(): array
     {
-        $names = ['culqi'];
+        $names = $this->canUseCulqi() ? ['culqi'] : [];
 
         if (app(IzipayGateway::class)->isAvailable()) {
             $names[] = 'izipay';
@@ -1844,6 +2179,15 @@ class Checkout extends Component
         }
 
         return $names;
+    }
+
+    /**
+     * Culqi se ofrece a cualquier comprador cuando las credenciales están
+     * configuradas, tanto en modo prueba como en producción.
+     */
+    private function canUseCulqi(): bool
+    {
+        return auth()->check() && app(CulqiGateway::class)->isAvailable();
     }
 
     /**
@@ -1940,6 +2284,15 @@ class Checkout extends Component
                 ?? $variantImages?->first()
                 ?? $item->variant?->product?->coverImageModel();
 
+            $wholesaleActive = $item->variant?->appliesWholesalePrice((int) $item->quantity) ?? false;
+            $retailPrice = (float) ($item->variant?->sale_price ?? $item->unit_price);
+            $regularUnitPrice = $wholesaleActive
+                ? $retailPrice
+                : max(
+                    (float) ($item->variant?->compare_price ?? $retailPrice),
+                    $retailPrice
+                );
+
             return [
                 'quantity' => (int) $item->quantity,
                 'name' => $item->variant?->product?->name
@@ -1951,11 +2304,10 @@ class Checkout extends Component
                     (float) $item->unit_price * (int) $item->quantity,
                     2
                 ),
-                'regularSubtotal' => round(max(
-                    (float) ($item->variant?->compare_price ?? $item->unit_price),
-                    (float) $item->unit_price
-                ) * (int) $item->quantity, 2),
-                'discountPercent' => (float) ($item->variant?->discount_percent ?: (1 - ((float) $item->unit_price / max(0.01, (float) ($item->variant?->compare_price ?? $item->unit_price)))) * 100),
+                'regularSubtotal' => round($regularUnitPrice * (int) $item->quantity, 2),
+                'discountPercent' => $regularUnitPrice > 0
+                    ? (float) ((1 - ((float) $item->unit_price / $regularUnitPrice)) * 100)
+                    : 0.0,
             ];
         });
         $productDiscount = round($summaryItems->sum(fn ($item) => max(0, $item['regularSubtotal'] - $item['subtotal'])), 2);
@@ -1972,8 +2324,14 @@ class Checkout extends Component
             'regularSubtotal' => round($totals['subtotal'] + $productDiscount, 2),
 
             'subtotal' => $totals['subtotal'],
+            'requiresShipping' => $totals['requiresShipping'],
             'discount' => $totals['discount'],
             'shippingTotal' => $totals['shippingTotal'],
+            'codShippingAmount' => $totals['codShippingAmount'],
+            'shippingPaymentMethod' => $totals['shippingPaymentMethod'],
+            'codAvailable' => $totals['codAvailable'] ?? false,
+            'quotedShippingTotal' => $totals['quotedShippingTotal']
+                ?? round($totals['shippingTotal'] + $totals['codShippingAmount'], 2),
             'deliveryDays' => $totals['deliveryDays'] ?? null,
             'total' => $totals['total'],
 
@@ -2041,7 +2399,7 @@ class Checkout extends Component
      * Importes del pedido ya creado, leídos de lo que quedó congelado al
      * crearlo. El carrito está convertido, así que no sirven para reconstruirlos.
      *
-     * @return array{items: Collection, subtotal: float, shippingTotal: float, deliveryDays: int|null, discount: float, total: float}
+     * @return array{items: Collection, subtotal: float, shippingTotal: float, codShippingAmount: float, shippingPaymentMethod: string, deliveryDays: int|null, discount: float, total: float}
      */
     private function totalsFromOrder(Order $order): array
     {
@@ -2050,8 +2408,11 @@ class Checkout extends Component
                 'variant.images',
                 'variant.product.variants.images',
             ])->get(),
+            'requiresShipping' => $order->hasPhysicalItems(),
             'subtotal' => (float) $order->subtotal,
             'shippingTotal' => (float) $order->shipping_total,
+            'codShippingAmount' => (float) $order->cod_shipping_amount,
+            'shippingPaymentMethod' => (string) ($order->shipping_payment_method ?: 'prepaid'),
             'deliveryDays' => $order->delivery_days,
             'discount' => (float) $order->discount_total,
             'total' => (float) $order->total,
@@ -2077,6 +2438,8 @@ class Checkout extends Component
 
     public function completeCulqiYape(string $token): void
     {
+        abort_unless($this->canUseCulqi(), 403);
+
         if (! str_starts_with($token, 'ype_')) {
             Log::warning('[Culqi] Token Yape inválido.');
 

@@ -21,6 +21,8 @@ class Order extends Model
         'payment_intent',
         'subtotal',
         'shipping_total',
+        'shipping_payment_method',
+        'cod_shipping_amount',
         'delivery_days',
         'pickup_code',
         'discount_total',
@@ -32,8 +34,14 @@ class Order extends Model
         'address_snapshot',
         'currency',
         'notes',
+        'marketing_consent',
+        'meta_purchase_event_id',
+        'meta_purchase_sent_at',
+        'points_earned',
+        'points_awarded_at',
         'paid_at',
         'gateway_order_id',
+        'completed_at',
         'cancelled_at',
         'cancelled_by',
         'cancellation_reason',
@@ -46,17 +54,23 @@ class Order extends Model
             'payment_status' => PaymentStatus::class,
             'subtotal' => 'decimal:2',
             'shipping_total' => 'decimal:2',
+            'cod_shipping_amount' => 'decimal:2',
             'delivery_days' => 'integer',
             'discount_total' => 'decimal:2',
             'total' => 'decimal:2',
             'cost_total' => 'decimal:2',
             'customer_snapshot' => 'array',
             'address_snapshot' => 'array',
+            'marketing_consent' => 'boolean',
+            'meta_purchase_sent_at' => 'datetime',
+            'points_earned' => 'integer',
+            'points_awarded_at' => 'datetime',
             'paid_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'processing_at' => 'datetime',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
     }
@@ -173,6 +187,20 @@ class Order extends Model
         return $this->belongsTo(Cart::class);
     }
 
+    public function hasPhysicalItems(): bool
+    {
+        return $this->activeItems()
+            ->whereHas('product', fn ($query) => $query->where('product_type', '!=', 'course'))
+            ->exists();
+    }
+
+    public function hasCourseItems(): bool
+    {
+        return $this->activeItems()
+            ->whereHas('product', fn ($query) => $query->where('product_type', 'course'))
+            ->exists();
+    }
+
     /**
      * Obtiene el historial de estados para la línea de tiempo.
      *
@@ -185,6 +213,7 @@ class Order extends Model
             'processing' => $this->processing_at,
             'shipped' => $this->shipped_at,
             'delivered' => $this->delivered_at,
+            'completed' => $this->completed_at,
         ];
     }
 
@@ -198,6 +227,7 @@ class Order extends Model
             OrderStatus::PROCESSING => 'processing_at',
             OrderStatus::SHIPPED => 'shipped_at',
             OrderStatus::DELIVERED => 'delivered_at',
+            OrderStatus::COMPLETED => 'completed_at',
             default => null,
         };
 

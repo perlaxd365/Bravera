@@ -117,6 +117,36 @@
                 @endif
             </div>
             <div class="sm:col-span-2">
+                <p class="mb-2 text-sm font-medium text-stone-800">Tipo de producto</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 p-4 transition has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50/60">
+                        <input type="radio" wire:model.live="form.product_type" value="physical"
+                            class="mt-0.5 size-4 border-stone-300 text-stone-950 focus:ring-stone-900/20">
+                        <span>
+                            <span class="block text-sm font-semibold text-stone-900">Producto físico</span>
+                            <span class="mt-1 block text-xs leading-5 text-stone-500">Requiere inventario, proveedor y envío.</span>
+                        </span>
+                    </label>
+                    <label class="flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 p-4 transition has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50/60">
+                        <input type="radio" wire:model.live="form.product_type" value="course"
+                            class="mt-0.5 size-4 border-stone-300 text-sky-700 focus:ring-sky-600/20">
+                        <span>
+                            <span class="block text-sm font-semibold text-stone-900">Curso digital</span>
+                            <span class="mt-1 block text-xs leading-5 text-stone-500">Se entrega mediante archivos o enlaces privados.</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+            @if ($form->product_type === 'course')
+                <div class="sm:col-span-2">
+                    <x-input label="Precio del curso (S/)" type="number" step="0.01" min="0.01" wire:model.blur="form.course_price" />
+                    <p class="mt-1.5 text-xs leading-5 text-stone-500">
+                        El curso usará una variante digital automática, sin stock ni envío.
+                    </p>
+                    @error('form.course_price') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+            @endif
+            <div class="sm:col-span-2">
                 <x-input label="Slug o dirección web" wire:model="form.slug" placeholder="ejemplo: audifonos-bluetooth" />
                 <p class="mt-1.5 text-xs leading-5 text-stone-500">Se usa en el enlace público del producto. Puedes mantener el valor sugerido.</p>
             </div>
