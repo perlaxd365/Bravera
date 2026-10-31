@@ -24,6 +24,7 @@ class ProductRepository
             ->with([
                 'category',
                 'brand',
+                'translations',
                 'variants.images',
                 'variants.supplierVariants.supplier',
             ])
@@ -75,6 +76,7 @@ class ProductRepository
         return Product::with([
             'category',
             'brand',
+            'translations',
             'variants.images',
             'variants.supplierVariants.supplier',
         ])->findOrFail($id);

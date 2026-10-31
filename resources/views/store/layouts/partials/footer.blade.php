@@ -1,9 +1,9 @@
 <footer class="mt-auto border-t border-gray-200 bg-white">
     <div class="bg-amber-300">
         <div class="mx-auto grid max-w-7xl gap-3 px-4 py-4 text-sm font-semibold text-amber-950 sm:grid-cols-3 sm:px-6 lg:px-8">
-            <p class="flex items-center gap-2"><flux:icon name="truck" class="size-5" /> Envíos a todo el Perú</p>
-            <p class="flex items-center gap-2"><flux:icon name="lock-closed" class="size-5" /> Compra con pago seguro</p>
-            <p class="flex items-center gap-2"><flux:icon name="chat-bubble-left-right" class="size-5" /> Atención para acompañarte</p>
+            <p class="flex items-center gap-2"><flux:icon name="truck" class="size-5" /> {{ __('storefront.footer.shipping') }}</p>
+            <p class="flex items-center gap-2"><flux:icon name="lock-closed" class="size-5" /> {{ __('storefront.footer.secure') }}</p>
+            <p class="flex items-center gap-2"><flux:icon name="chat-bubble-left-right" class="size-5" /> {{ __('storefront.footer.support') }}</p>
         </div>
     </div>
     <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -13,13 +13,13 @@
                     <span class="flex size-9 items-center justify-center rounded-xl bg-amber-300 text-amber-950">
                         <flux:icon name="shopping-bag" class="size-4" />
                     </span>
-                    Brevare Perú
+                    {{ app()->getLocale() === 'en' ? 'Brevare' : 'Brevare Perú' }}
                 </a>
                 <p class="mt-3 max-w-sm text-sm leading-relaxed text-gray-500">
-                    <span class="font-medium text-gray-700">Todo lo que buscas, en un solo lugar.</span><br>
-                    Novedades, regalos y productos para cada momento, con envío a todo el Perú.
+                    <span class="font-medium text-gray-700">{{ __('storefront.footer.tagline') }}</span><br>
+                    {{ __('storefront.footer.description') }}
                 </p>
-                <a href="{{ route('store.search') }}" class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-gray-950 px-5 text-sm font-semibold text-white transition hover:bg-amber-700">Explorar productos <span aria-hidden="true">→</span></a>
+                <a href="{{ route('store.search') }}" class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-gray-950 px-5 text-sm font-semibold text-white transition hover:bg-amber-700">{{ __('storefront.footer.explore') }} <span aria-hidden="true">→</span></a>
                 @php
                     $company = config('brevare.company');
                 @endphp
@@ -40,8 +40,8 @@
                 @if ($socialLinks->isNotEmpty())
                     <div class="mt-6 border-t border-stone-200/80 pt-5">
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <p class="text-[10px] font-bold uppercase tracking-[.18em] text-amber-900/75">Síguenos</p>
-                            <p class="text-xs text-stone-500">Novedades y hallazgos en tus redes.</p>
+                            <p class="text-[10px] font-bold uppercase tracking-[.18em] text-amber-900/75">{{ __('storefront.footer.follow') }}</p>
+                            <p class="text-xs text-stone-500">{{ __('storefront.footer.social_copy') }}</p>
                         </div>
                         <ul class="mt-3 flex flex-wrap gap-2" aria-label="Redes sociales de Brevare">
                             @foreach ($socialLinks as $social)
@@ -68,12 +68,12 @@
             </div>
 
             <div>
-                <p class="text-sm font-semibold text-gray-900">Tienda</p>
+                <p class="text-sm font-semibold text-gray-900">{{ __('storefront.footer.shop') }}</p>
                 <ul class="mt-4 space-y-3 text-sm">
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('home') }}">Inicio</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.search') }}">Catálogo</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.cart') }}">Carrito</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('about') }}">Nosotros</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('home') }}">{{ __('storefront.common.home') }}</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.search') }}">{{ __('storefront.common.catalog') }}</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.cart') }}">{{ __('storefront.common.cart') }}</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('about') }}">{{ __('storefront.common.about') }}</a></li>
                     @foreach (\App\Support\Seo\CatalogLinks::curated() as $category)
                         <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('store.category', ['path' => $category->path]) }}">{{ $category->seo_label ?? $category->name }}</a></li>
                     @endforeach
@@ -81,48 +81,48 @@
             </div>
 
             <div>
-                <p class="text-sm font-semibold text-gray-900">Mi cuenta</p>
+                <p class="text-sm font-semibold text-gray-900">{{ __('storefront.footer.account') }}</p>
                 <ul class="mt-4 space-y-3 text-sm">
                     @auth
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.orders') }}">Mis pedidos</a></li>
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.addresses') }}">Mis direcciones</a></li>
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.points') }}">Brevare Puntos</a></li>
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.coupons') }}">Mis cupones</a></li>
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.favorites') }}">Favoritos</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.orders') }}">{{ __('storefront.common.my_orders') }}</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.addresses') }}">{{ __('storefront.common.addresses') }}</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.points') }}">{{ __('storefront.common.points') }}</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.coupons') }}">{{ __('storefront.common.coupons') }}</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('account.favorites') }}">{{ __('storefront.common.favorites') }}</a></li>
                     @else
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('login') }}">Iniciar sesión</a></li>
-                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('register') }}">Crear cuenta</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('login') }}">{{ __('storefront.common.sign_in') }}</a></li>
+                        <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('register') }}">{{ __('storefront.common.create_account') }}</a></li>
                     @endauth
                 </ul>
             </div>
 
             <div>
-                <p class="text-sm font-semibold text-gray-900">¿Necesitas ayuda?</p>
+                <p class="text-sm font-semibold text-gray-900">{{ __('storefront.footer.help') }}</p>
                 <ul class="mt-4 space-y-3 text-sm">
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('claims') }}">Libro de Reclamaciones</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}">Cambios y devoluciones</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('claims') }}">{{ __('storefront.footer.claims') }}</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('returns') }}">{{ __('storefront.footer.returns') }}</a></li>
                 </ul>
             </div>
             <div>
-                <p class="text-sm font-semibold text-gray-900">Legal</p>
+                <p class="text-sm font-semibold text-gray-900">{{ __('storefront.footer.legal') }}</p>
                 <ul class="mt-4 space-y-3 text-sm">
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('terms') }}" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a></li>
-                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('privacy') }}" target="_blank" rel="noopener noreferrer">Política de Privacidad</a></li>
-                    <li><button type="button" onclick="window.BrevareConsent?.open()" class="text-gray-500 transition hover:text-gray-900">Preferencias de cookies</button></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('terms') }}" target="_blank" rel="noopener noreferrer">{{ __('storefront.footer.terms') }}</a></li>
+                    <li><a class="text-gray-500 transition hover:text-gray-900" href="{{ route('privacy') }}" target="_blank" rel="noopener noreferrer">{{ __('storefront.footer.privacy') }}</a></li>
+                    <li><button type="button" onclick="window.BrevareConsent?.open()" class="text-gray-500 transition hover:text-gray-900">{{ __('storefront.footer.cookie_preferences') }}</button></li>
                 </ul>
             </div>
         </div>
 
-        <section class="mt-10 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#faf8f3]" aria-label="Métodos de pago">
+        <section class="mt-10 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#faf8f3]" aria-label="{{ app()->getLocale() === 'en' ? 'Payment methods' : 'Métodos de pago' }}">
             <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[.8fr_1.4fr] lg:items-center lg:p-8">
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[.2em] text-amber-900">Compra protegida</p>
-                    <h3 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-stone-950 sm:text-3xl">Paga como prefieras.</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-[.2em] text-amber-900">{{ app()->getLocale() === 'en' ? 'Protected purchase' : 'Compra protegida' }}</p>
+                    <h3 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-stone-950 sm:text-3xl">{{ __('storefront.footer.payment_title') }}</h3>
                     <p class="mt-2 max-w-md text-sm leading-6 text-stone-600">
-                        Procesamos tus pagos con Culqi y Mercado Pago. Tus datos bancarios viajan de forma segura y no se almacenan en Brevare.
+                        {{ __('storefront.footer.payment_copy') }}
                     </p>
                     <p class="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
-                        <flux:icon name="lock-closed" class="size-3.5" /> Pago cifrado y protegido
+                        <flux:icon name="lock-closed" class="size-3.5" /> {{ __('storefront.footer.payment_secure') }}
                     </p>
                 </div>
 
@@ -204,7 +204,14 @@
         </section>
 
         <div class="mt-8 flex items-center justify-center border-t border-gray-100 pt-6">
-            <p class="text-sm text-gray-500">&copy; {{ date('Y') }} {{ $company['legal_name'] }} · RUC {{ $company['ruc'] }}. Todos los derechos reservados.</p>
+            <p class="text-center text-sm text-gray-500">&copy; {{ date('Y') }} {{ $company['legal_name'] }} · RUC {{ $company['ruc'] }}. {{ __('storefront.footer.rights') }}</p>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-stone-500">
+            <a href="{{ route('storefront.language', ['locale' => 'es']) }}" class="hover:text-stone-900">Español</a>
+            <a href="{{ route('storefront.language', ['locale' => 'en']) }}" class="hover:text-stone-900">English</a>
+            <span aria-hidden="true">·</span>
+            <a href="{{ route('storefront.currency', ['currency' => 'PEN']) }}" class="hover:text-stone-900">PEN S/</a>
+            <a href="{{ route('storefront.currency', ['currency' => 'USD']) }}" class="hover:text-stone-900">USD $</a>
         </div>
     </div>
 </footer>

@@ -54,17 +54,42 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_navigation_menu_can_be_rendered(): void
+    public function test_login_returns_to_the_requested_account_page(): void
+    {
+        $user = User::factory()->create();
+
+        session(['url.intended' => route('account.favorites')]);
+
+        Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', 'password')
+            ->call('login')
+            ->assertRedirect(route('account.favorites'));
+    }
+
+    public function test_login_remembers_the_redirect_query_parameter(): void
+    {
+        $this->get('/login?redirect='.urlencode(route('account.favorites')))
+            ->assertOk();
+
+        $this->assertSame(route('account.favorites'), session('url.intended'));
+    }
+
+    public function test_login_rejects_external_redirect_parameters(): void
+    {
+        $this->get('/login?redirect='.urlencode('https://example.com/phishing'))
+            ->assertOk();
+
+        $this->assertSame(route('home'), session('url.intended'));
+    }
+
+    public function test_dashboard_route_returns_to_store(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user);
 
-        $response = $this->get('/dashboard');
-
-        $response
-            ->assertOk()
-            ->assertSeeVolt('layout.navigation');
+        $this->get('/dashboard')->assertRedirect('/');
     }
 
     public function test_users_can_logout(): void

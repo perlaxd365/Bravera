@@ -1,3 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /carrito
+Disallow: /checkout
+Disallow: /mi-cuenta
+Disallow: /login
+Disallow: /register
+Disallow: /password
+Disallow: /buscar?
 Sitemap: https://brevare.com/sitemap.xml

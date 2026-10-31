@@ -15,6 +15,19 @@ enum OrderStatus: string
 
     public function label(): string
     {
+        if (app()->getLocale() === 'en') {
+            return match ($this) {
+                self::PENDING => 'Awaiting payment',
+                self::CONFIRMED => 'Confirmed',
+                self::PROCESSING => 'Preparing',
+                self::SHIPPED => 'Shipped',
+                self::DELIVERED => 'Delivered',
+                self::COMPLETED => 'Completed',
+                self::CANCELLED => 'Cancelled',
+                self::REFUNDED => 'Refunded',
+            };
+        }
+
         return match ($this) {
             self::PENDING => 'Pendiente de pago',
             self::CONFIRMED => 'Confirmado',

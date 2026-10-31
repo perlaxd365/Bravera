@@ -117,14 +117,16 @@ class Catalog extends Component
 
     public function render(StoreCatalogRepository $repository)
     {
+        $storefront = \App\Support\Localization\StorefrontContext::current();
+        $priceFilterRate = $storefront->isInternational() ? $storefront->exchangeRate : 1;
         $products = $repository->paginate(
             search: $this->search,
             offers: $this->offers,
             categoryPath: $this->categoryPath,
             brandId: $this->brandId,
             attributeValueIds: $this->selectedAttributeValueIds(),
-            minPrice: $this->minPrice,
-            maxPrice: $this->maxPrice,
+            minPrice: $this->minPrice !== null ? $this->minPrice * $priceFilterRate : null,
+            maxPrice: $this->maxPrice !== null ? $this->maxPrice * $priceFilterRate : null,
             sort: $this->sort,
         );
 

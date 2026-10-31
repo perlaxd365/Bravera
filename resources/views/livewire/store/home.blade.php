@@ -1,13 +1,15 @@
 <div class="home-editorial">
     {{-- Credenciales de la cuenta de prueba para las validaciones de Culqi. --}}
-    <div class="home-order-credentials mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
-        <x-brevare.review-credentials />
-    </div>
+    @if (app()->getLocale() === 'es')
+        <div class="home-order-credentials mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+            <x-brevare.review-credentials />
+        </div>
+    @endif
 
-    {{-- Franja promocional animada con fotografías reales del catálogo navideño. --}}
+    {{-- Franja editorial con los productos agregados más recientemente. --}}
     @if ($promoTickerItems !== [])
         <section class="home-order-promo mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:mt-5 lg:px-10"
-            aria-label="Ideas navideñas de Brevare">
+            aria-label="{{ __('storefront.home.latest_added') }}">
             <div class="home-promo-ticker">
                 <div class="home-promo-track">
                     @foreach ([false, true] as $duplicate)
@@ -17,13 +19,13 @@
                                     class="home-promo-card group">
                                     <span class="home-promo-media">
                                         <img src="{{ $item['image'] }}" alt="{{ $duplicate ? '' : $item['name'] }}"
-                                            loading="lazy" decoding="async">
+                                            loading="lazy" decoding="async" width="72" height="72">
                                     </span>
                                     <span class="min-w-0 flex-1">
-                                        <span class="block text-[9px] font-bold uppercase tracking-[.17em] text-amber-800/75">{{ $item['eyebrow'] }}</span>
-                                        <span class="mt-0.5 block truncate text-sm font-semibold text-stone-950 sm:text-[15px]">{{ $item['name'] }}</span>
+                                        <span class="block truncate text-[9px] font-bold uppercase tracking-[.19em] text-stone-500">{{ $item['eyebrow'] }}</span>
+                                        <span class="mt-1 block truncate text-sm font-semibold tracking-[-.015em] text-stone-950 sm:text-[15px]">{{ $item['name'] }}</span>
                                     </span>
-                                    <span class="home-promo-cta">Ver <span aria-hidden="true">↗</span></span>
+                                    <span class="home-promo-cta">{{ __('storefront.home.view') }} <span aria-hidden="true">↗</span></span>
                                 </a>
                             @endforeach
                         </div>
@@ -67,20 +69,20 @@
                         </template>
 
                         <div class="home-hero-controls mt-8 flex items-center gap-4 sm:mt-10">
-                            <button type="button" @click="prev()" aria-label="Portada anterior" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
+                            <button type="button" @click="prev()" aria-label="{{ __('storefront.home.previous') }}" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
                                 <flux:icon name="chevron-left" class="size-5" />
                             </button>
-                            <div class="flex items-center gap-1.5" role="group" aria-label="Seleccionar portada">
+                            <div class="flex items-center gap-1.5" role="group" aria-label="{{ __('storefront.home.choose_slide') }}">
                                 <template x-for="(slide, i) in slides" :key="'dot-' + i">
-                                    <button type="button" @click="go(i)" :aria-label="'Ir a portada ' + (i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-11 min-w-5 items-center justify-center focus-visible:outline-2 focus-visible:outline-amber-700">
+                                    <button type="button" @click="go(i)" :aria-label="'{{ __('storefront.home.go_slide') }}'.replace(':number', i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-11 min-w-5 items-center justify-center focus-visible:outline-2 focus-visible:outline-amber-700">
                                         <span class="h-1.5 rounded-full transition-all duration-500" :class="i === active ? 'w-7 bg-amber-700' : 'w-1.5 bg-gray-400/65'"></span>
                                     </button>
                                 </template>
                             </div>
-                            <button type="button" @click="next()" aria-label="Siguiente portada" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
+                            <button type="button" @click="next()" aria-label="{{ __('storefront.home.next') }}" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
                                 <flux:icon name="chevron-right" class="size-5" />
                             </button>
-                            <span class="ml-auto hidden items-center gap-2 text-xs font-medium text-gray-500 sm:inline-flex"><span class="size-1.5 rounded-full bg-emerald-600"></span>Ideas para cada temporada</span>
+                            <span class="ml-auto hidden items-center gap-2 text-xs font-medium text-gray-500 sm:inline-flex"><span class="size-1.5 rounded-full bg-emerald-600"></span>{{ __('storefront.home.seasonal_ideas') }}</span>
                         </div>
                     </div>
 
@@ -193,9 +195,9 @@
             <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
                 <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
                     <div>
-                        <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Hecho para encontrar</p>
-                        <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl lg:text-[2.5rem]">Un buen hallazgo empieza aquí.</h2>
-                        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">Explora colecciones elegidas para acompañar tus días.</p>
+                        <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.categories_eyebrow') }}</p>
+                        <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl lg:text-[2.5rem]">{{ __('storefront.home.categories_title') }}</h2>
+                        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">{{ __('storefront.home.categories_copy') }}</p>
                     </div>
                     <div class="hidden items-center gap-3 sm:flex">
                         <div class="mr-2 text-right">
@@ -208,23 +210,23 @@
                                     :style="`transform: scaleX(${progress})`"></span>
                             </span>
                         </div>
-                        <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
+                        <button type="button" @click="nudge(-1)" aria-label="{{ __('storefront.home.previous_categories') }}"
                             class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
                             <flux:icon name="chevron-left" class="size-4" />
                         </button>
-                        <button type="button" @click="nudge(1)" aria-label="Categorías siguientes"
+                        <button type="button" @click="nudge(1)" aria-label="{{ __('storefront.home.next_categories') }}"
                             class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
                             <flux:icon name="chevron-right" class="size-4" />
                         </button>
-                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? 'Reanudar rotación' : 'Pausar rotación'"
+                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'"
                             class="ml-1 min-h-11 rounded-full px-3 text-xs font-semibold text-stone-600 transition hover:text-stone-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                            x-text="userPaused ? 'Reanudar' : 'Pausar'">Pausar</button>
-                        <a href="{{ route('store.search') }}" class="ml-1 text-sm font-semibold text-gray-700 transition hover:text-amber-800">Ver todas <span class="ml-1" aria-hidden="true">↗</span></a>
+                            x-text="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'">{{ __('storefront.home.pause') }}</button>
+                        <a href="{{ route('store.search') }}" class="ml-1 text-sm font-semibold text-gray-700 transition hover:text-amber-800">{{ __('storefront.common.view_all') }} <span class="ml-1" aria-hidden="true">↗</span></a>
                     </div>
                 </div>
 
                 <div x-ref="viewport" class="category-carousel-viewport" role="region"
-                    aria-label="Explora categorías destacadas" tabindex="0"
+                    aria-label="{{ __('storefront.catalog.categories') }}" tabindex="0"
                     @scroll.debounce.100ms="sync()"
                     @touchstart.passive="interact()"
                     @keydown.arrow-left.prevent="nudge(-1)"
@@ -236,7 +238,7 @@
                             <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
                             <span class="relative flex w-full items-end justify-between gap-3 p-5 sm:p-6 lg:p-7">
                                 <span class="min-w-0">
-                                    <span class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-white/80">Colección Brevare</span>
+                                    <span class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-white/80">{{ __('storefront.home.collections') }}</span>
                                     <span class="block truncate text-2xl font-semibold tracking-[-.03em] sm:text-3xl">{{ $category->seo_label ?? $category->name }}</span>
                                 </span>
                                 <span class="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/15 text-white backdrop-blur-md transition group-hover:border-white group-hover:bg-white group-hover:text-gray-900" aria-hidden="true"><span class="text-xl leading-none">↗</span></span>
@@ -257,19 +259,19 @@
                         </span>
                     </div>
                     <div class="ml-auto flex gap-2">
-                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? 'Reanudar rotación' : 'Pausar rotación'"
+                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'"
                             class="min-h-11 rounded-full border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 shadow-sm transition active:scale-95"
-                            x-text="userPaused ? 'Reanudar' : 'Pausar'">Pausar</button>
-                        <button type="button" @click="nudge(-1)" aria-label="Categorías anteriores"
+                            x-text="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'">{{ __('storefront.home.pause') }}</button>
+                        <button type="button" @click="nudge(-1)" aria-label="{{ __('storefront.home.previous_categories') }}"
                             class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
                             <flux:icon name="chevron-left" class="size-4" />
                         </button>
-                        <button type="button" @click="nudge(1)" aria-label="Categorías siguientes"
+                        <button type="button" @click="nudge(1)" aria-label="{{ __('storefront.home.next_categories') }}"
                             class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
                             <flux:icon name="chevron-right" class="size-4" />
                         </button>
                     </div>
-                    <a href="{{ route('store.search') }}" class="text-xs font-semibold text-gray-800">Ver todas ↗</a>
+                    <a href="{{ route('store.search') }}" class="text-xs font-semibold text-gray-800">{{ __('storefront.common.view_all') }} ↗</a>
                 </div>
             </div>
         </section>
@@ -280,10 +282,10 @@
         <section class="home-order-featured mx-auto max-w-screen-2xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-10">
             <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
                 <div>
-                    <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Selección Brevare</p>
-                    <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['featured'] ?? 'Productos destacados' }}</h2>
+                    <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.featured_eyebrow') }}</p>
+                    <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ app()->getLocale() === 'en' ? __('storefront.home.featured_title') : ($homeTexts['featured'] ?? __('storefront.home.featured_title')) }}</h2>
                 </div>
-                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">Ver la tienda <span class="ml-1" aria-hidden="true">↗</span></a>
+                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">{{ __('storefront.common.view_store') }} <span class="ml-1" aria-hidden="true">↗</span></a>
             </div>
             @if ($featured->count() <= 2 && $allCategories->isNotEmpty())
                 <div class="home-featured-layout grid gap-5 lg:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)] lg:gap-7">
@@ -295,9 +297,9 @@
                         <img src="{{ $discoveryCategory->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $discoveryCategory->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]">
                         <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
                         <span class="relative max-w-lg p-6 text-white sm:p-9 lg:p-11">
-                            <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">Más para descubrir</span>
-                            <span class="mt-2 block text-3xl font-semibold leading-tight tracking-[-.035em] sm:text-4xl">Pequeños detalles. Grandes momentos.</span>
-                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">Explora {{ $discoveryCategory->seo_label ?? $discoveryCategory->name }} <span aria-hidden="true">↗</span></span>
+                            <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">{{ __('storefront.home.more_to_discover') }}</span>
+                            <span class="mt-2 block text-3xl font-semibold leading-tight tracking-[-.035em] sm:text-4xl">{{ __('storefront.home.discovery_title') }}</span>
+                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">{{ __('storefront.home.discover_category', ['category' => $discoveryCategory->seo_label ?? $discoveryCategory->name]) }} <span aria-hidden="true">↗</span></span>
                         </span>
                     </a>
                 </div>
@@ -314,8 +316,8 @@
     @if ($latest->isNotEmpty())
         <section class="home-order-latest mx-auto max-w-screen-2xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-10">
             <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
-                <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">Recién llegados</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ $homeTexts['latest'] ?? 'Lo nuevo' }}</h2></div>
-                <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">Descubrir novedades ↗</a>
+                <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.new_arrivals') }}</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ app()->getLocale() === 'en' ? __('storefront.home.new_title') : ($homeTexts['latest'] ?? __('storefront.home.new_title')) }}</h2></div>
+                <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">{{ __('storefront.home.discover_new') }} ↗</a>
             </div>
             <div class="home-product-grid grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
                 @foreach ($latest as $product)

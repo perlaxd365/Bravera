@@ -6,7 +6,7 @@
         count: 0,
         timer: null,
         show(detail) {
-            this.message = detail?.product ?? 'Producto agregado al carrito';
+            this.message = detail?.product ?? @js(app()->getLocale() === 'en' ? 'Product added to cart' : 'Producto agregado al carrito');
             this.thumb = detail?.image ?? '';
             this.count = Number(detail?.count ?? 0);
             this.open = true;
@@ -39,18 +39,18 @@
                 <span x-text="message" class="truncate font-medium"></span>
             </p>
             <p x-show="count > 0" class="mt-0.5 pl-6 text-xs text-gray-400">
-                Ya tienes <span class="font-semibold text-white" x-text="count"></span>
-                <span x-text="count === 1 ? 'artículo' : 'artículos'"></span>
-                en tu carrito
+                {{ app()->getLocale() === 'en' ? 'You now have' : 'Ya tienes' }} <span class="font-semibold text-white" x-text="count"></span>
+                <span x-text="count === 1 ? @js(app()->getLocale() === 'en' ? 'item' : 'artículo') : @js(app()->getLocale() === 'en' ? 'items' : 'artículos')"></span>
+                {{ app()->getLocale() === 'en' ? 'in your cart' : 'en tu carrito' }}
             </p>
         </div>
 
         <a href="{{ route('store.cart') }}"
             class="ml-1 shrink-0 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-gray-900 shadow-sm transition hover:bg-gray-100">
-            Ver carrito
+            {{ __('storefront.product.view_cart') }}
         </a>
 
-        <button type="button" @click="close()" aria-label="Cerrar notificación"
+        <button type="button" @click="close()" aria-label="{{ app()->getLocale() === 'en' ? 'Close notification' : 'Cerrar notificación' }}"
             class="-mr-1 shrink-0 rounded-full p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white">
             <flux:icon name="x-mark" class="size-4" />
         </button>

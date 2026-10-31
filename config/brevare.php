@@ -33,6 +33,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Descuentos por cantidad
+    |--------------------------------------------------------------------------
+    | Se aplican sobre el precio de venta vigente. Si la cantidad también
+    | alcanza el mínimo mayorista, manda el precio mayorista configurado en
+    | la variante.
+    |
+    */
+
+    'quantity_discounts' => [
+        ['quantity' => 2, 'percent' => 5],
+        ['quantity' => 3, 'percent' => 10, 'badge' => 'Más vendido'],
+        ['quantity' => 5, 'percent' => 15],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cuenta de pruebas (validaciones de Culqi)
     |--------------------------------------------------------------------------
     |

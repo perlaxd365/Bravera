@@ -7,13 +7,13 @@
         ->join('');
 
     $links = [
-        ['route' => 'account.profile', 'match' => 'account.profile', 'label' => 'Mi perfil', 'icon' => 'user'],
-        ['route' => 'account.password', 'match' => 'account.password', 'label' => 'Contraseña', 'icon' => 'lock'],
-        ['route' => 'account.orders', 'match' => 'account.orders*', 'label' => 'Mis pedidos', 'icon' => 'cube'],
-        ['route' => 'account.addresses', 'match' => 'account.addresses', 'label' => 'Mis direcciones', 'icon' => 'map-pin'],
-        ['route' => 'account.points', 'match' => 'account.points', 'label' => 'Brevare Puntos', 'icon' => 'gift'],
-        ['route' => 'account.coupons', 'match' => 'account.coupons', 'label' => 'Mis cupones', 'icon' => 'ticket'],
-        ['route' => 'account.favorites', 'match' => 'account.favorites', 'label' => 'Favoritos', 'icon' => 'heart'],
+        ['route' => 'account.profile', 'match' => 'account.profile', 'label' => __('storefront.common.profile'), 'icon' => 'user'],
+        ['route' => 'account.password', 'match' => 'account.password', 'label' => app()->getLocale() === 'en' ? 'Password' : 'Contraseña', 'icon' => 'lock'],
+        ['route' => 'account.orders', 'match' => 'account.orders*', 'label' => __('storefront.common.my_orders'), 'icon' => 'cube'],
+        ['route' => 'account.addresses', 'match' => 'account.addresses', 'label' => __('storefront.common.addresses'), 'icon' => 'map-pin'],
+        ['route' => 'account.points', 'match' => 'account.points', 'label' => __('storefront.common.points'), 'icon' => 'gift'],
+        ['route' => 'account.coupons', 'match' => 'account.coupons', 'label' => __('storefront.common.coupons'), 'icon' => 'ticket'],
+        ['route' => 'account.favorites', 'match' => 'account.favorites', 'label' => __('storefront.common.favorites'), 'icon' => 'heart'],
     ];
 @endphp
 
@@ -35,7 +35,7 @@
             </div>
         </div>
 
-        <nav class="p-2" aria-label="Menú de cuenta">
+        <nav class="p-2" aria-label="{{ app()->getLocale() === 'en' ? 'Account menu' : 'Menú de cuenta' }}">
             @foreach ($links as $link)
                 @php $active = request()->routeIs($link['match']); @endphp
                 <a href="{{ route($link['route']) }}" wire:navigate
@@ -51,13 +51,13 @@
                 @csrf
                 <button type="submit" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50">
                     <flux:icon name="arrow-right-start-on-rectangle" class="size-4.5" />
-                    Cerrar sesión
+                    {{ __('storefront.common.logout') }}
                 </button>
             </form>
         </div>
     </div>
 @else
-    <nav class="mb-6 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Menú de cuenta">
+    <nav class="mb-6 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="{{ app()->getLocale() === 'en' ? 'Account menu' : 'Menú de cuenta' }}">
         @foreach ($links as $link)
             @php $active = request()->routeIs($link['match']); @endphp
             <a href="{{ route($link['route']) }}" wire:navigate

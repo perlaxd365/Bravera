@@ -9,29 +9,29 @@
 @php
     $steps = [
         'confirmed' => [
-            'label' => 'Confirmado',
+            'label' => app()->getLocale() === 'en' ? 'Confirmed' : 'Confirmado',
             'icon' => 'check',
-            'description' => 'Pedido confirmado',
+            'description' => app()->getLocale() === 'en' ? 'Order confirmed' : 'Pedido confirmado',
         ],
         'processing' => [
-            'label' => 'Preparación',
+            'label' => app()->getLocale() === 'en' ? 'Preparing' : 'Preparación',
             'icon' => 'cog',
-            'description' => 'En preparación',
+            'description' => app()->getLocale() === 'en' ? 'Preparing your order' : 'En preparación',
         ],
         'shipped' => [
-            'label' => 'Enviado',
+            'label' => app()->getLocale() === 'en' ? 'Shipped' : 'Enviado',
             'icon' => 'truck',
-            'description' => 'En camino',
+            'description' => app()->getLocale() === 'en' ? 'On the way' : 'En camino',
         ],
         'delivered' => [
-            'label' => 'Entregado',
+            'label' => app()->getLocale() === 'en' ? 'Delivered' : 'Entregado',
             'icon' => 'check-badge',
-            'description' => 'Entregado',
+            'description' => app()->getLocale() === 'en' ? 'Delivered' : 'Entregado',
         ],
         'completed' => [
-            'label' => 'Completado',
+            'label' => app()->getLocale() === 'en' ? 'Completed' : 'Completado',
             'icon' => 'check-badge',
-            'description' => 'Proceso completado',
+            'description' => app()->getLocale() === 'en' ? 'Process complete' : 'Proceso completado',
         ],
     ];
 
@@ -50,11 +50,11 @@
         <div class="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
             <div class="min-w-0">
                 <h2 class="text-sm font-semibold tracking-tight text-gray-900 sm:text-[15px]">
-                    Seguimiento del pedido
+                    {{ app()->getLocale() === 'en' ? 'Order tracking' : 'Seguimiento del pedido' }}
                 </h2>
 
                 <p class="mt-0.5 text-xs text-gray-400">
-                    Estado y progreso de tu pedido
+                    {{ app()->getLocale() === 'en' ? 'Status and progress of your order' : 'Estado y progreso de tu pedido' }}
                 </p>
             </div>
 
@@ -181,7 +181,7 @@
                                 {{-- Fecha --}}
                                 @if (($isCompleted || $isCurrent) && isset($history[$key]) && $history[$key])
                                     <p class="mt-1.5 text-[10px] font-medium tracking-wide text-gray-400">
-                                        {{ \Carbon\Carbon::parse($history[$key])->locale('es')->isoFormat('DD MMM · HH:mm') }}
+                                        {{ \Carbon\Carbon::parse($history[$key])->locale(app()->getLocale())->isoFormat('DD MMM · HH:mm') }}
                                     </p>
                                 @endif
 
@@ -189,7 +189,7 @@
                                 @if ($isCurrent)
                                     <span class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-2.5 py-1 text-[10px] font-semibold text-white">
                                         <span class="size-1 rounded-full bg-white"></span>
-                                        Actual
+                                        {{ app()->getLocale() === 'en' ? 'Current' : 'Actual' }}
                                     </span>
                                 @endif
 
@@ -225,22 +225,24 @@
 
                     <div class="flex flex-wrap items-center gap-2">
                         <h4 class="text-sm font-semibold text-gray-900">
-                            Pedido cancelado
+                            {{ app()->getLocale() === 'en' ? 'Order cancelled' : 'Pedido cancelado' }}
                         </h4>
 
                         <span class="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-red-600">
-                            Cancelado
+                            {{ app()->getLocale() === 'en' ? 'Cancelled' : 'Cancelado' }}
                         </span>
                     </div>
 
                     <p class="mt-1 text-sm leading-5 text-gray-600">
-                        {{ $cancelledReason ?? 'El pedido fue cancelado' }}
+                        {{ $cancelledReason ?? (app()->getLocale() === 'en' ? 'The order was cancelled' : 'El pedido fue cancelado') }}
                     </p>
 
                     @if ($cancelledAt)
                         <p class="mt-2 text-xs text-gray-400">
-                            Cancelado el
-                            {{ \Carbon\Carbon::parse($cancelledAt)->locale('es')->isoFormat('D [de] MMMM [de] YYYY [a las] HH:mm') }}
+                            {{ app()->getLocale() === 'en' ? 'Cancelled on' : 'Cancelado el' }}
+                            {{ app()->getLocale() === 'en'
+                                ? \Carbon\Carbon::parse($cancelledAt)->locale('en')->isoFormat('MMM D, YYYY [at] h:mm A')
+                                : \Carbon\Carbon::parse($cancelledAt)->locale('es')->isoFormat('D [de] MMMM [de] YYYY [a las] HH:mm') }}
                         </p>
                     @endif
 

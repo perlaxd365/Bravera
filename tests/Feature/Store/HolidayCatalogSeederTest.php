@@ -54,6 +54,23 @@ class HolidayCatalogSeederTest extends TestCase
             ->assertSee('S/ 90.30');
     }
 
+    public function test_la_busqueda_encuentra_productos_navidena_por_categoria_y_plural(): void
+    {
+        Livewire::test(Catalog::class)
+            ->set('search', 'productos navideños')
+            ->assertSee('Corona Navideña con Luces LED 40 cm')
+            ->assertDontSee('No encontramos una coincidencia exacta');
+    }
+
+    public function test_una_busqueda_sin_resultados_siempre_muestra_productos_similares(): void
+    {
+        Livewire::test(Catalog::class)
+            ->set('search', 'tetera')
+            ->assertSee('No encontramos una coincidencia exacta')
+            ->assertSee('También te puede interesar')
+            ->assertSee('Corona Navideña con Luces LED 40 cm');
+    }
+
     public function test_la_ficha_de_producto_muestra_precio_y_permite_agregar_al_carrito(): void
     {
         $component = Livewire::test(ProductDetail::class, ['slug' => self::SLUG])

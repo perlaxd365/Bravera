@@ -39,13 +39,19 @@ class CourseProductService
 
             $sku = 'CURSO-'.$product->id;
             $variant = ProductVariant::withTrashed()->firstOrNew(['sku' => $sku]);
+            $comparePrice = (float) $variant->compare_price > (float) $product->course_price
+                ? (float) $variant->compare_price
+                : null;
+            $discountPercent = $comparePrice
+                ? round((1 - ((float) $product->course_price / $comparePrice)) * 100, 2)
+                : 0;
             $variant->fill([
                 'product_id' => $product->id,
                 'barcode' => null,
                 'cost_price' => 0,
                 'sale_price' => (float) $product->course_price,
-                'compare_price' => null,
-                'discount_percent' => 0,
+                'compare_price' => $comparePrice,
+                'discount_percent' => $discountPercent,
                 'sync_enabled' => false,
                 'is_default' => true,
                 'is_active' => true,

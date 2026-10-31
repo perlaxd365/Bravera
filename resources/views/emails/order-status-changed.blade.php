@@ -71,12 +71,22 @@
         </tr>
         <tr>
             <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-top:1px solid #f3f4f6;">
-                Envío
+                Envío pagado ahora
             </td>
             <td style="padding:12px 16px;font-size:13px;color:#111827;border-top:1px solid #f3f4f6;">
                 S/ {{ number_format((float) $order->shipping_total, 2) }}
             </td>
         </tr>
+        @if ((float) $order->cod_shipping_amount > 0)
+            <tr>
+                <td style="padding:12px 16px;font-size:13px;color:#047857;border-top:1px solid #f3f4f6;">
+                    Envío a pagar en Shalom
+                </td>
+                <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#047857;border-top:1px solid #f3f4f6;">
+                    S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}
+                </td>
+            </tr>
+        @endif
         <tr>
             <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-top:1px solid #f3f4f6;">
                 Total

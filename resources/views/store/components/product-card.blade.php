@@ -1,5 +1,6 @@
 @php
     $preview = $preview ?? false;
+    $localizedProductName = $product->localized('name') ?? $product->name;
     $coverImage = $product->coverImageModel()?->sizedUrl(900);
     $cardVariants = $product->availableVariants()->get([
         'id',
@@ -34,14 +35,14 @@
 
 <div class="relative">
     <a href="{{ $preview ? '#' : route('store.product', ['slug' => $product->slug]) }}"
-        @if ($preview) @click.prevent tabindex="-1" aria-label="Vista previa de {{ $product->name }}" @endif
+        @if ($preview) @click.prevent tabindex="-1" aria-label="{{ app()->getLocale() === 'en' ? 'Preview of' : 'Vista previa de' }} {{ $localizedProductName }}" @endif
         class="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-950/10">
         <div class="product-card-media relative aspect-[4/3] max-h-[460px] overflow-hidden bg-[#f7f5ef]">
             @if ($coverImage)
                 <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-6" aria-hidden="true">
                     <flux:icon name="photo" class="size-12 text-gray-300" />
                 </div>
-                <img src="{{ $coverImage }}" alt="{{ $product->name }}" loading="lazy" decoding="async"
+                <img src="{{ $coverImage }}" alt="{{ $localizedProductName }}" loading="lazy" decoding="async"
                     onerror="this.remove()"
                     class="relative z-10 h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.025]">
             @else
@@ -53,18 +54,18 @@
                 <span class="absolute left-3 top-3 rounded-full bg-rose-600 px-2.5 py-1 text-xs font-extrabold text-white shadow-md">-{{ $discountPercent }}%</span>
             @endif
             @if ($product->is_featured ?? false)
-                <span class="absolute right-3 top-3 rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">Destacado</span>
+                <span class="absolute right-3 top-3 rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">{{ __('storefront.catalog.featured') }}</span>
             @endif
             @if ($product->isCourse())
-                <span class="absolute bottom-3 right-3 z-20 rounded-full bg-sky-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">Curso digital</span>
+                <span class="absolute bottom-3 right-3 z-20 rounded-full bg-sky-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">{{ __('storefront.catalog.course') }}</span>
             @endif
             @if ($product->isSoldByBrevare() || $hasWholesale)
                 <div class="absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1.5">
                     @if ($product->isSoldByBrevare())
-                        <span class="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-gray-900 shadow-sm sm:px-3 sm:text-[10px]">Vendido por Brevare Perú</span>
+                        <span class="rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-gray-900 shadow-sm sm:px-3 sm:text-[10px]">{{ __('storefront.catalog.sold_by') }}</span>
                     @endif
                     @if ($hasWholesale)
-                        <span class="rounded-full bg-emerald-700 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-white shadow-sm sm:px-3 sm:text-[10px]">Mayorista</span>
+                        <span class="rounded-full bg-emerald-700 px-2.5 py-1 text-[9px] font-bold uppercase leading-4 tracking-wide text-white shadow-sm sm:px-3 sm:text-[10px]">{{ __('storefront.catalog.wholesale') }}</span>
                     @endif
                 </div>
             @endif
@@ -74,39 +75,39 @@
             <p class="text-[9px] font-bold uppercase tracking-[.1em] text-gray-600 sm:text-xs">
                 {{ $product->brand?->name ?? $product->category?->name }}
             </p>
-            <p class="mt-1 line-clamp-2 min-h-9 text-[13px] font-semibold leading-[1.15rem] text-gray-900 group-hover:text-amber-950 sm:min-h-10 sm:text-sm sm:leading-5" title="{{ $product->name }}">
-                {{ $product->name }}
+            <p class="mt-1 line-clamp-2 min-h-9 text-[13px] font-semibold leading-[1.15rem] text-gray-900 group-hover:text-amber-950 sm:min-h-10 sm:text-sm sm:leading-5" title="{{ $localizedProductName }}">
+                {{ $localizedProductName }}
             </p>
 
-            <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="{{ $product->reviews_count ?? 0 }} opiniones">
+            <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="{{ __('storefront.catalog.reviews', ['count' => $product->reviews_count ?? 0]) }}">
                 @if (($product->reviews_count ?? 0) > 0)
-                    <span class="text-sm leading-none tracking-[1px] text-amber-600" aria-label="{{ number_format((float) $product->reviews_avg_rating, 1) }} de 5 estrellas">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
+                    <span class="text-sm leading-none tracking-[1px] text-amber-600" aria-label="{{ __('storefront.catalog.rating', ['rating' => number_format((float) $product->reviews_avg_rating, 1)]) }}">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
                     <span class="text-xs font-semibold text-gray-700">{{ number_format((float) $product->reviews_avg_rating, 1) }}</span>
                     <span class="text-xs text-gray-600">({{ $product->reviews_count }})</span>
                 @else
-                    <span class="text-[11px] font-medium text-emerald-700">Disponible para comprar</span>
+                    <span class="text-[11px] font-medium text-emerald-700">{{ __('storefront.catalog.available') }}</span>
                 @endif
             </div>
 
             @if ($availableColors->isNotEmpty())
-                <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="Colores disponibles: {{ $availableColors->pluck('name')->implode(', ') }}">
+                <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="{{ __('storefront.catalog.colors', ['colors' => $availableColors->pluck('name')->implode(', ')]) }}">
                     @foreach ($availableColors->take(5) as $color)
                         <span title="{{ $color['name'] }}" aria-hidden="true" class="size-4 rounded-full border border-white shadow-[0_0_0_1px_rgba(17,24,39,0.18)] transition group-hover:scale-110" style="background-color: {{ $color['hex'] }}"></span>
                     @endforeach
                     @if ($availableColors->count() > 5)
                         <span class="ml-0.5 text-[10px] font-medium text-gray-500">+{{ $availableColors->count() - 5 }}</span>
                     @endif
-                    <span class="sr-only">{{ $availableColors->count() }} colores</span>
+                    <span class="sr-only">{{ $availableColors->count() }} {{ app()->getLocale() === 'en' ? 'colors' : 'colores' }}</span>
                 </div>
             @endif
 
             <div class="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pr-10 pt-2.5 sm:pr-12 sm:pt-3">
                 <x-brevare.price :amount="$minPrice" size="sm" />
                 @if ($discountPercent > 0)
-                    <span class="text-xs text-gray-500 line-through">S/ {{ number_format($comparePrice, 2) }}</span>
+                    <x-brevare.price :amount="$comparePrice" size="xs" class="text-xs text-gray-500 line-through" :show-approximation="false" />
                 @endif
                 @if ($maxPrice > $minPrice && $minPrice > 0)
-                    <span class="w-full text-[11px] text-gray-500">Variantes hasta S/ {{ number_format($maxPrice, 2) }}</span>
+                    <span class="w-full text-[11px] text-gray-500">{{ __('storefront.catalog.variants_up_to', ['price' => \App\Support\Localization\StorefrontContext::current()->formatFromPen($maxPrice)]) }}</span>
                 @endif
             </div>
         </div>

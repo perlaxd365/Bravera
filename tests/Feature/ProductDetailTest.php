@@ -87,8 +87,16 @@ class ProductDetailTest extends TestCase
             ->assertDontSee('Proveedor Oficial')
             ->assertDontSee('Vendido por')
             ->assertSee('S/ 120.00')
-            ->assertSee('culqiConNombre.svg', false)
-            ->assertSee('Pago 100% seguro');
+            ->assertSee('Múltiples opciones de pago')
+            ->assertSee('Retiro Express en 2 a 6 horas')
+            ->assertSee('Disponible en nuestras 2 tiendas.')
+            ->assertSee('San Isidro, Lima')
+            ->assertSee('Chimbote, Áncash')
+            ->assertDontSee('San Borja')
+            ->assertSee('overscroll-behavior-y: auto', false)
+            ->assertSee('Gana')
+            ->assertSee('puntos')
+            ->assertSee('Aprende más');
     }
 
     public function test_no_se_puede_agregar_al_carrito_sin_seleccionar_talla(): void

@@ -3,6 +3,7 @@
 use App\Livewire\Actions\Logout;
 use App\Models\User;
 use App\Services\EmailVerificationService;
+use App\Support\Auth\LoginRedirect;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +24,7 @@ new #[Layout('layouts.guest')] class extends Component
             $authenticatedUser = Auth::user();
 
             if ($authenticatedUser->hasVerifiedEmail()) {
-                $this->redirectIntended(default: route('home'), navigate: true);
+                $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
 
                 return;
             }
@@ -45,7 +46,7 @@ new #[Layout('layouts.guest')] class extends Component
             Session::forget('pending_email_verification_user_id');
             Auth::login($user);
             Session::regenerate();
-            $this->redirectIntended(default: route('home'), navigate: true);
+            $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
 
             return;
         }
@@ -80,7 +81,7 @@ new #[Layout('layouts.guest')] class extends Component
             Session::regenerate();
             Session::flash('status', 'verified');
 
-            $this->redirectIntended(default: route('home'), navigate: true);
+            $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
 
             return;
         }
@@ -102,7 +103,7 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('home'), navigate: true);
+            $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
 
             return;
         }

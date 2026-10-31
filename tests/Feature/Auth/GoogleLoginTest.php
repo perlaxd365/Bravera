@@ -96,6 +96,36 @@ class GoogleLoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_google_callback_returns_to_the_requested_page(): void
+    {
+        User::create([
+            'name' => 'María Pérez',
+            'email' => 'maria.perez@gmail.com',
+            'password' => 'ExistingPass123!',
+        ]);
+
+        $this->mockGoogleDriver($this->fakeGoogleUser());
+        $this->withSession(['url.intended' => route('account.favorites')]);
+
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('account.favorites'));
+    }
+
+    public function test_google_callback_never_returns_to_the_generic_dashboard(): void
+    {
+        User::create([
+            'name' => 'María Pérez',
+            'email' => 'maria.perez@gmail.com',
+            'password' => 'ExistingPass123!',
+        ]);
+
+        $this->mockGoogleDriver($this->fakeGoogleUser());
+        $this->withSession(['url.intended' => '/dashboard']);
+
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('home'));
+    }
+
     public function test_set_password_saves_password_for_google_user(): void
     {
         $user = User::create([

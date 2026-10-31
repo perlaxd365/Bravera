@@ -226,11 +226,11 @@
         <div class="mp-topbar">
             <a href="{{ route('checkout') }}" class="mp-back">
                 <flux:icon name="arrow-left" class="size-4" />
-                Volver al checkout
+                {{ app()->getLocale() === 'en' ? 'Back to checkout' : 'Volver al checkout' }}
             </a>
             <span class="mp-secure-pill">
                 <span class="mp-live-dot" aria-hidden="true"></span>
-                Pago seguro
+                {{ app()->getLocale() === 'en' ? 'Secure payment' : 'Pago seguro' }}
             </span>
         </div>
 
@@ -246,14 +246,17 @@
                         </p>
                     </div>
                     <div class="mp-order-pill">
-                        <span>Pedido</span>
+                        <span>{{ app()->getLocale() === 'en' ? 'Order' : 'Pedido' }}</span>
                         <strong>{{ $order->order_number }}</strong>
                     </div>
                 </header>
 
                 <div class="mp-total-strip">
                     <span>Total a pagar</span>
-                    <strong>S/ {{ number_format((float) $order->total, 2) }}</strong>
+                    <strong>{{ $storefront->formatFromPen((float) $order->total) }}</strong>
+                    @if ($storefront->isInternational())
+                        <small class="block">{{ __('storefront.prices.charged_in_soles', ['amount' => $storefront->chargedFromPen((float) $order->total)]) }}</small>
+                    @endif
                 </div>
 
                 <div id="checkout-init-error" role="alert" aria-live="assertive" hidden wire:ignore
@@ -330,9 +333,9 @@
                             </select>
 
                             <button type="submit" id="form-checkout__submit"
-                                data-default-label="Pagar S/ {{ number_format((float) $order->total, 2) }}"
+                                data-default-label="{{ app()->getLocale() === 'en' ? 'Pay S/' : 'Pagar S/' }} {{ number_format((float) $order->total, 2) }}"
                                 class="mp-submit">
-                                Pagar S/ {{ number_format((float) $order->total, 2) }}
+                                {{ app()->getLocale() === 'en' ? 'Pay S/' : 'Pagar S/' }} {{ number_format((float) $order->total, 2) }}
                             </button>
                         </form>
                     </div>
@@ -365,7 +368,7 @@
             <aside class="mp-side">
                 <div class="mp-glass mp-summary">
                     <div class="mp-summary-head">
-                        <h2>Resumen del pedido</h2>
+                        <h2>{{ __('storefront.checkout.summary') }}</h2>
                         <span>{{ $order->order_number }}</span>
                     </div>
 
@@ -373,31 +376,31 @@
                         @foreach ($order->items as $item)
                             <div class="mp-summary-item">
                                 <span>{{ $item->quantity }} × {{ $item->product_name }}</span>
-                                <strong>S/ {{ number_format((float) $item->line_subtotal, 2) }}</strong>
+                                <strong><x-brevare.price :amount="(float) $item->line_subtotal" size="xs" class="font-bold text-gray-900" /></strong>
                             </div>
                         @endforeach
                     </div>
 
                     <dl class="mp-summary-totals">
                         <div>
-                            <dt>Subtotal</dt>
-                            <dd>S/ {{ number_format((float) $order->subtotal, 2) }}</dd>
+                            <dt>{{ __('storefront.common.subtotal') }}</dt>
+                            <dd><x-brevare.price :amount="(float) $order->subtotal" size="xs" class="font-semibold text-gray-900" /></dd>
                         </div>
                         <div>
-                            <dt>Envío</dt>
-                            <dd>S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
+                            <dt>{{ __('storefront.checkout.shipping') }}</dt>
+                            <dd><x-brevare.price :amount="(float) $order->shipping_total" size="xs" class="font-semibold text-gray-900" /></dd>
                         </div>
                         @if ((float) $order->discount_total > 0)
                             <div class="mp-summary-discount">
                                 <dt>Descuento</dt>
-                                <dd>- S/ {{ number_format((float) $order->discount_total, 2) }}</dd>
+                                <dd>- <x-brevare.price :amount="(float) $order->discount_total" size="xs" class="font-semibold text-green-700" /></dd>
                             </div>
                         @endif
                     </dl>
 
                     <div class="mp-summary-total">
                         <span>Total</span>
-                        <strong>S/ {{ number_format((float) $order->total, 2) }}</strong>
+                        <strong>{{ $storefront->formatFromPen((float) $order->total) }}</strong>
                     </div>
                     <p class="mp-summary-note">
                         <flux:icon name="check" class="size-3.5" />

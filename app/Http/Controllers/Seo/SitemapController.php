@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Seo;
 
-use App\Models\Category;
 use App\Models\Product;
+use App\Support\Seo\CatalogLinks;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SitemapController
@@ -14,11 +14,11 @@ class SitemapController
             echo '<?xml version="1.0" encoding="UTF-8"?>';
             echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">';
             echo $this->urlEntry(route('home'));
+            echo $this->urlEntry(route('about'));
 
-            Category::query()
-                ->where('is_visible', true)
-                ->orderBy('id')
-                ->chunkById(500, function ($categories): void {
+            CatalogLinks::orderedForSitemap()
+                ->chunk(500)
+                ->each(function ($categories): void {
                     foreach ($categories as $category) {
                         echo $this->urlEntry(
                             route('store.category', ['path' => $category->path]),

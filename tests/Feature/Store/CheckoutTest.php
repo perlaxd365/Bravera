@@ -54,6 +54,11 @@ class CheckoutTest extends TestCase
         $this->app->instance('db.transactions', new DatabaseTransactionsManager);
 
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        config([
+            'payments.culqi.public_key' => 'pk_test_checkout',
+            'payments.culqi.secret_key' => 'sk_test_checkout',
+        ]);
     }
 
     /*
@@ -213,6 +218,40 @@ class CheckoutTest extends TestCase
     |--------------------------------------------------------------------------
     */
 
+    public function test_checkout_prefills_and_prioritizes_the_previous_dni(): void
+    {
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $this->cartWith($user, $variant);
+
+        Order::create([
+            'order_number' => 'BRV-DNI-PREVIOUS',
+            'user_id' => $user->id,
+            'status' => OrderStatus::DELIVERED->value,
+            'payment_status' => PaymentStatus::PAID->value,
+            'subtotal' => 100.00,
+            'shipping_total' => 12.00,
+            'discount_total' => 0.00,
+            'total' => 112.00,
+            'cost_total' => 60.00,
+            'currency' => 'PEN',
+            'customer_snapshot' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'identification_type' => 'DNI',
+                'identification_number' => '87654321',
+            ],
+        ]);
+
+        Livewire::test(Checkout::class)
+            ->assertSet('culqiIdentification', '87654321')
+            ->assertSee('DNI del titular')
+            ->assertSee('Obligatorio para Culqi')
+            ->set('culqiIdentification', '12-345 678')
+            ->assertSet('culqiIdentification', '12345678')
+            ->assertSessionHas('checkout_culqi_identification', '12345678');
+    }
+
     public function test_places_order_with_server_side_quote(): void
     {
         config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
@@ -238,11 +277,15 @@ class CheckoutTest extends TestCase
         $this->assertSame(12.00, (float) $order->items->first()->shipping_price);
     }
 
-    public function test_el_checkout_de_invitado_guarda_el_destino_posterior_al_login(): void
+    public function test_el_checkout_de_invitado_muestra_el_formulario_sin_exigir_login(): void
     {
+        $variant = $this->productWithStock();
+        app(CartService::class)->add($variant->id);
+
         $this->get(route('checkout'))
             ->assertOk()
-            ->assertSee('Necesitas una cuenta');
+            ->assertSee('Contacto')
+            ->assertSee('Iniciar sesión');
 
         $this->assertSame(route('checkout'), session('url.intended'));
     }
@@ -1964,10 +2007,10 @@ class CheckoutTest extends TestCase
     }
 
     /**
-     * Ninguna pasarela nace seleccionada. Al elegir Mercado Pago se muestra su
-     * bloque de confianza y los medios que acepta.
+     * Ninguna pasarela nace seleccionada, pero cada opción muestra desde el
+     * inicio su bloque de confianza y los medios que acepta.
      */
-    public function test_mercadopago_solo_se_muestra_al_elegirlo_y_con_sus_medios(): void
+    public function test_las_pasarelas_muestran_sus_medios_desde_el_inicio(): void
     {
         config([
             'payments.default_gateway' => 'mercadopago',
@@ -1984,11 +2027,18 @@ class CheckoutTest extends TestCase
         $address = $this->addressFor($user, $district);
         $this->cartWith($user, $variant);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
-            ->assertSee('Selecciona una pasarela de pago')
-            ->assertDontSee('Continuar a Mercado Pago')
+            ->assertSee('Selecciona la pasarela de pago')
+            ->assertSee('Pago 100% seguro')
+            ->assertSee('American Express')
+            ->assertSee('Yape')
+            ->assertDontSee('Continuar a Mercado Pago');
+
+        $this->assertSame(2, substr_count($component->html(), 'Pago 100% seguro'));
+
+        $component
             ->set('gatewayChoice', 'mercadopago')
             ->assertSet('gatewayChoice', 'mercadopago')
             ->assertSee('Pago 100% seguro')
@@ -1996,6 +2046,8 @@ class CheckoutTest extends TestCase
             ->assertSee('Continuar a Mercado Pago')
             ->assertSee('American Express')
             ->assertDontSee('Pagar con Culqi');
+
+        $this->assertSame(2, substr_count($component->html(), 'Pago 100% seguro'));
     }
 
     /**
@@ -2077,8 +2129,38 @@ class CheckoutTest extends TestCase
         Livewire::actingAs($user)
             ->test(Checkout::class)
             ->set('selectedAddressId', $address->id)
+            ->assertDontSee('name="payment_gateway" value="culqi"', false)
             ->assertDontSee('Pagar con Culqi')
-            ->assertSee('El pago con Culqi no está disponible');
+            ->assertDontSee('Tarjetas, Yape y otros medios disponibles.');
+    }
+
+    public function test_culqi_se_ofrece_a_cualquier_cuenta_con_credenciales(): void
+    {
+        $customer = $this->customer();
+        $variant = $this->productWithStock();
+        $this->cartWith($customer, $variant);
+
+        Livewire::actingAs($customer)
+            ->test(Checkout::class)
+            ->assertSee('Culqi')
+            ->assertViewHas(
+                'availableGateways',
+                fn (array $gateways): bool => array_key_first($gateways) === 'culqi'
+            );
+
+        $otherUser = User::create([
+            'name' => 'Cliente Normal',
+            'email' => 'normal@checkout.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $otherUser->assignRole('Cliente');
+        $this->cartWith($otherUser, $variant);
+
+        Livewire::actingAs($otherUser)
+            ->test(Checkout::class)
+            ->assertSee('Culqi')
+            ->assertDontSee('El pago con Culqi no está disponible');
     }
 
     /**
@@ -2171,6 +2253,56 @@ class CheckoutTest extends TestCase
         $this->assertSame('chr_modal_1', $payment->gateway_transaction_id);
         $this->assertSame(PaymentStatus::PAID->value, $payment->status->value);
         $this->assertSame(OrderStatus::CONFIRMED->value, $order->fresh()->status->value);
+    }
+
+    public function test_cancelar_culqi_conserva_el_carrito_al_elegir_mercadopago(): void
+    {
+        $this->useCulqi();
+        config([
+            'payments.default_gateway' => 'mercadopago',
+            'payments.mercadopago.enabled' => true,
+            'payments.mercadopago.access_token' => 'TEST-access',
+            'payments.mercadopago.public_key' => 'TEST-public',
+            'payments.mercadopago.webhook_secret' => 'test-webhook-secret',
+            'payments.mercadopago.webhook_url' => 'https://brevare.test/webhooks/mercadopago',
+        ]);
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(
+                CulqiResponses::pendingOrder('ord_cancel_restore'),
+                201
+            ),
+        ]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->call('startCulqiCheckout');
+
+        $order = Order::firstOrFail();
+        $cart = $order->cart;
+
+        // Algunos flujos intermedios crean otro carrito vacío. La cancelación
+        // debe devolver la sesión al carrito real del pedido abandonado.
+        $emptyCart = Cart::create(['user_id' => $user->id, 'status' => 'active']);
+        session([CartService::SESSION_KEY => $emptyCart->id]);
+
+        $component->call('cancelCulqiCheckout')
+            ->assertSet('pendingOrderNumber', null)
+            ->assertSet('culqiSession', [])
+            ->set('gatewayChoice', 'mercadopago')
+            ->assertSet('selectedGateway', 'mercadopago');
+
+        $this->assertSame(OrderStatus::CANCELLED, $order->fresh()->status);
+        $this->assertSame(PaymentStatus::EXPIRED, $order->fresh()->payment_status);
+        $this->assertSame('active', $cart->fresh()->status);
+        $this->assertSame($cart->id, session(CartService::SESSION_KEY));
+        $this->assertSame(1, $cart->items()->count());
     }
 
     /**
@@ -2502,7 +2634,8 @@ class CheckoutTest extends TestCase
         $order = Order::firstOrFail();
 
         $this->assertSame(1, (int) SupplierVariant::where('product_variant_id', $variant->id)->firstOrFail()->reserved_stock);
-        $this->assertSame(1, $order->coupon->usedCount());
+        // El cupón solo se consume cuando el pago queda confirmado.
+        $this->assertSame(0, $order->coupon->usedCount());
 
         // Todavía dentro del plazo: el comando no toca lo que puede pagarse.
         $this->artisan('brevare:expire-pending-orders')->assertSuccessful();
@@ -2845,5 +2978,110 @@ class CheckoutTest extends TestCase
             route('checkout', ['pagar' => $pagado->order_number]),
             $html,
         );
+    }
+
+    public function test_permite_pagar_el_envio_contra_entrega_cuando_el_producto_lo_autoriza(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $variant->product->update(['allows_shalom_cod' => true]);
+
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        $component = Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('Pagar al recoger en Shalom')
+            ->set('shippingPaymentMethod', 'shalom_cod')
+            ->assertSee('Total a pagar ahora')
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('shalom_cod', $order->shipping_payment_method);
+        $this->assertSame(12.00, (float) $order->cod_shipping_amount);
+        $this->assertSame(0.00, (float) $order->shipping_total);
+        $this->assertSame(100.00, (float) $order->total);
+        $this->assertSame('shalom_cod', $order->address_snapshot['shipping_payment_method']);
+        $this->assertSame(12.00, (float) $order->address_snapshot['shipping_due_at_pickup']);
+    }
+
+    public function test_un_producto_sin_contra_entrega_fuerza_el_envio_prepagado(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $variant = $this->productWithStock();
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $variant);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->assertSee('Los productos de este carrito requieren que el envío se pague junto con la compra.')
+            ->set('shippingPaymentMethod', 'shalom_cod')
+            ->assertSet('shippingPaymentMethod', 'prepaid')
+            ->call('placeOrder')
+            ->assertHasNoErrors();
+
+        $order = Order::firstOrFail();
+
+        $this->assertSame('prepaid', $order->shipping_payment_method);
+        $this->assertSame(0.00, (float) $order->cod_shipping_amount);
+        $this->assertSame(12.00, (float) $order->shipping_total);
+        $this->assertSame(112.00, (float) $order->total);
+    }
+
+    public function test_un_carrito_mixto_no_ofrece_contra_entrega(): void
+    {
+        config(['payments.default_gateway' => 'manual', 'payments.allow_demo_gateway' => true]);
+
+        $user = $this->customer();
+        $eligible = $this->productWithStock();
+        $eligible->product->update(['allows_shalom_cod' => true]);
+
+        $ordinaryProduct = Product::create([
+            'category_id' => $eligible->product->category_id,
+            'name' => 'Producto con envío prepagado',
+            'slug' => 'producto-envio-prepagado',
+            'status' => true,
+            'allows_shalom_cod' => false,
+        ]);
+
+        $ordinary = ProductVariant::create([
+            'product_id' => $ordinaryProduct->id,
+            'sku' => 'PV-CHK-MIX-2',
+            'sale_price' => 50.00,
+            'cost_price' => 20.00,
+            'is_active' => true,
+        ]);
+
+        SupplierVariant::create([
+            'supplier_id' => $eligible->supplierVariants()->firstOrFail()->supplier_id,
+            'product_variant_id' => $ordinary->id,
+            'cost_price' => 20.00,
+            'shipping_cost' => 5.00,
+            'stock' => 10,
+            'reserved_stock' => 0,
+            'is_active' => true,
+        ]);
+
+        $district = $this->districtWithZoneAndRate();
+        $address = $this->addressFor($user, $district);
+        $this->cartWith($user, $eligible);
+        app(CartService::class)->add($ordinary->id, null, 1);
+
+        Livewire::actingAs($user)
+            ->test(Checkout::class)
+            ->set('selectedAddressId', $address->id)
+            ->set('shippingPaymentMethod', 'shalom_cod')
+            ->assertSet('shippingPaymentMethod', 'prepaid')
+            ->assertDontSee('Pagar al recoger en Shalom');
     }
 }

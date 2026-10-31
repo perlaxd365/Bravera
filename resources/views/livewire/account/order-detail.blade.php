@@ -1,17 +1,17 @@
 <div>
     <a href="{{ route('account.orders') }}"
         class="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900">
-        <flux:icon name="arrow-left" class="size-4" /> Volver a mis pedidos
+        <flux:icon name="arrow-left" class="size-4" /> {{ app()->getLocale() === 'en' ? 'Back to my orders' : 'Volver a mis pedidos' }}
     </a>
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-xl font-bold tracking-tight text-gray-900">Pedido {{ $order->order_number }}</h1>
+        <h1 class="text-xl font-bold tracking-tight text-gray-900">{{ app()->getLocale() === 'en' ? 'Order' : 'Pedido' }} {{ $order->order_number }}</h1>
         {{-- Las etiquetas de estado y la acción van en grupos separados: mezcladas
              en la misma fila, el botón filled se leía como una tercera etiqueta. --}}
         <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap items-center gap-2">
                 <x-brevare.badge :color="$order->status->badgeColor()">{{ $order->status->label() }}</x-brevare.badge>
-                <x-brevare.badge :color="$order->payment_status->badgeColor()">Pago: {{ $order->payment_status->label() }}</x-brevare.badge>
+                <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ app()->getLocale() === 'en' ? 'Payment' : 'Pago' }}: {{ $order->payment_status->label() }}</x-brevare.badge>
             </div>
             @if ($order->isPayable())
                 {{-- El checkout se cierra con el pedido ya creado, así que el pago
@@ -19,7 +19,7 @@
                      comprador tenga que rehacer el carrito. --}}
                 <a href="{{ route('checkout', ['pagar' => $order->order_number]) }}"
                     class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800">
-                    <flux:icon name="credit-card" class="size-4" /> Pagar ahora
+                    <flux:icon name="credit-card" class="size-4" /> {{ app()->getLocale() === 'en' ? 'Pay now' : 'Pagar ahora' }}
                 </a>
             @endif
         </div>
@@ -40,19 +40,19 @@
             <div class="space-y-4 lg:col-span-2">
                 <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                     <header class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
-                        <span class="font-bold text-gray-900">Productos</span>
+                        <span class="font-bold text-gray-900">{{ app()->getLocale() === 'en' ? 'Products' : 'Productos' }}</span>
                         @if ($order->hasCancelledItems())
-                            <x-brevare.badge color="danger">Cancelado: S/ {{ number_format($order->cancelledTotal(), 2) }}</x-brevare.badge>
+                            <x-brevare.badge color="danger">{{ app()->getLocale() === 'en' ? 'Cancelled' : 'Cancelado' }}: {{ $storefront->formatFromPen($order->cancelledTotal()) }}</x-brevare.badge>
                         @endif
                     </header>
                     <div class="responsive-table-scroll" role="region" aria-label="Tabla desplazable horizontalmente" tabindex="0">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                    <th class="px-6 py-3">Producto</th>
-                                    <th class="px-6 py-3 text-center">Cant.</th>
-                                    <th class="px-6 py-3 text-right">Precio</th>
-                                    <th class="px-6 py-3 text-right">Estado</th>
+                                    <th class="px-6 py-3">{{ __('storefront.common.product') }}</th>
+                                    <th class="px-6 py-3 text-center">{{ app()->getLocale() === 'en' ? 'Qty.' : 'Cant.' }}</th>
+                                    <th class="px-6 py-3 text-right">{{ app()->getLocale() === 'en' ? 'Price' : 'Precio' }}</th>
+                                    <th class="px-6 py-3 text-right">{{ app()->getLocale() === 'en' ? 'Status' : 'Estado' }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -79,7 +79,7 @@
                                         </td>
                                         <td class="px-6 py-4 text-center text-gray-900">{{ $item->quantity }}</td>
                                         <td class="px-6 py-4 text-right font-semibold text-gray-900">
-                                            S/ {{ number_format((float) $item->unit_price, 2) }}
+                                            <x-brevare.price :amount="(float) $item->unit_price" size="xs" class="font-semibold text-gray-900" />
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <x-brevare.badge :color="$item->status->badgeColor()">{{ $item->status->label() }}</x-brevare.badge>
@@ -122,46 +122,46 @@
             {{-- Resumen y entrega --}}
             <aside class="space-y-4">
                 <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 class="font-bold text-gray-900">Resumen</h2>
+                    <h2 class="font-bold text-gray-900">{{ __('storefront.cart.summary') }}</h2>
                     <dl class="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-sm">
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Subtotal</dt>
-                            <dd class="text-gray-900">S/ {{ number_format((float) $order->subtotal, 2) }}</dd>
+                            <dt class="text-gray-500">{{ __('storefront.common.subtotal') }}</dt>
+                            <dd class="text-gray-900"><x-brevare.price :amount="(float) $order->subtotal" size="xs" class="font-semibold text-gray-900" /></dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Envío pagado ahora</dt>
-                            <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
+                            <dt class="text-gray-500">{{ __('storefront.checkout.shipping_now') }}</dt>
+                            <dd class="text-gray-900"><x-brevare.price :amount="(float) $order->shipping_total" size="xs" class="font-semibold text-gray-900" /></dd>
                         </div>
                         @if ((float) $order->cod_shipping_amount > 0)
                             <div class="flex justify-between text-emerald-800">
-                                <dt>Envío a pagar en Shalom</dt>
-                                <dd>S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</dd>
+                                <dt>{{ __('storefront.checkout.shipping_at_pickup') }}</dt>
+                                <dd><x-brevare.price :amount="(float) $order->cod_shipping_amount" size="xs" class="font-semibold text-emerald-800" /></dd>
                             </div>
                         @endif
                         @if ($order->delivery_days)
                             <div class="flex justify-between">
-                                <dt class="text-gray-500">Entrega</dt>
+                                <dt class="text-gray-500">{{ __('storefront.checkout.delivery') }}</dt>
                                 <dd class="text-gray-900">
-                                    {{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}
+                                    {{ $order->delivery_days }} {{ app()->getLocale() === 'en' ? ($order->delivery_days === 1 ? 'business day' : 'business days') : ($order->delivery_days === 1 ? 'día hábil' : 'días hábiles') }}
                                 </dd>
                             </div>
                         @endif
                         @if ((float) $order->discount_total > 0)
                             <div class="flex justify-between text-green-700">
                                 <dt>Cupón {{ $order->coupon_code }}</dt>
-                                <dd>- S/ {{ number_format((float) $order->discount_total, 2) }}</dd>
+                                <dd>- <x-brevare.price :amount="(float) $order->discount_total" size="xs" class="font-semibold text-green-700" /></dd>
                             </div>
                         @endif
                     </dl>
                     <div class="mt-4 flex justify-between border-t border-gray-100 pt-4">
-                        <span class="font-bold text-gray-900">Total</span>
-                        <span class="font-extrabold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</span>
+                        <span class="font-bold text-gray-900">{{ __('storefront.common.total') }}</span>
+                        <span class="font-extrabold text-gray-900"><x-brevare.price :amount="(float) $order->total" size="xs" class="font-extrabold text-gray-900" /></span>
                     </div>
                 </section>
 
                 @if (! empty($order->address_snapshot))
                 <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 class="font-bold text-gray-900">Recojo</h2>
+                    <h2 class="font-bold text-gray-900">{{ app()->getLocale() === 'en' ? 'Pickup' : 'Recojo' }}</h2>
                     @php($pickup = $order->address_snapshot['pickup_agency'] ?? null)
                     @if (! empty($pickup))
                         <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
@@ -173,14 +173,14 @@
 
                         @if ($order->payment_status->value === 'paid' && $order->pickup_code)
                             <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
-                                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">Código de recojo</p>
+                                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">{{ app()->getLocale() === 'en' ? 'Pickup code' : 'Código de recojo' }}</p>
                                 <p class="mt-1 text-3xl font-black tracking-[0.3em] text-gray-900">{{ $order->pickup_code }}</p>
-                                <p class="mt-1 text-xs text-gray-500">Preséntalo en la agencia junto con tu DNI.</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ app()->getLocale() === 'en' ? 'Present it at the Shalom office with your ID.' : 'Preséntalo en la agencia junto con tu DNI.' }}</p>
                             </div>
                         @endif
                     @endif
                     <div class="mt-3 space-y-1 text-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección de contacto</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ app()->getLocale() === 'en' ? 'Contact address' : 'Dirección de contacto' }}</p>
                         <p class="font-semibold text-gray-900">{{ $order->address_snapshot['full_name'] ?? '' }}</p>
                         <p class="text-gray-500">{{ $order->address_snapshot['address'] ?? '' }}</p>
                         <p class="text-gray-500">{{ $order->address_snapshot['location_label'] ?? '' }}</p>

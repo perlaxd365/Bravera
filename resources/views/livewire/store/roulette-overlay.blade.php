@@ -30,9 +30,71 @@
         open: false,
         rotation: 0,
         spinning: false,
+        autoMinimizeTimer: null,
+        minimizing: false,
         wheelVisible: {{ $showPrizeLauncher ? 'false' : 'true' }},
         reveal: {{ $showPrizeLauncher ? 'true' : 'false' }},
         segments: @js($segments),
+        clearAutoMinimize() {
+            if (this.autoMinimizeTimer) {
+                clearTimeout(this.autoMinimizeTimer);
+                this.autoMinimizeTimer = null;
+            }
+        },
+        openWheel() {
+            this.clearAutoMinimize();
+            this.minimizing = false;
+            this.open = true;
+        },
+        closeWheel(remember = false) {
+            this.clearAutoMinimize();
+            this.minimizing = false;
+            this.open = false;
+            if (remember) sessionStorage.setItem('brevare-roulette-dismissed', '1');
+        },
+        minimizeWheel(remember = false) {
+            if (!this.open || this.minimizing) return;
+
+            this.clearAutoMinimize();
+            if (remember) sessionStorage.setItem('brevare-roulette-dismissed', '1');
+
+            const panel = this.$refs.roulettePanel;
+            const launcher = this.$refs.rouletteLauncher;
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!panel || !launcher || reducedMotion) {
+                this.open = false;
+                return;
+            }
+
+            const panelRect = panel.getBoundingClientRect();
+            const launcherDisplay = launcher.style.display;
+            launcher.style.display = 'flex';
+            const launcherRect = launcher.getBoundingClientRect();
+            launcher.style.display = launcherDisplay;
+            const panelCenterX = panelRect.left + (panelRect.width / 2);
+            const panelCenterY = panelRect.top + (panelRect.height / 2);
+            const launcherCenterX = launcherRect.left + (launcherRect.width / 2);
+            const launcherCenterY = launcherRect.top + (launcherRect.height / 2);
+            const scale = Math.min(
+                launcherRect.width / panelRect.width,
+                launcherRect.height / panelRect.height
+            );
+
+            panel.style.setProperty('--roulette-minimize-x', `${launcherCenterX - panelCenterX}px`);
+            panel.style.setProperty('--roulette-minimize-y', `${launcherCenterY - panelCenterY}px`);
+            panel.style.setProperty('--roulette-minimize-scale', Math.max(.06, scale).toFixed(4));
+            this.minimizing = true;
+            setTimeout(() => {
+                this.open = false;
+                setTimeout(() => {
+                    this.minimizing = false;
+                    panel.style.removeProperty('--roulette-minimize-x');
+                    panel.style.removeProperty('--roulette-minimize-y');
+                    panel.style.removeProperty('--roulette-minimize-scale');
+                }, 280);
+            }, 380);
+        },
         confetti() {
             if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
             const root = this.$refs.confetti;
@@ -50,6 +112,8 @@
             }
         },
         startSpin(index, result) {
+            this.clearAutoMinimize();
+            this.minimizing = false;
             this.reveal = false;
             this.spinning = true;
             this.wheelVisible = true;
@@ -74,7 +138,10 @@
         },
         init() {
             setTimeout(() => {
-                if (sessionStorage.getItem('brevare-roulette-dismissed') !== '1') this.open = true;
+                if (sessionStorage.getItem('brevare-roulette-dismissed') !== '1') {
+                    this.open = true;
+                    this.autoMinimizeTimer = setTimeout(() => this.minimizeWheel(true), 2000);
+                }
             }, 650);
         }
     }"
@@ -86,7 +153,7 @@
     x-on:roulette-require-login.window="window.location.href = $event.detail.url">
 
     @if ($showPrizeLauncher)
-        <button type="button" x-show="!open" @click="open = true"
+        <button type="button" x-show="!open" x-ref="rouletteLauncher" @click="openWheel()"
             class="roulette-floating-prize group fixed bottom-24 left-3 z-[75] flex size-14 flex-col items-center justify-center rounded-full border-2 border-stone-950/75 bg-amber-300 text-stone-950 shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-[4.5rem]"
             aria-label="Ver mi premio de {{ $winningPercent }}% de descuento">
             <span class="roulette-prize-launcher-number leading-none">{{ $winningPercent }}<span class="text-[.52em]">%</span></span>
@@ -94,7 +161,7 @@
             <flux:icon name="sparkles" class="absolute -right-1 -top-1 size-4 rounded-full bg-stone-950 p-0.5 text-amber-300" />
         </button>
     @elseif ($eligibility['allowed'])
-        <button type="button" x-show="!open" @click="open = true"
+        <button type="button" x-show="!open" x-ref="rouletteLauncher" @click="openWheel()"
             class="roulette-floating-cta group fixed bottom-24 left-3 z-[75] flex size-12 flex-col items-center justify-center gap-0.5 rounded-full border border-amber-300/55 bg-[#1b1713] text-white shadow-2xl shadow-amber-950/35 sm:bottom-6 sm:left-5 sm:size-16"
             aria-label="Girar y ganar un descuento gratis">
             <span class="roulette-cta-spark relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-amber-100/60 bg-amber-300 text-amber-950 shadow-[inset_0_-3px_0_rgba(120,53,15,.18)] sm:size-11">
@@ -110,15 +177,17 @@
     @endif
 
     <div x-show="open" x-cloak x-transition.opacity.duration.250ms class="roulette-overlay-backdrop"
+        :class="minimizing ? 'roulette-overlay-backdrop--minimizing' : ''"
         role="dialog" aria-modal="true"
         :aria-labelledby="wheelVisible ? 'roulette-overlay-title' : 'roulette-overlay-result-title'"
-        @keydown.escape.window="open = false"
-        @click.self="open = false">
-        <div class="roulette-overlay-panel relative overflow-hidden rounded-[1.75rem] border border-amber-200/80 bg-[#fffdf8] p-4 sm:rounded-[2.25rem] sm:p-6"
-            :class="wheelVisible ? '' : 'roulette-overlay-panel--result'">
+        @keydown.escape.window="closeWheel()"
+        @click.self="closeWheel()">
+        <div x-ref="roulettePanel"
+            class="roulette-overlay-panel relative overflow-hidden rounded-[1.75rem] border border-amber-200/80 bg-[#fffdf8] p-4 sm:rounded-[2.25rem] sm:p-6"
+            :class="{ 'roulette-overlay-panel--result': !wheelVisible, 'roulette-overlay-panel--minimizing': minimizing }">
             <div x-ref="confetti" class="pointer-events-none absolute inset-0 z-40 overflow-hidden"></div>
 
-            <button type="button" @click="open = false; sessionStorage.setItem('brevare-roulette-dismissed', '1')"
+            <button type="button" @click="closeWheel(true)"
                 class="roulette-close-button absolute right-3 top-3 z-50 flex size-10 items-center justify-center rounded-full border border-stone-200/80 bg-white/90 text-stone-600 shadow-[0_8px_24px_-14px_rgba(41,37,36,.8)] backdrop-blur-sm hover:border-amber-300 hover:bg-amber-50 hover:text-stone-950"
                 aria-label="Cerrar ruleta">
                 <flux:icon name="x-mark" class="size-5" />
@@ -182,7 +251,7 @@
                     <div class="roulette-spin-shell absolute left-1/2 top-1/2 z-20 flex items-center justify-center rounded-full">
                         <div class="roulette-center-button flex items-center justify-center rounded-full border-[5px] border-[#fff5d4] bg-stone-950">
                             <button type="button" wire:click="spin"
-                                x-on:click="if ({{ $eligibility['allowed'] ? 'true' : 'false' }} && !spinning) { $nextTick(() => {}) }"
+                                x-on:click="clearAutoMinimize()"
                                 wire:loading.attr="disabled" wire:target="spin"
                                 @disabled(! $eligibility['allowed'])
                                 x-bind:disabled="spinning || {{ $eligibility['allowed'] ? 'false' : 'true' }}"
@@ -350,6 +419,15 @@
             from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.975); }
             to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
+        @keyframes roulette-panel-collapse {
+            from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+            to {
+                opacity: 0;
+                transform:
+                    translate3d(var(--roulette-minimize-x, 0), var(--roulette-minimize-y, 0), 0)
+                    scale(var(--roulette-minimize-scale, .08));
+            }
+        }
         @keyframes roulette-halo-turn {
             to { transform: rotate(360deg); }
         }
@@ -500,6 +578,14 @@
                 rgba(17, 14, 11, .86);
             backdrop-filter: blur(12px) saturate(.8);
         }
+        .roulette-overlay-backdrop--minimizing {
+            opacity: 0;
+            pointer-events: none;
+            transition:
+                opacity .36s cubic-bezier(.4, 0, .2, 1),
+                backdrop-filter .36s cubic-bezier(.4, 0, .2, 1);
+            backdrop-filter: blur(0) saturate(1);
+        }
         .roulette-overlay-panel {
             isolation: isolate;
             width: min(900px, calc(100vw - 24px));
@@ -521,6 +607,11 @@
             animation: roulette-panel-in .55s cubic-bezier(.16, 1, .3, 1) both;
             scrollbar-color: rgba(180, 83, 9, .34) transparent;
             scrollbar-width: thin;
+        }
+        .roulette-overlay-panel.roulette-overlay-panel--minimizing {
+            pointer-events: none;
+            will-change: transform, opacity;
+            animation: roulette-panel-collapse .38s cubic-bezier(.4, 0, .2, 1) both;
         }
         .roulette-overlay-panel::before {
             content: '';

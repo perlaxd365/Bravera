@@ -12,10 +12,13 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\CourseAsset;
+use App\Models\CustomerAddress;
+use App\Models\Location;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ShalomAgency;
 use App\Models\User;
 use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Product\Services\CourseProductService;
@@ -31,14 +34,33 @@ class CourseCheckoutTest extends TestCase
 
     public function test_course_page_hides_internal_stock_without_embedding_legal_terms(): void
     {
-        [$product] = $this->courseProduct();
+        [$product, $variant] = $this->courseProduct();
+        $variant->update([
+            'compare_price' => 198,
+            'discount_percent' => 50,
+        ]);
+        $this->assertSame('198.00', (string) $variant->fresh()->compare_price);
 
-        Livewire::test(ProductDetail::class, ['slug' => $product->slug])
+        $component = Livewire::test(ProductDetail::class, ['slug' => $product->slug]);
+        $component
             ->assertSee('Producto digital · Disponible en tu cuenta')
+            ->assertSee('Acceso de por vida')
+            ->assertSee('Experiencia digital')
+            ->assertSee('Precio de lanzamiento')
+            ->assertSee('-50%')
+            ->assertSee('Acceso digital de por vida')
+            ->assertSee('Agregar curso al carrito')
+            ->assertDontSee('Cantidad exacta')
             ->assertDontSee('1000000')
             ->assertDontSee('Producto digital sin devolución tras la entrega.')
             ->assertDontSee('Ver condiciones')
             ->assertSee('Acceso digital');
+
+        $html = $component->html();
+        $this->assertLessThan(
+            strpos($html, 'Experiencia digital'),
+            strpos($html, 'Precio del curso'),
+        );
 
         $this->get(route('terms'))
             ->assertOk()
@@ -48,6 +70,22 @@ class CourseCheckoutTest extends TestCase
         $this->get(route('returns'))
             ->assertOk()
             ->assertSee('no admiten cambios ni devoluciones');
+    }
+
+    public function test_course_variant_keeps_its_reference_price_when_the_product_is_updated(): void
+    {
+        [$product, $variant] = $this->courseProduct();
+        $variant->update([
+            'compare_price' => 198,
+            'discount_percent' => 50,
+        ]);
+
+        $product->update(['course_price' => 79.20]);
+        $updated = app(CourseProductService::class)->ensureDigitalVariant($product->fresh());
+
+        $this->assertSame('198.00', (string) $updated->compare_price);
+        $this->assertSame(60.0, (float) $updated->discount_percent);
+        $this->assertSame('79.20', (string) $updated->sale_price);
     }
 
     public function test_course_video_is_rendered_between_description_and_specifications(): void
@@ -155,11 +193,49 @@ class CourseCheckoutTest extends TestCase
 
         $user = User::factory()->create();
         [$product, $variant] = $this->courseProduct();
+        $department = Location::create([
+            'ubigeo' => '150000',
+            'name' => 'Lima',
+            'level' => 'department',
+        ]);
+        $province = Location::create([
+            'ubigeo' => '150100',
+            'name' => 'Lima',
+            'level' => 'province',
+            'parent_id' => $department->id,
+        ]);
+        $district = Location::create([
+            'ubigeo' => '150101',
+            'name' => 'Miraflores',
+            'level' => 'district',
+            'parent_id' => $province->id,
+        ]);
+        CustomerAddress::create([
+            'user_id' => $user->id,
+            'full_name' => $user->name,
+            'phone' => '999888777',
+            'location_id' => $district->id,
+            'address' => 'Av. Siempre Viva 742',
+            'is_default' => true,
+        ]);
+        ShalomAgency::create([
+            'code' => 'SH-COURSE-TEST',
+            'department' => 'LIMA',
+            'province' => 'LIMA',
+            'district' => 'MIRAFLORES',
+            'address' => 'AV. LARCO 123',
+            'modality' => 'Regular',
+            'active' => true,
+        ]);
+
         $this->actingAs($user);
         app(CartService::class)->add($variant->id);
 
         Livewire::test(Checkout::class)
             ->assertSee('Compra digital')
+            ->assertDontSee('Recojo en agencia Shalom')
+            ->assertDontSee('Envío pagado ahora')
+            ->assertDontSee('Envío a pagar en Shalom')
             ->call('placeOrder')
             ->assertHasNoErrors();
 

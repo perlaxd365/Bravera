@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureVerifiedIfAuthenticated;
 use App\Http\Middleware\ForceCanonicalHost;
+use App\Http\Middleware\SetStorefrontLocale;
 use App\Http\Middleware\TrackStorefrontView;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -29,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(ForceCanonicalHost::class);
-        $middleware->web(append: [TrackStorefrontView::class]);
+        $middleware->web(append: [SetStorefrontLocale::class, TrackStorefrontView::class]);
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,

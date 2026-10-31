@@ -5,6 +5,9 @@ namespace App\Livewire\Store;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Services\CartService;
+use App\Services\MetaConversionsService;
+use App\Support\Seo\CatalogLinks;
+use App\Support\Seo\StructuredData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -44,6 +47,8 @@ class ProductDetail extends Component
             ->with([
                 'brand',
                 'category',
+                'translations',
+                'courseAssets',
                 'variants.images',
                 'variants.attributeValues.attribute',
                 'variants.attributeValues.value',
@@ -67,22 +72,20 @@ class ProductDetail extends Component
             }
         }
 
-        // Si no se pidió una variante concreta, inicia en la primera combinación
-        // comprable para que el cliente pueda agregarla sin tener que descubrir
-        // primero que debe seleccionar cada atributo.
+        // Si solo existe una combinación comprable, se selecciona para que el
+        // cliente pueda comprar directo. Con varias tallas/alturas debe elegir.
         if ($this->selectedVariantId === null) {
-            $firstAvailableVariant = $this->product->variants
+            $availableVariants = $this->product->variants
                 ->filter(fn ($variant) => $variant->is_active
-                    && $variant->attributeValues->isNotEmpty()
                     && $variant->supplierVariants->contains(
                         fn ($supplier) => $supplier->is_active && $supplier->availableStock() > 0
                     ))
-                ->sortByDesc('is_default')
-                ->first();
+                ->values();
 
-            if ($firstAvailableVariant) {
-                $this->selectedVariantId = (int) $firstAvailableVariant->id;
-                $this->selectedAttributes = $firstAvailableVariant->attributeValues
+            if ($availableVariants->count() === 1) {
+                $onlyVariant = $availableVariants->first();
+                $this->selectedVariantId = (int) $onlyVariant->id;
+                $this->selectedAttributes = $onlyVariant->attributeValues
                     ->mapWithKeys(fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id])
                     ->all();
                 $this->resolveSupplierForVariant();
@@ -90,6 +93,10 @@ class ProductDetail extends Component
         }
 
         $this->recordRecentView();
+        $this->dispatch('brevare-meta-event', [
+            'name' => 'ViewContent',
+            'data' => $this->metaViewContentData(),
+        ]);
     }
 
     /**
@@ -267,6 +274,20 @@ class ProductDetail extends Component
             ->contains(fn ($variant) => $variant->attributeValues->isNotEmpty());
     }
 
+    private function metaViewContentData(): array
+    {
+        $variant = $this->product->variants->firstWhere('id', $this->selectedVariantId);
+        $price = $variant?->sale_price ?? $this->product->minPrice() ?? 0;
+
+        return [
+            'content_ids' => [(string) ($variant?->sku ?? $this->product->id)],
+            'content_name' => $this->product->name,
+            'content_type' => 'product',
+            'value' => round((float) $price, 2),
+            'currency' => 'PEN',
+        ];
+    }
+
     public function addToCart(CartService $cart): void
     {
         $rules = [
@@ -294,6 +315,34 @@ class ProductDetail extends Component
             );
 
             $item->loadMissing(['variant.product', 'variant.images']);
+
+            $metaData = [
+                'content_ids' => [(string) ($item->variant?->sku ?? $item->product_variant_id)],
+                'content_name' => $item->variant?->product?->name ?? $this->product->name,
+                'content_type' => 'product',
+                'value' => round((float) $item->unit_price * (int) $item->quantity, 2),
+                'currency' => 'PEN',
+                'quantity' => (int) $item->quantity,
+                'contents' => [[
+                    'id' => (string) ($item->variant?->sku ?? $item->product_variant_id),
+                    'quantity' => (int) $item->quantity,
+                    'item_price' => round((float) $item->unit_price, 2),
+                ]],
+            ];
+            $eventId = implode('_', [
+                'add_to_cart',
+                $item->cart_id,
+                $item->id,
+                $item->quantity,
+                $item->updated_at?->timestamp,
+            ]);
+
+            $this->dispatch('brevare-meta-event', [
+                'name' => 'AddToCart',
+                'data' => $metaData,
+                'event_id' => $eventId,
+            ]);
+            app(MetaConversionsService::class)->track('AddToCart', $eventId, $metaData);
 
             $thumb = $item->variant?->images->firstWhere('is_primary', true)
                 ?? $item->variant?->images->first();
@@ -405,11 +454,15 @@ class ProductDetail extends Component
         $schemaVariant = $this->selectedVariantId
             ? $variants->firstWhere('id', $this->selectedVariantId)
             : $previewVariant;
-        $seoTitle = $this->product->seo_title ?: $this->product->name.' | Brevare';
-        $seoDescription = $this->product->seo_description
-            ?: ($this->product->short_description ?: Str::limit(strip_tags((string) $this->product->description), 160));
-        $seoDescription = $seoDescription ?: 'Compra '.$this->product->name.' en Brevare.';
-        $seoImage = $this->product->coverImage();
+        $localizedName = $this->product->localized('name') ?? $this->product->name;
+        $seoTitle = $this->product->localized('seo_title')
+            ?: $localizedName.' | Brevare';
+        $seoDescription = $this->product->localized('seo_description')
+            ?: ($this->product->localized('short_description')
+                ?: Str::limit(strip_tags((string) $this->product->localized('description')), 160));
+        $seoDescription = $seoDescription ?: (app()->getLocale() === 'en'
+            ? 'Shop '.$localizedName.' at Brevare.'
+            : 'Compra '.$localizedName.' en Brevare.');
         $canonicalUrl = route('store.product', ['slug' => $this->product->slug]);
         if ($schemaVariant && request()->query('variant') === $schemaVariant->sku) {
             $canonicalUrl .= '?variant='.rawurlencode($schemaVariant->sku);
@@ -419,57 +472,58 @@ class ProductDetail extends Component
             ->flatMap(fn ($variant) => $variant->images
                 ->where('is_active', true)
                 ->map(fn ($image) => $image->imageUrl()))
-            ->merge([$seoImage])
             ->filter(fn ($image) => is_string($image) && filter_var($image, FILTER_VALIDATE_URL))
             ->unique()
             ->take(10)
             ->values()
             ->all();
 
-        $productStructuredData = [
-            '@context' => 'https://schema.org',
-            '@type' => 'Product',
-            'name' => $this->product->name,
-            'description' => $seoDescription,
+        $seoImage = $productImages[0] ?? asset('favicon-192.png');
+
+        $breadcrumbs = [
+            ['name' => __('storefront.common.home'), 'url' => route('home')],
+            ['name' => __('storefront.common.catalog'), 'url' => route('store.search')],
+        ];
+
+        if ($this->product->category?->parent) {
+            $breadcrumbs[] = [
+                'name' => CatalogLinks::label($this->product->category->parent),
+                'url' => route('store.category', ['path' => $this->product->category->parent->path]),
+            ];
+        }
+
+        if ($this->product->category) {
+            $breadcrumbs[] = [
+                'name' => CatalogLinks::label($this->product->category),
+                'url' => route('store.category', ['path' => $this->product->category->path]),
+            ];
+        }
+
+        $breadcrumbs[] = [
+            'name' => $localizedName,
             'url' => $canonicalUrl,
         ];
 
-        if ($productImages !== []) {
-            $productStructuredData['image'] = $productImages;
-        }
-
-        if ($this->product->category?->name) {
-            $productStructuredData['category'] = $this->product->category->name;
-        }
-
-        if ($this->product->brand?->name) {
-            $productStructuredData['brand'] = ['@type' => 'Brand', 'name' => $this->product->brand->name];
-        }
-
-        if ($schemaVariant) {
-            $productStructuredData['sku'] = $schemaVariant->sku;
-            $productStructuredData['offers'] = [
-                '@type' => 'Offer',
-                'url' => $canonicalUrl,
-                'priceCurrency' => 'PEN',
-                'price' => number_format((float) $schemaVariant->sale_price, 2, '.', ''),
-                'availability' => $schemaVariant->total_available > 0
-                    ? 'https://schema.org/InStock'
-                    : 'https://schema.org/OutOfStock',
-                'itemCondition' => 'https://schema.org/NewCondition',
-                'seller' => ['@type' => 'Organization', 'name' => 'Brevare'],
-            ];
-        }
-
-        if ($reviewCount > 0 && $reviewAverage !== null) {
-            $productStructuredData['aggregateRating'] = [
-                '@type' => 'AggregateRating',
-                'ratingValue' => number_format((float) $reviewAverage, 1, '.', ''),
-                'reviewCount' => $reviewCount,
-                'bestRating' => 5,
-                'worstRating' => 1,
-            ];
-        }
+        $breadcrumbUrl = $canonicalUrl.'#breadcrumb';
+        $breadcrumbStructuredData = StructuredData::breadcrumbs($breadcrumbs, $breadcrumbUrl);
+        $productStructuredData = StructuredData::product(
+            $this->product,
+            $schemaVariant,
+            $canonicalUrl,
+            $productImages,
+            $reviewCount,
+            $reviewAverage,
+        );
+        $pageStructuredData = [
+            StructuredData::webPage(
+                'ItemPage',
+                $canonicalUrl,
+                $seoTitle,
+                $seoDescription,
+                $breadcrumbUrl,
+                $canonicalUrl.'#product',
+            ),
+        ];
 
         return view('livewire.store.product-detail', compact(
             'variants',
@@ -493,6 +547,8 @@ class ProductDetail extends Component
             'seoDescription' => $seoDescription,
             'seoImage' => $seoImage,
             'canonicalUrl' => $canonicalUrl,
+            'breadcrumbStructuredData' => $breadcrumbStructuredData,
+            'pageStructuredData' => $pageStructuredData,
             'productStructuredData' => $productStructuredData,
         ]);
     }
@@ -510,7 +566,7 @@ class ProductDetail extends Component
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants.supplier', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'translations', 'variants.images', 'variants.supplierVariants.supplier', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->where('id', '!=', $this->product->id)
@@ -548,7 +604,7 @@ class ProductDetail extends Component
         $products = Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants.supplier', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'translations', 'variants.images', 'variants.supplierVariants.supplier', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereIn('id', $list)

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Modules\Ordering\Data\CheckoutData;
+use App\Support\Localization\StorefrontContext;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -24,6 +25,7 @@ class OrderService
     public function createFromCheckout(CheckoutData $data, ?string $paymentIntent = null): Order
     {
         return DB::transaction(function () use ($data, $paymentIntent) {
+            $storefront = StorefrontContext::current();
             $order = Order::create([
                 'cart_id' => $data->cart->id,
                 'order_number' => $this->orderNumberGenerator->next(),
@@ -50,6 +52,11 @@ class OrderService
                     'meta_client_ip' => request()->ip(),
                     'meta_client_user_agent' => request()->userAgent(),
                     'meta_event_source_url' => request()->fullUrl(),
+                    'storefront_country' => $storefront->countryCode,
+                    'storefront_locale' => $storefront->locale,
+                    'display_currency' => $storefront->currency,
+                    'exchange_rate' => $storefront->exchangeRate,
+                    'display_total' => $storefront->displayAmount((float) $data->total),
                 ],
                 'address_snapshot' => $data->address ? [
                     'full_name' => $data->address->full_name,
@@ -63,6 +70,9 @@ class OrderService
                     'pickup_agency' => $data->pickupAgency,
                 ] : null,
                 'currency' => 'PEN',
+                'display_currency' => $storefront->currency,
+                'exchange_rate' => $storefront->exchangeRate,
+                'display_total' => $storefront->displayAmount((float) $data->total),
                 'notes' => $data->notes,
             ]);
 
@@ -88,7 +98,9 @@ class OrderService
                 'product_variant_id' => $variant?->id,
                 'supplier_id' => $supplierVariant?->supplier_id,
                 'supplier_variant_id' => $supplierVariant?->id,
-                'product_name' => $variant?->product?->name ?? 'Producto',
+                'product_name' => $variant?->product?->localized('name')
+                    ?? $variant?->product?->name
+                    ?? 'Producto',
                 'variant_sku' => $variant?->sku,
                 'variant_attributes' => $this->variantAttributes($variant),
                 'supplier_name' => $supplierVariant?->supplier?->business_name,

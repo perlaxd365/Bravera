@@ -1,7 +1,7 @@
 <x-mail::message>
 # Verifica tu correo, {{ $user->name }}!
 
-Gracias por crear tu cuenta en **Brevare**. Para activar tu cuenta ingresa el siguiente código de verificación:
+Usa este código para verificar de forma segura tu correo en **Brevare**:
 
 <x-mail::panel>
 # {{ $code }}

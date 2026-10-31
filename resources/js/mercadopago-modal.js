@@ -8,6 +8,7 @@ let brickLayoutObserver = null;
 let brickDomObserver = null;
 
 const byId = (id) => document.getElementById(id);
+const isEnglishPage = () => document.documentElement.lang.startsWith('en');
 
 const loadSdk = () => {
     if (window.MercadoPago) {
@@ -27,11 +28,11 @@ const loadSdk = () => {
         script.addEventListener('load', () => {
             window.MercadoPago
                 ? resolve(window.MercadoPago)
-                : reject(new Error('El SDK de Mercado Pago no expuso el objeto global.'));
+                : reject(new Error(isEnglishPage() ? 'Mercado Pago did not expose its SDK.' : 'El SDK de Mercado Pago no expuso el objeto global.'));
         }, { once: true });
 
         script.addEventListener('error', () => {
-            reject(new Error('No pudimos cargar el SDK de Mercado Pago. Revisa tu conexión o el bloqueador de anuncios.'));
+            reject(new Error(isEnglishPage() ? 'We could not load the Mercado Pago SDK. Check your connection or ad blocker.' : 'No pudimos cargar el SDK de Mercado Pago. Revisa tu conexión o el bloqueador de anuncios.'));
         }, { once: true });
 
         if (!existing) {
@@ -43,7 +44,7 @@ const loadSdk = () => {
 
         window.setTimeout(() => {
             if (!window.MercadoPago) {
-                reject(new Error('El SDK de Mercado Pago tardó demasiado en cargar.'));
+                reject(new Error(isEnglishPage() ? 'The Mercado Pago SDK took too long to load.' : 'El SDK de Mercado Pago tardó demasiado en cargar.'));
             }
         }, 12000);
     });
@@ -306,18 +307,18 @@ const submitBrick = (formData) => new Promise((resolve) => {
     const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
 
     if (!component) {
-        setError('No pudimos conectar el pago con el checkout. Recarga la página.');
+        setError(isEnglishPage() ? 'We could not connect the payment to checkout. Reload the page.' : 'No pudimos conectar el pago con el checkout. Recarga la página.');
         resolve();
         return;
     }
 
     setError('');
-    setResult('Procesando tu pago de forma segura…');
+    setResult(isEnglishPage() ? 'Processing your payment securely…' : 'Procesando tu pago de forma segura…');
 
     component.call('payMercadoPagoBrick', formData)
         .catch((error) => {
             console.error('[Mercado Pago] fallo al enviar el pago:', error);
-            setResult('No pudimos procesar el pago. Revisa tu conexión e inténtalo de nuevo.', true);
+            setResult(isEnglishPage() ? 'We could not process the payment. Check your connection and try again.' : 'No pudimos procesar el pago. Revisa tu conexión e inténtalo de nuevo.', true);
         })
         .finally(() => resolve());
 });
@@ -346,6 +347,7 @@ const mountBrick = async () => {
     if (brandBadge) {
         brandBadge.hidden = true;
     }
+    const isEnglish = document.documentElement.lang.startsWith('en');
 
     try {
         await unmountBrick();
@@ -355,6 +357,7 @@ const mountBrick = async () => {
         const publicKey = await loadPublicKey();
         const mp = new MercadoPagoCtor(publicKey);
         const bricks = mp.bricks();
+        const paymentAmount = Number(modal.dataset.amount || 0).toFixed(2);
 
         const initialization = {
             amount: Number(modal.dataset.amount || 0),
@@ -392,16 +395,16 @@ const mountBrick = async () => {
                         },
                     },
                     texts: {
-                        formTitle: 'Datos de la tarjeta',
-                        cardNumber: { label: 'Número de tarjeta' },
-                        expirationDate: { label: 'Vencimiento' },
-                        securityCode: { label: 'Código de seguridad' },
-                        cardholderName: { label: 'Nombre del titular' },
-                        cardholderIdentification: { label: 'DNI del titular' },
-                        installmentsSectionTitle: 'Cuotas',
-                        selectInstallments: 'Número de cuotas',
-                        selectIssuerBank: 'Banco emisor',
-                        formSubmit: `Pagar S/ ${Number(modal.dataset.amount || 0).toFixed(2)}`,
+                        formTitle: isEnglish ? 'Card details' : 'Datos de la tarjeta',
+                        cardNumber: { label: isEnglish ? 'Card number' : 'Número de tarjeta' },
+                        expirationDate: { label: isEnglish ? 'Expiration date' : 'Vencimiento' },
+                        securityCode: { label: isEnglish ? 'Security code' : 'Código de seguridad' },
+                        cardholderName: { label: isEnglish ? 'Cardholder name' : 'Nombre del titular' },
+                        cardholderIdentification: { label: isEnglish ? 'Cardholder ID' : 'DNI del titular' },
+                        installmentsSectionTitle: isEnglish ? 'Installments' : 'Cuotas',
+                        selectInstallments: isEnglish ? 'Number of installments' : 'Número de cuotas',
+                        selectIssuerBank: isEnglish ? 'Issuing bank' : 'Banco emisor',
+                        formSubmit: isEnglish ? `Pay S/ ${paymentAmount}` : `Pagar S/ ${paymentAmount}`,
                     },
                 },
                 paymentMethods: {
@@ -430,7 +433,7 @@ const mountBrick = async () => {
                 onError: (error) => {
                     setLoading(false);
                     console.error('[Mercado Pago] error del formulario:', error);
-                    setError('No pudimos mostrar el formulario de tarjeta. Revisa tu conexión e inténtalo otra vez.');
+                    setError(isEnglish ? 'We could not display the card form. Check your connection and try again.' : 'No pudimos mostrar el formulario de tarjeta. Revisa tu conexión e inténtalo otra vez.');
                 },
                 onBinChange: (bin) => setBrandBadge(brandFromBin(bin)),
                 onSubmit: submitBrick,
@@ -444,12 +447,12 @@ const mountBrick = async () => {
 
             if (loading && !loading.hidden) {
                 setLoading(false);
-                setError('El formulario de pago tardó demasiado en cargar. Cierra y vuelve a intentarlo.');
+                setError(isEnglish ? 'The payment form took too long to load. Close it and try again.' : 'El formulario de pago tardó demasiado en cargar. Cierra y vuelve a intentarlo.');
             }
         }, 15000);
     } catch (error) {
         setLoading(false);
-        setError(error.message || 'No pudimos iniciar el formulario de Mercado Pago.');
+        setError(error.message || (isEnglish ? 'We could not start the Mercado Pago form.' : 'No pudimos iniciar el formulario de Mercado Pago.'));
     } finally {
         mountingBrick = false;
 
@@ -526,7 +529,7 @@ const init = () => {
             return;
         }
 
-        setError(payload.message || 'No pudimos procesar el pago. Inténtalo de nuevo.');
+        setError(payload.message || (isEnglishPage() ? 'We could not process the payment. Please try again.' : 'No pudimos procesar el pago. Inténtalo de nuevo.'));
         setResult('');
         remountBrick();
 

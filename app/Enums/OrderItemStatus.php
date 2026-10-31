@@ -10,6 +10,14 @@ enum OrderItemStatus: string
 
     public function label(): string
     {
+        if (app()->getLocale() === 'en') {
+            return match ($this) {
+                self::ACTIVE => 'Active',
+                self::CANCELLED => 'Cancelled',
+                self::REFUNDED => 'Refunded',
+            };
+        }
+
         return match ($this) {
             self::ACTIVE => 'Activo',
             self::CANCELLED => 'Cancelado',

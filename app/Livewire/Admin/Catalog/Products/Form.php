@@ -18,6 +18,7 @@ use App\Modules\Product\Repositories\ProductRepository;
 use App\Modules\Product\Services\CourseProductService;
 use App\Modules\Product\Services\ProductReadinessService;
 use App\Modules\Product\Services\ProductService;
+use App\Modules\Product\Services\ProductTranslationService;
 use App\Modules\Product\Services\ProductVariantService;
 use App\Modules\Product\Services\SupplierVariantService;
 use App\Services\CloudinaryImageService;
@@ -84,6 +85,8 @@ class Form extends Component
 
     public string $courseAssetUrl = '';
 
+    public string $courseAssetLocale = 'es';
+
     /**
      * Configuración del anuncio de Meta para este producto.
      */
@@ -131,6 +134,8 @@ class Form extends Component
      */
     protected ProductService $service;
 
+    protected ProductTranslationService $translationService;
+
     protected ProductReadinessService $readiness;
 
     /**
@@ -151,6 +156,7 @@ class Form extends Component
     public function boot(
         ProductRepository $repository,
         ProductService $service,
+        ProductTranslationService $translationService,
         ProductReadinessService $readiness,
         ProductVariantService $variantService,
         SupplierVariantService $supplierVariantService,
@@ -159,6 +165,8 @@ class Form extends Component
         $this->repository = $repository;
 
         $this->service = $service;
+
+        $this->translationService = $translationService;
 
         $this->readiness = $readiness;
 
@@ -191,6 +199,7 @@ class Form extends Component
             'courseFile',
             'courseAssetTitle',
             'courseAssetUrl',
+            'courseAssetLocale',
         ]);
 
         $this->resetMetaForm();
@@ -313,12 +322,14 @@ class Form extends Component
                 $product,
                 $this->form->toDto()
             );
+            $this->translationService->sync($product->fresh(), $this->form->translations);
 
             $message = 'Producto actualizado correctamente.';
         } else {
             $product = $this->service->create(
                 $this->form->toDto()
             );
+            $this->translationService->sync($product, $this->form->translations);
 
             /*
              * Cargamos el ID del producto recién creado.
@@ -365,10 +376,12 @@ class Form extends Component
         $this->validate([
             'courseAssetTitle' => ['required', 'string', 'max:120'],
             'courseFile' => ['required', 'file', 'max:51200'],
+            'courseAssetLocale' => ['required', 'in:es,en'],
         ], [
             'courseAssetTitle.required' => 'Escribe un nombre para el archivo.',
             'courseFile.required' => 'Selecciona un archivo.',
             'courseFile.max' => 'El archivo no puede superar los 50 MB.',
+            'courseAssetLocale.in' => 'Selecciona español o inglés para el material.',
         ]);
 
         $originalName = $this->courseFile->getClientOriginalName();
@@ -389,6 +402,7 @@ class Form extends Component
 
         CourseAsset::create([
             'product_id' => $product->id,
+            'locale' => $this->courseAssetLocale,
             'title' => trim($this->courseAssetTitle),
             'type' => 'file',
             'file_path' => $path,
@@ -415,14 +429,17 @@ class Form extends Component
         $validated = $this->validate([
             'courseAssetTitle' => ['required', 'string', 'max:120'],
             'courseAssetUrl' => ['required', 'url', 'max:2048'],
+            'courseAssetLocale' => ['required', 'in:es,en'],
         ], [
             'courseAssetTitle.required' => 'Escribe un nombre para el enlace.',
             'courseAssetUrl.required' => 'Escribe la URL del contenido.',
             'courseAssetUrl.url' => 'La URL del contenido no es válida.',
+            'courseAssetLocale.in' => 'Selecciona español o inglés para el material.',
         ]);
 
         CourseAsset::create([
             'product_id' => $product->id,
+            'locale' => $validated['courseAssetLocale'],
             'title' => trim($validated['courseAssetTitle']),
             'type' => 'link',
             'url' => trim($validated['courseAssetUrl']),

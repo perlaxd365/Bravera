@@ -13,8 +13,11 @@ use App\Livewire\Admin\Discounts\Coupons\Index as CouponIndex;
 use App\Livewire\Admin\Dropshipping\Orders\Index as SupplierOrderIndex;
 use App\Livewire\Admin\Orders\Index as OrderIndex;
 use App\Livewire\Admin\Orders\Show as OrderShow;
+use App\Livewire\Admin\Points\Index as PointsIndex;
 use App\Livewire\Admin\Refunds\Index as RefundIndex;
 use App\Livewire\Admin\Settings\Homepage as HomepageSettings;
+use App\Livewire\Admin\Settings\Index as SettingsIndex;
+use App\Livewire\Admin\Settings\Integrations as SettingsIntegrations;
 use App\Livewire\Admin\Shipping\Rates\Index as ShippingRateIndex;
 use App\Livewire\Admin\Shipping\Zones\Index as ShippingZoneIndex;
 use Illuminate\Support\Facades\Route;
@@ -24,11 +27,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/', DashboardIndex::class)
         ->name('dashboard');
 
+    Route::get('/settings', SettingsIndex::class)
+        ->name('settings.index');
+
     Route::get('/settings/homepage', HomepageSettings::class)
         ->name('settings.homepage');
 
+    Route::get('/settings/integrations', SettingsIntegrations::class)
+        ->name('settings.integrations');
+
     Route::get('/customers', CustomerIndex::class)
         ->name('customers.index');
+
+    Route::get('/points', PointsIndex::class)
+        ->name('points.index');
 
     /*
     |--------------------------------------------------------------------------

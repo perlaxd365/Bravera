@@ -11,6 +11,7 @@ class GoogleMerchantFeedController
     public function __invoke(): StreamedResponse
     {
         $baseUrl = rtrim(config('app.url'), '/');
+
         return response()->stream(function () use ($baseUrl): void {
             echo '<?xml version="1.0" encoding="UTF-8"?>';
             echo '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>';
@@ -21,7 +22,7 @@ class GoogleMerchantFeedController
                 ->visible()
                 ->with([
                     'brand',
-                    'category',
+                    'category.parent',
                     'variants' => fn ($query) => $query->active()
                         ->with([
                             'supplierVariants' => fn ($suppliers) => $suppliers->available(),
@@ -53,10 +54,6 @@ class GoogleMerchantFeedController
     {
         $stock = $variant->supplierVariants->sum(fn ($supplier) => $supplier->availableStock());
 
-        if ($stock < 1) {
-            return null;
-        }
-
         $image = $variant->images->first()?->imageUrl() ?: $product->coverImage();
         if (! $image || ! filter_var($image, FILTER_VALIDATE_URL)) {
             return null;
@@ -72,6 +69,29 @@ class GoogleMerchantFeedController
         $description = trim(preg_replace('/\s+/u', ' ', $description) ?? '');
         $description = $description ?: $product->name.' disponible en Brevare.';
         $link = route('store.product', ['slug' => $product->slug]).'?variant='.rawurlencode($variant->sku);
+        $categoryPath = collect();
+        $category = $product->category;
+
+        while ($category) {
+            $categoryPath->prepend($category->name);
+            $category = $category->parent;
+        }
+
+        $productType = $categoryPath->isNotEmpty() ? $categoryPath->implode(' > ') : 'Productos';
+        $categoryKey = $product->category?->path;
+        $googleCategory = $categoryKey
+            ? (config('seo.google_product_category.'.$categoryKey)
+                ?? config('seo.google_product_category.'.explode('/', $categoryKey)[0]))
+            : null;
+        $brand = $product->brand?->name ?: 'Brevare';
+        $gtin = $this->isValidGtin($variant->barcode)
+            ? preg_replace('/\D+/', '', $variant->barcode)
+            : null;
+        $attributes = $variant->attributeValues
+            ->mapWithKeys(fn ($pivot) => [
+                mb_strtolower((string) ($pivot->attribute?->slug ?? '')) => $pivot->value?->value,
+            ])
+            ->filter();
 
         $xml = '<item>';
         $xml .= $this->tag('id', 'brv-v-'.$variant->id);
@@ -79,18 +99,40 @@ class GoogleMerchantFeedController
         $xml .= $this->tag('description', $description);
         $xml .= $this->tag('link', $link);
         $xml .= $this->tag('image_link', $image);
-        $xml .= $this->tag('availability', 'in_stock');
+        foreach ($variant->images->skip(1)->take(10) as $additionalImage) {
+            $additionalUrl = $additionalImage->imageUrl();
+
+            if ($additionalUrl && filter_var($additionalUrl, FILTER_VALIDATE_URL)) {
+                $xml .= $this->tag('additional_image_link', $additionalUrl);
+            }
+        }
+        $xml .= $this->tag('availability', $stock > 0 ? 'in_stock' : 'out_of_stock');
         $xml .= $this->tag('price', number_format((float) $variant->sale_price, 2, '.', '').' PEN');
         $xml .= $this->tag('condition', 'new');
         $xml .= $this->tag('item_group_id', 'brv-p-'.$product->id);
-        $xml .= $this->tag('product_type', $product->category?->name ?? 'Productos');
+        $xml .= $this->tag('product_type', $productType);
+        $xml .= $this->tag('brand', $brand);
+        $xml .= $this->tag('mpn', $variant->sku);
+        $xml .= $this->tag('identifier_exists', 'yes');
 
-        if ($product->brand?->name) {
-            $xml .= $this->tag('brand', $product->brand->name);
+        if ($googleCategory) {
+            $xml .= $this->tag('google_product_category', $googleCategory);
         }
 
-        if ($this->isValidGtin($variant->barcode)) {
-            $xml .= $this->tag('gtin', preg_replace('/\D+/', '', $variant->barcode));
+        if ($gtin) {
+            $xml .= $this->tag('gtin', $gtin);
+        }
+
+        $color = $attributes->get('color');
+        if ($color) {
+            $xml .= $this->tag('color', $color);
+        }
+
+        $size = $attributes->get('talla')
+            ?? $attributes->get('talla-calzado')
+            ?? $attributes->get('medida');
+        if ($size) {
+            $xml .= $this->tag('size', $size);
         }
 
         return $xml.'</item>';

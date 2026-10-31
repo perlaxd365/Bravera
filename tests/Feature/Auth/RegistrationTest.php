@@ -38,12 +38,14 @@ class RegistrationTest extends TestCase
         $component
             ->assertRedirect(route('verification.notice', absolute: false));
 
-        $this->assertAuthenticated();
+        // El acceso se habilita cuando el cliente confirma el código enviado a su correo.
+        $this->assertGuest();
 
         $user = User::where('email', 'test@example.com')->firstOrFail();
 
         $this->assertFalse($user->hasVerifiedEmail());
         $this->assertTrue($user->hasRole('Cliente'));
+        $this->assertSame(50, (int) $user->points_balance);
         $this->assertNotNull($user->email_verification_code);
 
         Notification::assertSentTo($user, VerificationCodeNotification::class);

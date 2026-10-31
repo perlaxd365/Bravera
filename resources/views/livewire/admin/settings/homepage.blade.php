@@ -12,6 +12,8 @@
         </button>
     </header>
 
+    <x-admin.settings-nav />
+
     @if (session()->has('status'))
         <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
     @endif

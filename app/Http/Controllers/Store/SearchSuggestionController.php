@@ -34,7 +34,7 @@ class SearchSuggestionController extends Controller
 
         return response()->json(
             $products->map(fn (Product $product): array => [
-                'name' => $product->name,
+                'name' => $product->localized('name') ?? $product->name,
                 'category' => $product->category?->name,
                 'url' => route('store.product', ['slug' => $product->slug]),
                 'image' => $product->coverImageModel()?->sizedUrl(96),

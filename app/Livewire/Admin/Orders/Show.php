@@ -323,7 +323,9 @@ class Show extends Component
         $cost = (float) $supplierOrder->total_cost;
 
         // El descuento del cupón se prorratea entre los productos del pedido.
-        $orderGross = (float) $this->order->subtotal + (float) $this->order->shipping_total;
+        $orderGross = (float) $this->order->subtotal
+            + (float) $this->order->shipping_total
+            + (float) $this->order->cod_shipping_amount;
         $share = $orderGross > 0 ? ($revenue + $shippingCharged) / $orderGross : 0.0;
         $discountShare = round((float) $this->order->discount_total * $share, 2);
 

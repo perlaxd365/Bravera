@@ -20,6 +20,16 @@ class ProductVariantForm extends Form
 
     public float $sale_price = 0;
 
+    /**
+     * Precio minorista final. Se calcula desde el precio normal y el
+     * descuento, pero también puede editarse directamente.
+     */
+    public float $retail_price = 0;
+
+    public ?float $wholesale_price = null;
+
+    public ?int $wholesale_min_quantity = null;
+
     public ?float $compare_price = null;
 
     public float $discount_percent = 0;
@@ -37,6 +47,14 @@ class ProductVariantForm extends Form
     public bool $is_default = false;
 
     public bool $is_active = true;
+
+    public bool $pricing_initialized = false;
+
+    public float $last_auto_cost = 0;
+
+    public float $last_auto_retail = 0;
+
+    public float $wholesale_ratio = 0.9;
 
     /**
      * Valores de atributos seleccionados.
@@ -83,6 +101,40 @@ class ProductVariantForm extends Form
                 'required',
                 'numeric',
                 'min:0',
+            ],
+
+            'retail_price' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'wholesale_price' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'required_with:wholesale_min_quantity',
+                function ($attribute, $value, $fail) {
+                    if (blank($value) || blank($this->wholesale_min_quantity)) {
+                        return;
+                    }
+
+                    $retailPrice = round(
+                        $this->sale_price * (1 - ($this->discount_percent / 100)),
+                        2
+                    );
+
+                    if ((float) $value >= $retailPrice) {
+                        $fail('El precio al por mayor debe ser menor que el precio minorista.');
+                    }
+                },
+            ],
+
+            'wholesale_min_quantity' => [
+                'nullable',
+                'integer',
+                'min:2',
+                'required_with:wholesale_price',
             ],
 
             'compare_price' => [
@@ -169,6 +221,14 @@ class ProductVariantForm extends Form
             'sale_price.numeric' => 'El precio de venta debe ser numérico.',
             'sale_price.min' => 'El precio de venta no puede ser negativo.',
 
+            'wholesale_price.numeric' => 'El precio al por mayor debe ser numérico.',
+            'wholesale_price.min' => 'El precio al por mayor no puede ser negativo.',
+            'wholesale_price.required_with' => 'Indica el precio al por mayor o deja vacía la cantidad mínima.',
+
+            'wholesale_min_quantity.integer' => 'La cantidad mínima para mayoreo debe ser un número entero.',
+            'wholesale_min_quantity.min' => 'La cantidad mínima para mayoreo debe ser al menos 2.',
+            'wholesale_min_quantity.required_with' => 'Indica la cantidad mínima para mayoreo o deja vacío el precio al por mayor.',
+
             'compare_price.numeric' => 'El precio referencial debe ser numérico.',
             'compare_price.min' => 'El precio referencial no puede ser negativo.',
 
@@ -208,6 +268,9 @@ class ProductVariantForm extends Form
             'barcode' => 'código de barras',
             'cost_price' => 'costo de adquisición',
             'sale_price' => 'precio de venta',
+            'retail_price' => 'precio minorista final',
+            'wholesale_price' => 'precio al por mayor',
+            'wholesale_min_quantity' => 'cantidad mínima para mayoreo',
             'compare_price' => 'precio referencial',
             'discount_percent' => 'descuento',
             'weight' => 'peso',
@@ -245,6 +308,16 @@ class ProductVariantForm extends Form
             ? (float) $variant->compare_price
             : (float) $variant->sale_price;
 
+        $this->retail_price = (float) $variant->sale_price;
+
+        $this->wholesale_price = $variant->wholesale_price !== null
+            ? (float) $variant->wholesale_price
+            : null;
+
+        $this->wholesale_min_quantity = $variant->wholesale_min_quantity !== null
+            ? (int) $variant->wholesale_min_quantity
+            : null;
+
         $this->compare_price = $variant->compare_price !== null
             ? (float) $variant->compare_price
             : null;
@@ -271,6 +344,13 @@ class ProductVariantForm extends Form
 
         $this->is_active = $variant->is_active;
 
+        $this->pricing_initialized = true;
+        $this->last_auto_cost = (float) $variant->cost_price;
+        $this->last_auto_retail = (float) $variant->sale_price;
+        $this->wholesale_ratio = $this->retail_price > 0 && $variant->wholesale_price !== null
+            ? round((float) $variant->wholesale_price / $this->retail_price, 4)
+            : 0.9;
+
         /*
         |--------------------------------------------------------------------------
         | Atributos de la variante
@@ -292,6 +372,8 @@ class ProductVariantForm extends Form
      */
     public function toDto(): ProductVariantData
     {
+        $this->applyAutomaticPricing('base');
+
         return ProductVariantData::fromArray([
             'id' => $this->id,
             'product_id' => $this->product_id,
@@ -299,6 +381,8 @@ class ProductVariantForm extends Form
             'barcode' => $this->barcode,
             'cost_price' => $this->cost_price,
             'sale_price' => $this->sale_price,
+            'wholesale_price' => $this->wholesale_price,
+            'wholesale_min_quantity' => $this->wholesale_min_quantity,
             'compare_price' => $this->compare_price,
             'discount_percent' => $this->discount_percent,
             'weight' => $this->weight,
@@ -323,12 +407,99 @@ class ProductVariantForm extends Form
 
         $this->sale_price = 0;
 
+        $this->retail_price = 0;
+
+        $this->wholesale_price = null;
+
+        $this->wholesale_min_quantity = null;
+
         $this->sync_enabled = true;
 
         $this->is_default = false;
 
         $this->is_active = true;
 
+        $this->pricing_initialized = false;
+        $this->last_auto_cost = 0;
+        $this->last_auto_retail = 0;
+        $this->wholesale_ratio = 0.9;
+
         $this->attribute_values = [];
+    }
+
+    /**
+     * Recalcula los precios dependientes cuando cambia un campo.
+     *
+     * Regla inicial (ejemplo S/30):
+     * normal = 30 × 3.33 = 100, descuento = 50%,
+     * minorista = 50, mayorista = 45 desde 3 unidades.
+     */
+    public function applyAutomaticPricing(string $source): void
+    {
+        $source = in_array($source, ['cost', 'base', 'discount', 'retail', 'wholesale'], true)
+            ? $source
+            : 'base';
+
+        if ($source === 'cost') {
+            $cost = max(0, round((float) $this->cost_price, 2));
+
+            if (! $this->pricing_initialized || $this->sale_price <= 0) {
+                $this->sale_price = round($cost * (10 / 3), 2);
+                $this->discount_percent = 50;
+                $this->wholesale_ratio = 0.9;
+                $this->wholesale_min_quantity = 3;
+            } else {
+                $factor = $this->last_auto_cost > 0
+                    ? $cost / $this->last_auto_cost
+                    : 1;
+
+                $this->sale_price = round($this->sale_price * $factor, 2);
+
+                if ($this->wholesale_price !== null) {
+                    $this->wholesale_price = round($this->wholesale_price * $factor, 2);
+                }
+            }
+
+            $this->last_auto_cost = $cost;
+        }
+
+        $basePrice = max(0, round((float) $this->sale_price, 2));
+        $discount = min(90, max(0, round((float) $this->discount_percent, 2)));
+        $this->discount_percent = $discount;
+
+        if ($source === 'retail') {
+            $retailPrice = max(0, round((float) $this->retail_price, 2));
+
+            if ($basePrice > 0 && $retailPrice > 0 && $retailPrice < $basePrice) {
+                $this->discount_percent = round((1 - ($retailPrice / $basePrice)) * 100, 2);
+            } elseif ($discount > 0) {
+                $this->sale_price = round($retailPrice / (1 - ($discount / 100)), 2);
+                $basePrice = $this->sale_price;
+            } else {
+                $this->sale_price = $retailPrice;
+                $basePrice = $retailPrice;
+            }
+        } else {
+            $this->retail_price = round($basePrice * (1 - ($discount / 100)), 2);
+        }
+
+        $this->sale_price = max(0, $basePrice);
+        $this->retail_price = max(0, round((float) $this->retail_price, 2));
+
+        if ($source === 'wholesale' && $this->wholesale_price !== null && $this->retail_price > 0) {
+            $this->wholesale_ratio = round(
+                (float) $this->wholesale_price / $this->retail_price,
+                4,
+            );
+        }
+
+        if ($source !== 'wholesale') {
+            $this->wholesale_price = $this->retail_price > 0
+                ? round($this->retail_price * $this->wholesale_ratio, 2)
+                : null;
+        }
+
+        $this->last_auto_retail = $this->retail_price;
+        $this->pricing_initialized = true;
     }
 }

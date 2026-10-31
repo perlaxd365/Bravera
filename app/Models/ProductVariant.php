@@ -102,17 +102,59 @@ class ProductVariant extends Model
     }
 
     /**
+     * Tramos de descuento por cantidad configurados para la tienda.
+     *
+     * @return array<int, array{quantity: int, percent: float, badge?: string}>
+     */
+    public function quantityDiscountTiers(): array
+    {
+        return collect(config('brevare.quantity_discounts', []))
+            ->map(function ($tier): array {
+                $mapped = [
+                    'quantity' => (int) ($tier['quantity'] ?? 0),
+                    'percent' => (float) ($tier['percent'] ?? 0),
+                ];
+
+                if (filled($tier['badge'] ?? null)) {
+                    $mapped['badge'] = (string) $tier['badge'];
+                }
+
+                return $mapped;
+            })
+            ->filter(fn (array $tier) => $tier['quantity'] > 1 && $tier['percent'] > 0)
+            ->sortBy('quantity')
+            ->values()
+            ->all();
+    }
+
+    public function quantityDiscountPercent(int $quantity): float
+    {
+        $percent = 0.0;
+
+        foreach ($this->quantityDiscountTiers() as $tier) {
+            if ($quantity >= $tier['quantity']) {
+                $percent = $tier['percent'];
+            }
+        }
+
+        return $percent;
+    }
+
+    /**
      * Precio unitario vigente para una cantidad concreta.
      *
-     * El precio mayorista se aplica a toda la línea cuando se alcanza el
-     * mínimo; por debajo del mínimo se mantiene el precio minorista.
+     * El precio mayorista y el tramo por cantidad compiten por ofrecer el
+     * mejor precio al cliente; nunca se aplica un importe superior.
      */
     public function unitPriceForQuantity(int $quantity): float
     {
-        $price = $this->appliesWholesalePrice($quantity)
-            ? $this->wholesale_price
-            : $this->sale_price;
+        $quantityDiscount = $this->quantityDiscountPercent($quantity);
+        $volumePrice = (float) $this->sale_price * (1 - ($quantityDiscount / 100));
 
-        return round((float) $price, 2);
+        if ($this->appliesWholesalePrice($quantity)) {
+            $volumePrice = min($volumePrice, (float) $this->wholesale_price);
+        }
+
+        return round($volumePrice, 2);
     }
 }

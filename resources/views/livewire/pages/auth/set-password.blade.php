@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Support\Auth\LoginRedirect;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -18,7 +19,7 @@ new #[Layout('layouts.guest')] class extends Component
     public function mount(): void
     {
         if (! Auth::user()->needsPasswordSetup()) {
-            $this->redirectIntended(default: route('home'), navigate: true);
+            $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
         }
     }
 
@@ -30,7 +31,7 @@ new #[Layout('layouts.guest')] class extends Component
         $user = Auth::user();
 
         if (! $user->needsPasswordSetup()) {
-            $this->redirectIntended(default: route('home'), navigate: true);
+            $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
 
             return;
         }
@@ -43,7 +44,7 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => Hash::make($this->password),
         ])->save();
 
-        $this->redirectIntended(default: route('home'), navigate: true);
+        $this->redirect(LoginRedirect::pull(request(), route('home')), navigate: true);
     }
 
     /**

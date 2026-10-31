@@ -25,7 +25,9 @@ use App\Modules\Payments\Services\PaymentService;
 use App\Modules\Shipping\Services\ShippingQuoteService;
 use App\Services\CartService;
 use App\Services\CustomerAddressService;
+use App\Services\EmailVerificationService;
 use App\Services\MetaConversionsService;
+use App\Support\Localization\StorefrontContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -44,13 +46,18 @@ class Checkout extends Component
 {
     use ProcessesMercadoPagoPayment;
 
-    public bool $authRequired = false;
+    public string $guestFirstName = '';
 
-    public string $guestName = '';
+    public string $guestLastName = '';
 
     public string $guestEmail = '';
 
     public string $guestPhone = '';
+
+    public string $checkoutVerificationCode = '';
+
+    #[Locked]
+    public bool $emailNeedsVerification = false;
 
     public ?int $selectedAddressId = null;
 
@@ -181,18 +188,6 @@ class Checkout extends Component
             $this->syncPaymentMethodToGateway();
         }
 
-        $this->authRequired = ! auth()->check();
-
-        if ($this->authRequired) {
-            // El checkout no redirige a login: muestra una pantalla de acceso.
-            // Guardamos el destino aquí para que, después de autenticarse,
-            // Laravel vuelva al checkout con el carrito que traía el invitado.
-            session(['url.intended' => request()->fullUrl()]);
-            session()->flash('login_intent', 'Inicia sesión para completar tu compra.');
-
-            return;
-        }
-
         $this->restoreCulqiIdentification();
 
         // "Pagar ahora" desde la cuenta entra por query (?pagar=...), no por
@@ -250,7 +245,14 @@ class Checkout extends Component
         // reemplace el resumen del checkout actual.
         session()->forget('mercadopago_pending_order');
         $this->trackMetaInitiateCheckout($cart);
-        $this->prepareGuestAddress();
+
+        if (! auth()->check()) {
+            session(['url.intended' => request()->fullUrl()]);
+            $this->showNewAddress = true;
+            $this->departments = app(LocationService::class)->getDepartments()->toArray();
+        } else {
+            $this->prepareGuestAddress();
+        }
 
         $supported = $this->supportedMethods();
 
@@ -280,69 +282,215 @@ class Checkout extends Component
         $this->resetValidation('culqiIdentification');
     }
 
-    public function continueAsGuest(): void
+    public function updatedGuestEmail($value): void
     {
+        $this->resetValidation();
+        $this->emailNeedsVerification = false;
+        $this->checkoutVerificationCode = '';
+
+        $email = mb_strtolower(trim((string) $value));
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        $existing = $this->userForEmail($email);
+
+        if ($existing !== null) {
+            $this->beginExistingEmailVerification($existing);
+        }
+    }
+
+    public function verifyGuestEmailCode(): void
+    {
+        $this->validate([
+            'checkoutVerificationCode' => ['required', 'digits:6'],
+        ], [
+            'checkoutVerificationCode.required' => 'Ingresa el código de 6 dígitos.',
+            'checkoutVerificationCode.digits' => 'El código debe tener 6 dígitos.',
+        ]);
+
+        $email = mb_strtolower(trim($this->guestEmail));
+        $user = $this->userForEmail($email);
+
+        if ($user === null) {
+            $this->emailNeedsVerification = false;
+            $this->addError('guestEmail', 'Ese correo ya no está asociado a una cuenta.');
+
+            return;
+        }
+
+        if (! $this->verifyExistingEmailCode($user, $this->checkoutVerificationCode)) {
+            $this->addError(
+                'checkoutVerificationCode',
+                'El código no es correcto o ya venció. Solicita uno nuevo.'
+            );
+
+            return;
+        }
+
+        $this->emailNeedsVerification = false;
+        $this->checkoutVerificationCode = '';
+        $this->guestFirstName = '';
+        $this->guestLastName = '';
+        $this->guestPhone = (string) $user->phone;
+        $this->newFullName = (string) $user->name;
+        $this->newPhone = (string) $user->phone;
+        $this->showNewAddress = ! $user->customerAddresses()->exists();
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Correo verificado. Puedes continuar con tu compra.',
+        ]);
+    }
+
+    public function resendGuestEmailCode(): void
+    {
+        $user = $this->userForEmail(mb_strtolower(trim($this->guestEmail)));
+
+        if ($user === null) {
+            $this->emailNeedsVerification = false;
+
+            return;
+        }
+
+        $this->beginExistingEmailVerification($user);
+    }
+
+    public function changeGuestEmail(): void
+    {
+        $this->emailNeedsVerification = false;
+        $this->checkoutVerificationCode = '';
+        $this->guestEmail = '';
+        $this->resetValidation();
+    }
+
+    /**
+     * Obtiene o crea el cliente que será dueño del pedido.
+     *
+     * Los correos nuevos crean una cuenta invitada sin contraseña visible. Un
+     * correo existente debe validar antes un código enviado a su bandeja.
+     */
+    private function ensureCheckoutCustomer(): ?User
+    {
+        if (auth()->check()) {
+            return auth()->user();
+        }
+
         $validated = $this->validate([
-            'guestName' => ['required', 'string', 'max:150'],
+            'guestFirstName' => ['required', 'string', 'max:100'],
+            'guestLastName' => ['required', 'string', 'max:100'],
             'guestEmail' => ['required', 'email', 'max:255'],
             'guestPhone' => ['required', 'string', 'max:30'],
         ], [
-            'guestName.required' => 'Escribe tu nombre completo.',
-            'guestName.max' => 'El nombre no puede superar los 150 caracteres.',
-            'guestEmail.required' => 'Escribe tu correo para enviarte el comprobante.',
+            'guestFirstName.required' => 'Escribe tu nombre.',
+            'guestFirstName.max' => 'El nombre no puede superar los 100 caracteres.',
+            'guestLastName.required' => 'Escribe tus apellidos.',
+            'guestLastName.max' => 'Los apellidos no pueden superar los 100 caracteres.',
+            'guestEmail.required' => 'Escribe tu correo para enviarte la confirmación.',
             'guestEmail.email' => 'El correo no tiene un formato válido.',
             'guestPhone.required' => 'Escribe un teléfono de contacto.',
             'guestPhone.max' => 'El teléfono no puede superar los 30 caracteres.',
         ]);
 
         $email = mb_strtolower(trim($validated['guestEmail']));
-        $existing = User::query()->where('email', $email)->first();
+        $existing = $this->userForEmail($email);
+        $name = trim($validated['guestFirstName'].' '.$validated['guestLastName']);
 
-        if ($existing && ! $existing->is_guest) {
-            $this->addError(
-                'guestEmail',
-                'Este correo ya tiene una cuenta. Inicia sesión para continuar.'
-            );
+        if ($existing !== null) {
+            if (! $this->emailNeedsVerification) {
+                $this->beginExistingEmailVerification($existing);
+            }
 
-            return;
+            if (blank($this->checkoutVerificationCode)) {
+                $this->addError(
+                    'checkoutVerificationCode',
+                    'Ingresa el código enviado a tu correo para continuar.'
+                );
+
+                return null;
+            }
+
+            if (! $this->verifyExistingEmailCode($existing, $this->checkoutVerificationCode)) {
+                $this->addError(
+                    'checkoutVerificationCode',
+                    'El código no es correcto o ya venció. Solicita uno nuevo.'
+                );
+
+                return null;
+            }
+
+            $this->emailNeedsVerification = false;
+            $this->checkoutVerificationCode = '';
+
+            return $existing->fresh();
         }
 
-        if ($existing) {
-            $existing->update([
-                'name' => trim($validated['guestName']),
-                'phone' => trim($validated['guestPhone']),
-                'is_guest' => true,
-                'email_verified_at' => $existing->email_verified_at ?: now(),
-            ]);
-            $user = $existing;
-        } else {
-            $user = User::create([
-                'name' => trim($validated['guestName']),
-                'email' => $email,
-                'phone' => trim($validated['guestPhone']),
-                'password' => bcrypt(Str::random(40)),
-                'is_guest' => true,
-                'email_verified_at' => now(),
-            ]);
+        $user = User::create([
+            'name' => $name,
+            'email' => $email,
+            'phone' => trim($validated['guestPhone']),
+            'password' => bcrypt(Str::random(40)),
+            'is_guest' => true,
+            'email_verified_at' => now(),
+        ]);
 
-            try {
-                $user->assignCustomerRole();
-            } catch (\Throwable) {
-                Log::warning('No se pudo asignar el rol Cliente al invitado.', [
-                    'user_id' => $user->id,
-                ]);
-            }
+        try {
+            $user->assignCustomerRole();
+        } catch (Throwable) {
+            Log::warning('No se pudo asignar el rol Cliente al invitado.', [
+                'user_id' => $user->id,
+            ]);
         }
 
         auth()->login($user);
         session()->regenerate();
         session([
-            'guest_checkout_name' => $user->name,
-            'guest_checkout_phone' => $user->phone,
+            'guest_checkout_name' => $name,
+            'guest_checkout_phone' => trim($validated['guestPhone']),
         ]);
 
-        $this->authRequired = false;
-        $this->redirect(route('checkout'), navigate: true);
+        return $user;
+    }
+
+    private function userForEmail(string $email): ?User
+    {
+        if ($email === '') {
+            return null;
+        }
+
+        return User::query()->where('email', $email)->first();
+    }
+
+    private function beginExistingEmailVerification(User $user): void
+    {
+        $this->emailNeedsVerification = true;
+
+        try {
+            app(EmailVerificationService::class)->sendPasswordCode($user);
+        } catch (ValidationException $e) {
+            $message = (string) ($e->errors()['code'][0] ?? '');
+
+            if ($message !== '') {
+                $this->addError('guestEmail', $message);
+            }
+        }
+    }
+
+    private function verifyExistingEmailCode(User $user, string $code): bool
+    {
+        if (! app(EmailVerificationService::class)->verifyPasswordCode($user, $code)) {
+            return false;
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->forceFill(['email_verified_at' => now()])->saveQuietly();
+        }
+
+        auth()->login($user);
+        session()->regenerate();
+
+        return true;
     }
 
     private function prepareGuestAddress(): void
@@ -545,6 +693,8 @@ class Checkout extends Component
     public function openNewAddress(): void
     {
         $this->showNewAddress = true;
+        $this->newFullName = $this->newFullName ?: (string) auth()->user()?->name;
+        $this->newPhone = $this->newPhone ?: (string) auth()->user()?->phone;
 
         if ($this->departments === []) {
             $this->departments = app(LocationService::class)->getDepartments()->toArray();
@@ -553,6 +703,15 @@ class Checkout extends Component
 
     public function saveNewAddress(): void
     {
+        $user = $this->ensureCheckoutCustomer();
+
+        if ($user === null) {
+            return;
+        }
+
+        $this->newFullName = trim((string) $user->name);
+        $this->newPhone = trim((string) $user->phone);
+
         $this->validate([
             'newFullName' => ['required', 'string', 'max:150'],
             'newPhone' => ['required', 'string', 'max:30'],
@@ -561,7 +720,7 @@ class Checkout extends Component
             'newReference' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $address = app(CustomerAddressService::class)->create(auth()->user(), [
+        $address = app(CustomerAddressService::class)->create($user, [
             'full_name' => $this->newFullName,
             'phone' => $this->newPhone,
             'location_id' => $this->newDistrictId,
@@ -603,6 +762,10 @@ class Checkout extends Component
         $this->couponError = null;
 
         if (blank($this->couponCode)) {
+            return;
+        }
+
+        if ($this->ensureCheckoutCustomer() === null) {
             return;
         }
 
@@ -776,7 +939,7 @@ class Checkout extends Component
         $this->couponApplied = null;
         $discount = 0.0;
 
-        if (filled($this->couponCode)) {
+        if (filled($this->couponCode) && auth()->check()) {
             try {
                 $this->couponApplied = app(CouponService::class)->validate(
                     $this->couponCode,
@@ -826,14 +989,6 @@ class Checkout extends Component
      */
     public function placeOrder(?string $cardToken = null)
     {
-        if (auth()->check() === false) {
-            session()->flash('login_intent', 'Inicia sesión para completar tu compra.');
-
-            $this->redirect(route('login'));
-
-            return;
-        }
-
         if (! in_array($this->selectedGateway, $this->availableGatewayNames(), true)) {
             $this->dispatch('notify', ['type' => 'error', 'message' => 'La forma de pago seleccionada no está disponible.']);
 
@@ -1544,11 +1699,9 @@ class Checkout extends Component
      */
     private function buildOrder(array $extraRules = []): ?Order
     {
-        if (auth()->check() === false) {
-            session()->flash('login_intent', 'Inicia sesión para completar tu compra.');
+        $user = $this->ensureCheckoutCustomer();
 
-            $this->redirect(route('login'));
-
+        if ($user === null) {
             return null;
         }
 
@@ -1560,12 +1713,14 @@ class Checkout extends Component
             'notes' => ['nullable', 'string', 'max:1000'],
         ], $extraRules));
 
-        $address = $this->selectedAddressId
-            ? CustomerAddress::find($this->selectedAddressId)
+        $address = $requiresShipping && $this->selectedAddressId
+            ? CustomerAddress::query()
+                ->where('user_id', $user->id)
+                ->find($this->selectedAddressId)
             : null;
 
         abort_if($requiresShipping && ! $address, 422);
-        abort_if($address && $address->user_id !== auth()->id(), 403);
+        abort_if($address && $address->user_id !== $user->id, 403);
 
         $totals = $this->resolveTotals($address);
 
@@ -1615,7 +1770,7 @@ class Checkout extends Component
         }
 
         $data = new CheckoutData(
-            user: auth()->user(),
+            user: $user,
             cart: $cart->currentCart(),
             items: $totals['items'],
             address: $address,
@@ -1941,10 +2096,18 @@ class Checkout extends Component
      */
     private function availablePaymentMethods(): array
     {
-        return array_intersect_key(
+        $methods = array_intersect_key(
             (array) config('payments.methods', []),
             array_flip($this->supportedMethods()),
         );
+
+        return app()->getLocale() === 'en'
+            ? array_map(fn (string $label): string => match ($label) {
+                'Tarjeta de débito/crédito' => 'Debit or credit card',
+                'Transferencia bancaria' => 'Bank transfer',
+                default => $label,
+            }, $methods)
+            : $methods;
     }
 
     public function updatedSelectedGateway(): void
@@ -2187,7 +2350,7 @@ class Checkout extends Component
      */
     private function canUseCulqi(): bool
     {
-        return auth()->check() && app(CulqiGateway::class)->isAvailable();
+        return app(CulqiGateway::class)->isAvailable();
     }
 
     /**
@@ -2204,9 +2367,16 @@ class Checkout extends Component
         $options = [];
 
         foreach ($this->availableGatewayNames() as $name) {
+            $englishDescriptions = [
+                'culqi' => 'Cards, Yape, and other available payment methods.',
+                'izipay' => 'Cards, Yape, QR, and installments in Izipay’s secure form.',
+                'mercadopago' => 'Credit or debit card in Mercado Pago’s secure form.',
+            ];
             $options[$name] = [
                 'title' => (string) data_get($labels, $name.'.title', ucfirst($name)),
-                'description' => (string) data_get($labels, $name.'.description', ''),
+                'description' => app()->getLocale() === 'en'
+                    ? ($englishDescriptions[$name] ?? (string) data_get($labels, $name.'.description', ''))
+                    : (string) data_get($labels, $name.'.description', ''),
             ];
         }
 
@@ -2222,12 +2392,9 @@ class Checkout extends Component
 
     public function render(CartService $cart)
     {
-        if ($this->authRequired) {
-            return view('livewire.store.checkout-auth');
-        }
-
-        $this->addresses = app(CustomerAddressService::class)
-            ->addressesFor(auth()->user());
+        $this->addresses = auth()->check()
+            ? app(CustomerAddressService::class)->addressesFor(auth()->user())
+            : new Collection;
 
         if ($this->selectedAddressId) {
             $exists = $this->addresses->firstWhere('id', $this->selectedAddressId);
@@ -2295,9 +2462,10 @@ class Checkout extends Component
 
             return [
                 'quantity' => (int) $item->quantity,
-                'name' => $item->variant?->product?->name
+                'name' => $item->variant?->product?->localized('name')
+                    ?? $item->variant?->product?->name
                     ?? $item->product_name
-                    ?? 'Producto',
+                    ?? __('storefront.common.product'),
                 'image' => $image?->sizedUrl(240),
                 'imageFallback' => $image?->imageUrl(),
                 'subtotal' => round(
@@ -2314,14 +2482,17 @@ class Checkout extends Component
 
         $pickupAddress = $this->selectedAddress();
         $pickupLocation = $pickupAddress?->location;
-        $selectedShalomAgency = $pickupAddress
+        $selectedShalomAgency = $totals['requiresShipping'] && $pickupAddress
             ? $this->resolveShalomAgency($pickupAddress)
             : null;
 
         return view('livewire.store.checkout', [
+            'storefrontContext' => StorefrontContext::current(),
+            'displayTotal' => StorefrontContext::current()->displayAmount((float) $totals['total']),
             'summaryItems' => $summaryItems,
             'productDiscount' => $productDiscount,
             'regularSubtotal' => round($totals['subtotal'] + $productDiscount, 2),
+            'totalSavings' => round($productDiscount + (float) $totals['discount'], 2),
 
             'subtotal' => $totals['subtotal'],
             'requiresShipping' => $totals['requiresShipping'],

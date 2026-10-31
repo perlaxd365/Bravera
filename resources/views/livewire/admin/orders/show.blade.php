@@ -171,9 +171,15 @@
                                     <td class="px-6 py-3 text-right font-semibold text-gray-900">S/ {{ number_format((float) $order->subtotal, 2) }}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="3" class="px-6 py-3 text-right text-gray-500">Envío</td>
+                                    <td colspan="3" class="px-6 py-3 text-right text-gray-500">Envío pagado ahora</td>
                                     <td class="px-6 py-3 text-right font-semibold text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</td>
                                 </tr>
+                                @if ((float) $order->cod_shipping_amount > 0)
+                                    <tr>
+                                        <td colspan="3" class="px-6 py-3 text-right text-emerald-700">Envío a cobrar en Shalom</td>
+                                        <td class="px-6 py-3 text-right font-semibold text-emerald-700">S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</td>
+                                    </tr>
+                                @endif
                                 @if ((float) $order->discount_total > 0)
                                     <tr>
                                         <td colspan="3" class="px-6 py-3 text-right text-gray-500">Descuento ({{ $order->coupon_code }})</td>

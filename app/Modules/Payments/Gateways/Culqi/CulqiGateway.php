@@ -49,6 +49,20 @@ class CulqiGateway implements PaymentGateway
         return 'culqi';
     }
 
+    /**
+     * Culqi solo se ofrece cuando ambas llaves pertenecen al mismo entorno.
+     * Mezclar pk_live_ con sk_test_ deja el checkout visible pero el cobro
+     * falla con 401, así que se cierra de forma temprana.
+     */
+    public function isAvailable(): bool
+    {
+        $publicKey = trim((string) config('payments.culqi.public_key'));
+        $secretKey = trim((string) config('payments.culqi.secret_key'));
+
+        return (str_starts_with($publicKey, 'pk_live_') && str_starts_with($secretKey, 'sk_live_'))
+            || (str_starts_with($publicKey, 'pk_test_') && str_starts_with($secretKey, 'sk_test_'));
+    }
+
     public function charge(Payment $payment): array
     {
         if ((float) $payment->amount <= 0) {

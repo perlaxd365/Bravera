@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Support\Auth\LoginRedirect;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
@@ -9,6 +10,11 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
+
+    public function mount(): void
+    {
+        LoginRedirect::remember(request());
+    }
 
     /**
      * Handle an incoming authentication request.
@@ -33,8 +39,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $this->redirectIntended(
-            default: $this->redirectAfterLogin(),
+        $this->redirect(
+            LoginRedirect::pull(request(), $this->redirectAfterLogin()),
             navigate: true,
         );
     }
@@ -64,8 +70,8 @@ new #[Layout('layouts.guest')] class extends Component
     <x-brevare.review-credentials class="mb-5 w-full" />
 
     <x-brevare.auth-card
-        title="¡Hola, bienvenido de nuevo!"
-        subtitle="Ingresa con tu cuenta para seguir comprando en Brevare."
+        :title="app()->getLocale() === 'en' ? 'Welcome back!' : '¡Hola, bienvenido de nuevo!'"
+        :subtitle="app()->getLocale() === 'en' ? 'Sign in to continue shopping at Brevare.' : 'Ingresa con tu cuenta para seguir comprando en Brevare.'"
     >
         <x-brevare.google-button />
 
@@ -82,7 +88,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.floating-input
                 wire:model="form.email"
                 id="email"
-                label="Correo electrónico"
+                :label="app()->getLocale() === 'en' ? 'Email address' : 'Correo electrónico'"
                 type="email"
                 icon="mail"
                 autocomplete="username"
@@ -92,7 +98,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.password-input
                 wire:model="form.password"
                 id="password"
-                label="Contraseña"
+                :label="app()->getLocale() === 'en' ? 'Password' : 'Contraseña'"
                 autocomplete="current-password"
                 required
             />
@@ -107,26 +113,26 @@ new #[Layout('layouts.guest')] class extends Component
                             class="size-4 rounded border-gray-300 text-gray-900 shadow-sm focus:ring-gray-900/20"
                         >
                     </span>
-                    Recuérdame
+                    {{ app()->getLocale() === 'en' ? 'Remember me' : 'Recuérdame' }}
                 </label>
 
                 @if (Route::has('password.request'))
                     <a href="{{ route('password.request') }}" wire:navigate class="text-sm font-semibold text-gray-900 underline-offset-4 transition hover:underline">
-                        ¿Olvidaste tu contraseña?
+                        {{ app()->getLocale() === 'en' ? 'Forgot your password?' : '¿Olvidaste tu contraseña?' }}
                     </a>
                 @endif
             </div>
 
             <x-brevare.button class="w-full">
-                Iniciar sesión
+                {{ __('storefront.common.sign_in') }}
             </x-brevare.button>
         </form>
 
         <x-slot:footer>
             <p class="text-center text-sm text-gray-500">
-                ¿Aún no tienes cuenta?
+                {{ app()->getLocale() === 'en' ? 'No account yet?' : '¿Aún no tienes cuenta?' }}
                 <a href="{{ route('register') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
-                    Crea una gratis
+                    {{ app()->getLocale() === 'en' ? 'Create one for free' : 'Crea una gratis' }}
                 </a>
             </p>
         </x-slot:footer>

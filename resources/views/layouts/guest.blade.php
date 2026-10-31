@@ -6,7 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         @include('partials.favicon')
 
-        <title>{{ config('app.name', 'Brevare') }} · Acceso</title>
+        <title>{{ config('app.name', 'Brevare') }} · {{ app()->getLocale() === 'en' ? 'Account access' : 'Acceso' }}</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,14 +43,15 @@
 
                     <div>
                         <p class="auth-rise text-xs font-bold uppercase tracking-[0.25em] text-emerald-300" style="animation-delay: 60ms">
-                            Bienvenido a tu tienda online
+                            {{ app()->getLocale() === 'en' ? 'Welcome to your online store' : 'Bienvenido a tu tienda online' }}
                         </p>
                         <h1 class="auth-rise mt-3 max-w-md text-4xl font-extrabold leading-tight tracking-tight text-white xl:text-5xl" style="animation-delay: 140ms">
-                            Compra fácil, <span class="text-emerald-300">rápido</span> y seguro.
+                            {{ app()->getLocale() === 'en' ? 'Shop easily,' : 'Compra fácil,' }} <span class="text-emerald-300">{{ app()->getLocale() === 'en' ? 'quickly' : 'rápido' }}</span> {{ app()->getLocale() === 'en' ? 'and securely.' : 'y seguro.' }}
                         </h1>
                         <p class="auth-rise mt-4 max-w-sm text-sm leading-relaxed text-gray-200" style="animation-delay: 220ms">
-                            Tecnología, moda, hogar y mucho más con envíos a todo el Perú. Crea tu cuenta
-                            o inicia sesión para seguir comprando desde donde lo dejaste.
+                            {{ app()->getLocale() === 'en'
+                                ? 'Technology, fashion, home goods, and more with shipping throughout Peru. Create an account or sign in to continue where you left off.'
+                                : 'Tecnología, moda, hogar y mucho más con envíos a todo el Perú. Crea tu cuenta o inicia sesión para seguir comprando desde donde lo dejaste.' }}
                         </p>
 
                         <ul class="auth-rise mt-8 space-y-4" style="animation-delay: 300ms">
@@ -58,25 +59,25 @@
                                 <span class="flex size-8 items-center justify-center rounded-full bg-white/10 text-emerald-300 backdrop-blur">
                                     <flux:icon name="truck" class="size-4" />
                                 </span>
-                                Envío rápido a todo el Perú
+                                {{ app()->getLocale() === 'en' ? 'Fast shipping throughout Peru' : 'Envío rápido a todo el Perú' }}
                             </li>
                             <li class="flex items-center gap-3 text-sm font-medium text-white">
                                 <span class="flex size-8 items-center justify-center rounded-full bg-white/10 text-emerald-300 backdrop-blur">
                                     <flux:icon name="shield-check" class="size-4" />
                                 </span>
-                                Compra protegida y pagos seguros
+                                {{ app()->getLocale() === 'en' ? 'Protected shopping and secure payments' : 'Compra protegida y pagos seguros' }}
                             </li>
                             <li class="flex items-center gap-3 text-sm font-medium text-white">
                                 <span class="flex size-8 items-center justify-center rounded-full bg-white/10 text-emerald-300 backdrop-blur">
                                     <flux:icon name="star" class="size-4" />
                                 </span>
-                                Los mejores precios del mercado
+                                {{ app()->getLocale() === 'en' ? 'Great prices on every find' : 'Los mejores precios del mercado' }}
                             </li>
                         </ul>
                     </div>
 
                     <p class="text-xs text-gray-400">
-                        &copy; {{ date('Y') }} Brevare &middot; Tu tienda online
+                        &copy; {{ date('Y') }} Brevare &middot; {{ app()->getLocale() === 'en' ? 'Your online store' : 'Tu tienda online' }}
                     </p>
                 </div>
             </aside>
@@ -97,7 +98,7 @@
                 </div>
 
                 <p class="pb-6 text-center text-xs text-gray-400 lg:hidden">
-                    &copy; {{ date('Y') }} Brevare &middot; Tu tienda online
+                    &copy; {{ date('Y') }} Brevare &middot; {{ app()->getLocale() === 'en' ? 'Your online store' : 'Tu tienda online' }}
                 </p>
             </main>
         </div>

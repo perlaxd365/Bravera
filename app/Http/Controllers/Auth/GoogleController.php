@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Events\CustomerRegistered;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PointsService;
+use App\Support\Auth\LoginRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -17,6 +19,8 @@ class GoogleController extends Controller
      */
     public function redirect(): RedirectResponse
     {
+        LoginRedirect::remember(request());
+
         return Socialite::driver('google')->redirect();
     }
 
@@ -53,6 +57,8 @@ class GoogleController extends Controller
 
             $user->assignCustomerRole();
 
+            app(PointsService::class)->awardRegistration($user);
+
             event(new CustomerRegistered($user));
         }
 
@@ -66,7 +72,9 @@ class GoogleController extends Controller
             return redirect()->route('set-password');
         }
 
-        return redirect()->intended(route('home'));
+        return redirect()->to(
+            LoginRedirect::pull(request(), route('home'))
+        );
     }
 
     /**

@@ -30,6 +30,16 @@
                         x-on:livewire-upload-progress.window="progress = Number($event.detail.progress || 0)"
                         x-on:livewire-upload-finish.window="uploading = false; progress = 100"
                         x-on:livewire-upload-error.window="uploading = false">
+                        <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-stone-800">Idioma del material</label>
+                                <select wire:model="courseAssetLocale" class="min-h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-800">
+                                    <option value="es">Español</option>
+                                    <option value="en">English</option>
+                                </select>
+                                <p class="mt-1.5 text-xs text-stone-500">Cada material se mostrará al comprador que use ese idioma.</p>
+                            </div>
+                        </div>
                         <x-input label="Nombre visible del material" wire:model.blur="courseAssetTitle" maxlength="120" placeholder="Ej.: Guía completa en PDF" />
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
@@ -79,6 +89,7 @@
                                             <div class="min-w-0">
                                                 <p class="truncate text-sm font-semibold text-stone-900">{{ $asset->title }}</p>
                                                 <p class="text-xs text-stone-500">
+                                                    <span class="mr-1 rounded-full bg-sky-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-sky-800">{{ $asset->locale === 'en' ? 'English' : 'Español' }}</span>
                                                     {{ $asset->isFile() ? ($asset->file_name.' · '.$asset->sizeLabel()) : $asset->url }}
                                                 </p>
                                             </div>
@@ -94,6 +105,32 @@
                         @endif
                     </div>
                 @endif
+            </div>
+        </details>
+
+        <details class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm" open>
+            <summary class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+                <span class="flex items-center gap-3">
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><flux:icon name="language" class="size-4" /></span>
+                    <span>
+                        <span class="block text-sm font-bold text-stone-950">Contenido en inglés</span>
+                        <span class="mt-0.5 block text-xs text-stone-500">Nombre, descripción y SEO que verá el comprador en inglés.</span>
+                    </span>
+                </span>
+                <flux:icon name="chevron-down" class="size-4 shrink-0 text-stone-400" />
+            </summary>
+            <div class="space-y-4 border-t border-emerald-100 p-5">
+                <x-input label="Nombre del curso en inglés" wire:model.blur="form.translations.en.name" maxlength="255" placeholder="e.g. Complete Digital Marketing Course" />
+                @error('form.translations.en.name') <p class="-mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                <x-textarea label="Descripción corta en inglés" rows="3" wire:model.blur="form.translations.en.short_description" placeholder="A concise summary for English-speaking buyers." />
+                @error('form.translations.en.short_description') <p class="-mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                <x-textarea label="Descripción completa en inglés" rows="7" wire:model.blur="form.translations.en.description" placeholder="What the course includes, who it is for, and what students will learn." />
+                @error('form.translations.en.description') <p class="-mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-input label="Título SEO en inglés" wire:model.blur="form.translations.en.seo_title" maxlength="255" placeholder="Course title | Brevare" />
+                    <x-input label="Descripción SEO en inglés" wire:model.blur="form.translations.en.seo_description" maxlength="320" placeholder="A concise search description." />
+                </div>
+                <p class="text-xs leading-5 text-stone-500">Si dejas estos campos vacíos, el curso mostrará el contenido en español como respaldo.</p>
             </div>
         </details>
     @endif

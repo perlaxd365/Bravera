@@ -40,6 +40,22 @@ class ProductForm extends Form
     public ?string $seo_description = null;
 
     /**
+     * Contenido traducido. Las columnas originales siguen siendo la versión
+     * canónica en español para no alterar pedidos ni búsquedas existentes.
+     *
+     * @var array<string, array<string, string|null>>
+     */
+    public array $translations = [
+        'en' => [
+            'name' => '',
+            'short_description' => '',
+            'description' => '',
+            'seo_title' => '',
+            'seo_description' => '',
+        ],
+    ];
+
+    /**
      * Reglas de validación.
      */
     public function rules(): array
@@ -118,6 +134,35 @@ class ProductForm extends Form
                 'string',
                 'max:320',
             ],
+
+            'translations.en.name' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'translations.en.short_description' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+
+            'translations.en.description' => [
+                'nullable',
+                'string',
+            ],
+
+            'translations.en.seo_title' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'translations.en.seo_description' => [
+                'nullable',
+                'string',
+                'max:320',
+            ],
         ];
     }
 
@@ -148,6 +193,11 @@ class ProductForm extends Form
             'slug.max' => 'El slug no puede superar los 255 caracteres.',
 
             'short_description.max' => 'La descripción corta no puede superar los 500 caracteres.',
+
+            'translations.en.name.max' => 'El nombre en inglés no puede superar los 255 caracteres.',
+            'translations.en.short_description.max' => 'La descripción corta en inglés no puede superar los 500 caracteres.',
+            'translations.en.seo_title.max' => 'El título SEO en inglés no puede superar los 255 caracteres.',
+            'translations.en.seo_description.max' => 'La descripción SEO en inglés no puede superar los 320 caracteres.',
         ];
     }
 
@@ -171,6 +221,11 @@ class ProductForm extends Form
             'allows_shalom_cod' => 'envío contra entrega en Shalom',
             'seo_title' => 'título SEO',
             'seo_description' => 'descripción SEO',
+            'translations.en.name' => 'nombre en inglés',
+            'translations.en.short_description' => 'descripción corta en inglés',
+            'translations.en.description' => 'descripción en inglés',
+            'translations.en.seo_title' => 'título SEO en inglés',
+            'translations.en.seo_description' => 'descripción SEO en inglés',
         ];
     }
 
@@ -208,6 +263,20 @@ class ProductForm extends Form
         $this->seo_title = $product->seo_title;
 
         $this->seo_description = $product->seo_description;
+
+        $english = $product->relationLoaded('translations')
+            ? $product->translations->firstWhere('locale', 'en')
+            : $product->translations()->where('locale', 'en')->first();
+
+        $this->translations = [
+            'en' => [
+                'name' => (string) ($english?->name ?? ''),
+                'short_description' => (string) ($english?->short_description ?? ''),
+                'description' => (string) ($english?->description ?? ''),
+                'seo_title' => (string) ($english?->seo_title ?? ''),
+                'seo_description' => (string) ($english?->seo_description ?? ''),
+            ],
+        ];
     }
 
     /**
@@ -270,6 +339,16 @@ class ProductForm extends Form
         $this->seo_title = null;
 
         $this->seo_description = null;
+
+        $this->translations = [
+            'en' => [
+                'name' => '',
+                'short_description' => '',
+                'description' => '',
+                'seo_title' => '',
+                'seo_description' => '',
+            ],
+        ];
 
         $this->status = true;
 

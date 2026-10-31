@@ -118,11 +118,16 @@
                 <flux:icon name="users" class="size-4.5 shrink-0" />
                 Clientes
             </a>
+            <a href="{{ route('admin.points.index') }}"
+                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.points.*') ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                <flux:icon name="gift" class="size-4.5 shrink-0" />
+                Brevare Puntos
+            </a>
         </div>
     </nav>
 
     <div class="space-y-1 border-t border-gray-100 p-3">
-        <a href="{{ route('admin.settings.homepage') }}"
+        <a href="{{ route('admin.settings.index') }}"
             class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition {{ request()->routeIs('admin.settings.*') ? 'bg-amber-50 text-amber-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
             <flux:icon name="cog-6-tooth" class="size-4.5 shrink-0" />
             Configuración

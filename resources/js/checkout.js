@@ -17,6 +17,8 @@ export const notify = (message, type = 'error') => {
     Livewire.dispatch('notify', { type, message });
 };
 
+const t = (key, fallback) => window.BrevareI18n?.[key] || fallback;
+
 const hideCulqiModal = () => {
     const modal = document.querySelector('#culqi-payment-modal');
     modal?.classList.add('hidden');
@@ -88,26 +90,27 @@ export const safeErrorMessage = (error) => {
     const sendsToSupport = text.includes('soporte') || text.includes('culqi.com');
 
     if (error?.param === 'card_number' && !error?.code) {
-        return 'No pudimos validar esa tarjeta. Revisa el número e inténtalo de nuevo.';
+        return t('cardError', 'No pudimos validar esa tarjeta. Revisa el número e inténtalo de nuevo.');
     }
 
     if (sendsToSupport) {
-        return 'Culqi no pudo procesar esa tarjeta. Prueba con otra tarjeta o inténtalo más tarde.';
+        return t('paymentError', 'Culqi no pudo procesar esa tarjeta. Prueba con otra tarjeta o inténtalo más tarde.');
     }
 
     if (error?.code === 'card_declined') {
-        return 'Tu banco rechazó la operación. Inténtalo con otra tarjeta.';
+        return t('cardDeclined', 'Tu banco rechazó la operación. Inténtalo con otra tarjeta.');
     }
 
     if (error?.type === 'parameter_error') {
         return 'Revisa los datos de tu tarjeta e inténtalo de nuevo.';
     }
 
-    return 'No pudimos procesar el pago. Inténtalo de nuevo.';
+    return t('paymentError', 'No pudimos procesar el pago. Inténtalo de nuevo.');
 };
 
 export const openModal = async (rawSession, publicKey, state) => {
     const session = plain(rawSession);
+    const locale = document.querySelector('[data-storefront-locale]')?.dataset.storefrontLocale || 'es';
 
     if (!session) {
         console.error('[Culqi] openModal: sesión vacía');
@@ -151,7 +154,7 @@ export const openModal = async (rawSession, publicKey, state) => {
         Ctor = await loadCulqi();
     } catch (e) {
         console.error('[Culqi] Error cargando Culqi:', e);
-        notify('No pudimos cargar el formulario seguro de Culqi. Revisa tu conexión e inténtalo de nuevo.');
+        notify(t('loadFormError', 'No pudimos cargar el formulario seguro de Culqi. Revisa tu conexión e inténtalo de nuevo.'));
         hideCulqiModal();
         const root = document.querySelector('[data-culqi-public-key]');
         const component = window.Livewire?.find?.(root?.getAttribute('wire:id'));
@@ -166,7 +169,7 @@ export const openModal = async (rawSession, publicKey, state) => {
     try {
         checkout = new Ctor(publicKey, {
         settings: {
-            title: `Pago del pedido ${session.orderNumber}`,
+            title: t('orderTitle', 'Pago del pedido :order').replace(':order', session.orderNumber),
             currency: session.currency,
             amount: session.amount,
             order: session.gatewayOrderId,
@@ -178,7 +181,7 @@ export const openModal = async (rawSession, publicKey, state) => {
                 : {}),
         },
         options: {
-            lang: 'es',
+            lang: locale,
             modal: false,
             container: '#culqi-container',
             installments: false,
@@ -200,7 +203,7 @@ export const openModal = async (rawSession, publicKey, state) => {
         });
     } catch (error) {
         console.error('[Culqi] no se pudo crear la instancia del checkout:', error);
-        notify('No pudimos iniciar el formulario de Culqi. Inténtalo otra vez.');
+        notify(t('openFormError', 'No pudimos iniciar el formulario de Culqi. Inténtalo otra vez.'));
         hideCulqiModal();
         const root = document.querySelector('[data-culqi-public-key]');
         window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
@@ -565,7 +568,7 @@ export const initCheckout = (publicKey, wireId) => {
             }
 
             console.error('[Culqi] el modal no apareció en el DOM.');
-            notify('No pudimos abrir el formulario de Culqi. Recarga la página e inténtalo de nuevo.');
+            notify(t('openFormError', 'No pudimos abrir el formulario de Culqi. Recarga la página e inténtalo de nuevo.'));
             return;
         }
 
@@ -589,7 +592,7 @@ export const initCheckout = (publicKey, wireId) => {
 
         void openModal(session, publicKey, state).catch((error) => {
             console.error('[Culqi] no se pudo montar el checkout:', error);
-            notify('No pudimos cargar el formulario de Culqi. Revisa tu conexión e inténtalo otra vez.');
+            notify(t('loadFormError', 'No pudimos cargar el formulario de Culqi. Revisa tu conexión e inténtalo otra vez.'));
             hideCulqiModal();
         });
 
@@ -603,7 +606,7 @@ export const initCheckout = (publicKey, wireId) => {
 
             console.error('[Culqi] el checkout no montó el iframe.');
             hideCulqiModal();
-            notify('No pudimos mostrar el formulario de Culqi. Revisa tu conexión o el bloqueador de anuncios e inténtalo de nuevo.');
+            notify(t('loadFormError', 'No pudimos mostrar el formulario de Culqi. Revisa tu conexión o el bloqueador de anuncios e inténtalo de nuevo.'));
             const root = document.querySelector('[data-culqi-public-key]');
             window.Livewire?.find?.(root?.getAttribute('wire:id'))?.call('culqiFormFailed');
         }, 9000);
@@ -615,7 +618,7 @@ export const initCheckout = (publicKey, wireId) => {
 
         if (!session) {
             console.error('[Culqi] el evento culqi:open llegó sin sesión de pago.');
-            notify('No pudimos abrir el pago. Vuelve a intentarlo.');
+            notify(t('openFormError', 'No pudimos abrir el pago. Vuelve a intentarlo.'));
             return;
         }
 
@@ -774,8 +777,8 @@ const showPaymentProcessing = (state = window.__brevareCulqi ?? {}) => {
     const spinner = document.getElementById('culqi-processing-spinner');
     const recovery = document.getElementById('culqi-processing-recovery');
     const orderLink = document.getElementById('culqi-processing-order-link');
-    if (title) title.textContent = 'Procesando tu pago';
-    if (description) description.innerHTML = 'Estamos confirmando tu pago.<br>Por favor, no cierres ni recargues esta página.';
+    if (title) title.textContent = t('processingTitle', 'Procesando tu pago');
+    if (description) description.innerHTML = `${t('processingCopy', 'Estamos confirmando tu pago.')}<br>${t('noReload', 'Por favor, no cierres ni recargues esta página.')}`;
     if (spinner) spinner.style.display = 'block';
     if (recovery) recovery.style.display = 'none';
     if (orderLink && state.orderStatusUrl) orderLink.href = state.orderStatusUrl;
@@ -797,8 +800,8 @@ const showPaymentStalled = (state = window.__brevareCulqi ?? {}) => {
     const spinner = document.getElementById('culqi-processing-spinner');
     const recovery = document.getElementById('culqi-processing-recovery');
     const orderLink = document.getElementById('culqi-processing-order-link');
-    if (title) title.textContent = 'La confirmación está tardando';
-    if (description) description.textContent = 'El servidor aún no confirma el resultado. No vuelvas a pagar hasta revisar el estado de tu pedido.';
+    if (title) title.textContent = t('processingTitle', 'Procesando tu pago');
+    if (description) description.textContent = t('stalled', 'El servidor aún no confirma el resultado. No vuelvas a pagar hasta revisar el estado de tu pedido.');
     if (spinner) spinner.style.display = 'none';
     if (recovery) recovery.style.display = 'block';
     if (orderLink && state.orderStatusUrl) orderLink.href = state.orderStatusUrl;
@@ -824,8 +827,8 @@ const hidePaymentProcessing = () => {
     const description = document.getElementById('culqi-processing-description');
     const spinner = document.getElementById('culqi-processing-spinner');
     const recovery = document.getElementById('culqi-processing-recovery');
-    if (title) title.textContent = 'Procesando tu pago';
-    if (description) description.innerHTML = 'Estamos confirmando tu pago.<br>Por favor, no cierres ni recargues esta página.';
+    if (title) title.textContent = t('processingTitle', 'Procesando tu pago');
+    if (description) description.innerHTML = `${t('processingCopy', 'Estamos confirmando tu pago.')}<br>${t('noReload', 'Por favor, no cierres ni recargues esta página.')}`;
     if (spinner) spinner.style.display = 'block';
     if (recovery) recovery.style.display = 'none';
 

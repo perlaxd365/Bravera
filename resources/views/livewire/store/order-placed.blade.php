@@ -5,34 +5,46 @@
                 <flux:icon name="{{ $order->payment_status->value === 'paid' ? 'check-circle' : ($order->payment_status->value === 'pending' ? 'clock' : 'exclamation-circle') }}" class="size-9" />
             </span>
             <h1 class="mt-5 text-2xl font-bold tracking-tight text-gray-900">
-                {{ $order->payment_status->value === 'paid' ? '¡Gracias por tu compra!' : ($order->payment_status->value === 'pending' ? 'Estamos verificando tu pago' : 'No se completó el pago') }}
+                {{ $order->payment_status->value === 'paid'
+                    ? (app()->getLocale() === 'en' ? 'Thank you for your purchase!' : '¡Gracias por tu compra!')
+                    : ($order->payment_status->value === 'pending'
+                        ? (app()->getLocale() === 'en' ? 'We are confirming your payment' : 'Estamos verificando tu pago')
+                        : (app()->getLocale() === 'en' ? 'Payment was not completed' : 'No se completó el pago')) }}
             </h1>
             <p class="mt-2 text-gray-600">
-                Tu pedido
+                {{ app()->getLocale() === 'en' ? 'Order' : 'Tu pedido' }}
                 <strong class="text-gray-900">{{ $order->order_number }}</strong>
                 @if ($order->payment_status->value === 'paid')
-                    fue pagado y confirmado.
+                    {{ app()->getLocale() === 'en' ? 'has been paid and confirmed.' : 'fue pagado y confirmado.' }}
                 @elseif ($order->payment_status->value === 'pending' && $latestPayment?->status?->value === 'failed')
-                    sigue reservado, pero el intento de pago no se completó. Puedes volver a intentarlo.
+                    {{ app()->getLocale() === 'en' ? 'is still reserved, but the payment attempt did not complete. You can try again.' : 'sigue reservado, pero el intento de pago no se completó. Puedes volver a intentarlo.' }}
                 @elseif ($order->payment_status->value === 'pending')
-                    está reservado. Te mostraremos la confirmación cuando Mercado Pago nos notifique.
+                    {{ app()->getLocale() === 'en' ? 'is reserved. We will confirm it as soon as the payment provider notifies us.' : 'está reservado. Te mostraremos la confirmación cuando Mercado Pago nos notifique.' }}
                 @else
-                    no se confirmó el pago. Elige otro medio de pago o contáctanos.
+                    {{ app()->getLocale() === 'en' ? 'could not be paid. Choose another payment method or contact us.' : 'no se confirmó el pago. Elige otro medio de pago o contáctanos.' }}
                 @endif
             </p>
 
             <div class="mx-auto mt-6 grid max-w-md grid-cols-3 gap-4 text-sm">
                 <div>
-                    <span class="block text-gray-500">{{ $order->payment_status->value === 'paid' ? 'Total pagado' : 'Total del pedido' }}</span>
-                    <strong class="text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</strong>
+                    <span class="block text-gray-500">{{ $order->payment_status->value === 'paid' ? (app()->getLocale() === 'en' ? 'Total paid' : 'Total pagado') : (app()->getLocale() === 'en' ? 'Order total' : 'Total del pedido') }}</span>
+                    <strong class="text-gray-900"><x-brevare.price :amount="(float) $order->total" size="xs" class="font-bold text-gray-900" /></strong>
                 </div>
                 <div>
-                    <span class="block text-gray-500">Método</span>
+                    <span class="block text-gray-500">{{ app()->getLocale() === 'en' ? 'Method' : 'Método' }}</span>
                     <strong class="text-gray-900">{{ $latestPayment?->gateway === 'mercadopago' ? 'Mercado Pago' : strtoupper($latestPayment?->method ?? 'tarjeta') }}</strong>
                 </div>
                 <div>
-                    <span class="block text-gray-500">Estado</span>
-                    <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ $order->payment_status->label() }}</x-brevare.badge>
+                    <span class="block text-gray-500">{{ app()->getLocale() === 'en' ? 'Status' : 'Estado' }}</span>
+                    <x-brevare.badge :color="$order->payment_status->badgeColor()">{{ app()->getLocale() === 'en' ? match ($order->payment_status->value) {
+                        'paid' => 'Paid',
+                        'pending' => 'Pending',
+                        'failed' => 'Failed',
+                        'refunded' => 'Refunded',
+                        'cancelled' => 'Cancelled',
+                        'expired' => 'Expired',
+                        default => ucfirst($order->payment_status->value),
+                    } : $order->payment_status->label() }}</x-brevare.badge>
                 </div>
             </div>
 
@@ -47,7 +59,7 @@
             </div>
 
             <div class="mt-6 border-t border-gray-100 pt-6 text-left">
-                <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500">Tu pedido</h2>
+                <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500">{{ app()->getLocale() === 'en' ? 'Your order' : 'Tu pedido' }}</h2>
                 <ul class="mt-3 divide-y divide-gray-100">
                     @foreach ($order->items as $item)
                         @php $image = $item->imageUrl(160); @endphp
@@ -70,8 +82,8 @@
                                 </p>
                             </div>
                             <div class="shrink-0 text-right">
-                                <p class="font-semibold text-gray-900">S/ {{ number_format((float) $item->unit_price, 2) }}</p>
-                                <p class="text-xs text-gray-500">Cant. {{ $item->quantity }}</p>
+                                <p class="font-semibold text-gray-900"><x-brevare.price :amount="(float) $item->unit_price" size="xs" class="font-semibold text-gray-900" /></p>
+                                <p class="text-xs text-gray-500">{{ __('storefront.common.quantity') }} {{ $item->quantity }}</p>
                             </div>
                         </li>
                     @endforeach
@@ -81,43 +93,45 @@
 
                 <dl class="mt-3 space-y-1.5 border-t border-gray-100 pt-4 text-sm">
                     <div class="flex justify-between">
-                        <dt class="text-gray-500">Subtotal</dt>
-                        <dd class="text-gray-900">S/ {{ number_format((float) $order->subtotal, 2) }}</dd>
+                        <dt class="text-gray-500">{{ __('storefront.common.subtotal') }}</dt>
+                        <dd class="text-gray-900"><x-brevare.price :amount="(float) $order->subtotal" size="xs" class="font-semibold text-gray-900" /></dd>
                     </div>
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Envío pagado ahora</dt>
-                        <dd class="text-gray-900">S/ {{ number_format((float) $order->shipping_total, 2) }}</dd>
-                    </div>
-                    @if ((float) $order->cod_shipping_amount > 0)
-                        <div class="flex justify-between text-emerald-800">
-                            <dt>Envío a pagar en Shalom</dt>
-                            <dd>S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</dd>
-                        </div>
-                    @endif
-                    @if ($order->delivery_days)
+                    @if ($order->hasPhysicalItems())
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Tiempo de entrega</dt>
-                            <dd class="text-gray-900">
-                                {{ $order->delivery_days }} {{ $order->delivery_days === 1 ? 'día hábil' : 'días hábiles' }}
-                            </dd>
+                            <dt class="text-gray-500">{{ __('storefront.checkout.shipping_now') }}</dt>
+                            <dd class="text-gray-900"><x-brevare.price :amount="(float) $order->shipping_total" size="xs" class="font-semibold text-gray-900" /></dd>
                         </div>
+                        @if ((float) $order->cod_shipping_amount > 0)
+                            <div class="flex justify-between text-emerald-800">
+                                <dt>{{ __('storefront.checkout.shipping_at_pickup') }}</dt>
+                                <dd><x-brevare.price :amount="(float) $order->cod_shipping_amount" size="xs" class="font-semibold text-emerald-800" /></dd>
+                            </div>
+                        @endif
+                        @if ($order->delivery_days)
+                            <div class="flex justify-between">
+                            <dt class="text-gray-500">{{ app()->getLocale() === 'en' ? 'Delivery time' : 'Tiempo de entrega' }}</dt>
+                                <dd class="text-gray-900">
+                                    {{ $order->delivery_days }} {{ app()->getLocale() === 'en' ? ($order->delivery_days === 1 ? 'business day' : 'business days') : ($order->delivery_days === 1 ? 'día hábil' : 'días hábiles') }}
+                                </dd>
+                            </div>
+                        @endif
                     @endif
                     @if ((float) $order->discount_total > 0)
                         <div class="flex justify-between text-green-700">
                             <dt>Cupón {{ $order->coupon_code }}</dt>
-                            <dd>- S/ {{ number_format((float) $order->discount_total, 2) }}</dd>
+                            <dd>- <x-brevare.price :amount="(float) $order->discount_total" size="xs" class="font-semibold text-green-700" /></dd>
                         </div>
                     @endif
                     <div class="flex justify-between border-t border-gray-100 pt-2">
                         <dt class="font-bold text-gray-900">
-                            {{ (float) $order->cod_shipping_amount > 0 ? 'Total pagado ahora' : 'Total' }}
+                            {{ (float) $order->cod_shipping_amount > 0 ? (app()->getLocale() === 'en' ? 'Paid now' : 'Total pagado ahora') : __('storefront.common.total') }}
                         </dt>
-                        <dd class="font-extrabold text-gray-900">S/ {{ number_format((float) $order->total, 2) }}</dd>
+                        <dd class="font-extrabold text-gray-900"><x-brevare.price :amount="(float) $order->total" size="xs" class="font-extrabold text-gray-900" /></dd>
                     </div>
                 </dl>
                 @if ((float) $order->cod_shipping_amount > 0)
                     <p class="mt-2 text-xs leading-5 text-emerald-800">
-                        El envío de S/ {{ number_format((float) $order->cod_shipping_amount, 2) }} se paga en Shalom al recoger tu pedido.
+                        {{ __('storefront.order.shipping_due_pickup', ['amount' => $storefront->formatFromPen((float) $order->cod_shipping_amount)]) }}
                     </p>
                 @endif
             </div>
@@ -154,7 +168,7 @@
                         </p>
                     @endif
                 @endif
-                @if (! empty($order->address_snapshot))
+                @if ($order->hasPhysicalItems() && ! empty($order->address_snapshot))
                     <p class="flex items-start gap-2">
                         <flux:icon name="map-pin" class="mt-0.5 size-4 shrink-0 text-gray-400" />
                         <span>
@@ -180,16 +194,16 @@
                 @if ($order->payment_status->value === 'pending')
                     <a href="{{ route('checkout', ['pagar' => $order->order_number]) }}"
                         class="inline-flex items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
-                        Completar pago
+                        {{ app()->getLocale() === 'en' ? 'Complete payment' : 'Completar pago' }}
                     </a>
                 @endif
                 <a href="{{ route('account.orders') }}"
                     class="inline-flex items-center justify-center rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800">
-                    Ver mis pedidos
+                    {{ __('storefront.common.my_orders') }}
                 </a>
                 <a href="{{ route('home') }}"
                     class="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-900 transition hover:bg-gray-50">
-                    Seguir comprando
+                    {{ __('storefront.common.continue_shopping') }}
                 </a>
             </div>
         </div>

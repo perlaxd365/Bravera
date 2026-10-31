@@ -27,7 +27,7 @@ class StoreCatalogRepository
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'translations', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->withCount([
@@ -118,7 +118,7 @@ class StoreCatalogRepository
         $candidates = Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.supplierVariants.supplier', 'variants.images'])
+            ->with(['brand', 'category', 'translations', 'variants.supplierVariants.supplier', 'variants.images'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereHas('variants', function ($query) {
@@ -134,12 +134,12 @@ class StoreCatalogRepository
 
         $ranked = $candidates
             ->map(function (Product $product) use ($terms): array {
-                $name = $this->normalize($product->name);
+                $name = $this->normalize((string) $product->localized('name'));
                 $category = $this->normalize(
                     ($product->category?->name ?? '').' '.($product->category?->path ?? '')
                 );
                 $description = $this->normalize(
-                    ($product->short_description ?? '').' '.($product->description ?? '')
+                    ($product->localized('short_description') ?? '').' '.($product->localized('description') ?? '')
                 );
                 $score = 0;
 
@@ -183,7 +183,7 @@ class StoreCatalogRepository
         return Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.images', 'variants.supplierVariants.supplier'])
+            ->with(['brand', 'category', 'translations', 'variants.images', 'variants.supplierVariants.supplier'])
             ->whereHas('variants', function ($query) {
                 $query->where('is_active', true)
                     ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
@@ -217,6 +217,12 @@ class StoreCatalogRepository
                 $query->orWhere('name', 'like', "%{$term}%")
                     ->orWhere('short_description', 'like', "%{$term}%")
                     ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhereHas('translations', fn (Builder $translation) => $translation
+                        ->whereIn('locale', (array) config('storefront.supported_locales', ['es', 'en']))
+                        ->where(fn (Builder $localized) => $localized
+                            ->where('name', 'like', "%{$term}%")
+                            ->orWhere('short_description', 'like', "%{$term}%")
+                            ->orWhere('description', 'like', "%{$term}%")))
                     ->orWhereHas('category', fn (Builder $category) => $category
                         ->where('name', 'like', "%{$term}%")
                         ->orWhere('path', 'like', "%{$term}%"));

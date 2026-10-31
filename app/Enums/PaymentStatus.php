@@ -14,6 +14,18 @@ enum PaymentStatus: string
 
     public function label(): string
     {
+        if (app()->getLocale() === 'en') {
+            return match ($this) {
+                self::PENDING => 'Pending',
+                self::AUTHORIZED => 'Authorized',
+                self::PAID => 'Paid',
+                self::FAILED => 'Failed',
+                self::REFUNDED => 'Refunded',
+                self::CANCELLED => 'Cancelled',
+                self::EXPIRED => 'Expired',
+            };
+        }
+
         return match ($this) {
             self::PENDING => 'Pendiente',
             self::AUTHORIZED => 'Autorizado',

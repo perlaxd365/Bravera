@@ -3,6 +3,8 @@
 use App\Events\CustomerRegistered;
 use App\Models\User;
 use App\Services\EmailVerificationService;
+use App\Services\PointsService;
+use App\Support\Auth\LoginRedirect;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rules;
@@ -16,6 +18,11 @@ new #[Layout('layouts.guest')] class extends Component
     public string $password = '';
     public string $password_confirmation = '';
     public bool $terms = false;
+
+    public function mount(): void
+    {
+        LoginRedirect::remember(request());
+    }
 
     /**
      * Handle an incoming registration request.
@@ -37,6 +44,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         $user->assignCustomerRole();
 
+        app(PointsService::class)->awardRegistration($user);
+
         // Evento propio: evita la verificación por enlace síncrona del framework,
         // que rompía el registro cuando el SMTP fallaba. Aquí el correo de
         // bienvenida y el de verificación viajan por la cola de forma segura.
@@ -53,10 +62,10 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div x-data="{ legalModal: null }">
     <x-brevare.auth-card
-        title="Crea tu cuenta"
-        subtitle="Únete a Brevare y compra con los mejores precios del mercado."
+        :title="app()->getLocale() === 'en' ? 'Create your account' : 'Crea tu cuenta'"
+        :subtitle="app()->getLocale() === 'en' ? 'Join Brevare and shop with confidence.' : 'Únete a Brevare y compra con los mejores precios del mercado.'"
     >
-        <x-brevare.google-button label="Regístrate con Google" />
+        <x-brevare.google-button :label="app()->getLocale() === 'en' ? 'Sign up with Google' : 'Regístrate con Google'" />
 
         <x-brevare.auth-divider />
 
@@ -64,7 +73,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.floating-input
                 wire:model="name"
                 id="name"
-                label="Nombre completo"
+                :label="app()->getLocale() === 'en' ? 'Full name' : 'Nombre completo'"
                 type="text"
                 icon="user"
                 autocomplete="name"
@@ -74,7 +83,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.floating-input
                 wire:model="email"
                 id="email"
-                label="Correo electrónico"
+                :label="app()->getLocale() === 'en' ? 'Email address' : 'Correo electrónico'"
                 type="email"
                 icon="mail"
                 autocomplete="username"
@@ -84,7 +93,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.password-input
                 wire:model="password"
                 id="password"
-                label="Contraseña"
+                :label="app()->getLocale() === 'en' ? 'Password' : 'Contraseña'"
                 strength
                 autocomplete="new-password"
                 required
@@ -93,7 +102,7 @@ new #[Layout('layouts.guest')] class extends Component
             <x-brevare.password-input
                 wire:model="password_confirmation"
                 id="password_confirmation"
-                label="Confirmar contraseña"
+                :label="app()->getLocale() === 'en' ? 'Confirm password' : 'Confirmar contraseña'"
                 autocomplete="new-password"
                 required
             />
@@ -109,11 +118,11 @@ new #[Layout('layouts.guest')] class extends Component
                     required
                 >
                 <span>
-                    Acepto los
-                    <button type="button" @click="legalModal = 'terms'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Términos y Condiciones</button>
-                    y la
-                    <button type="button" @click="legalModal = 'privacy'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">Política de Privacidad</button>
-                    de Brevare.
+                    {{ app()->getLocale() === 'en' ? 'I accept the' : 'Acepto los' }}
+                    <button type="button" @click="legalModal = 'terms'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">{{ __('storefront.footer.terms') }}</button>
+                    {{ app()->getLocale() === 'en' ? 'and' : 'y la' }}
+                    <button type="button" @click="legalModal = 'privacy'" class="font-semibold text-gray-900 underline-offset-4 hover:underline">{{ __('storefront.footer.privacy') }}</button>
+                    {{ app()->getLocale() === 'en' ? 'for Brevare.' : 'de Brevare.' }}
                 </span>
             </label>
             @error('terms')
@@ -121,15 +130,15 @@ new #[Layout('layouts.guest')] class extends Component
             @enderror
 
             <x-brevare.button class="w-full">
-                Crear cuenta
+                {{ __('storefront.common.create_account') }}
             </x-brevare.button>
         </form>
 
         <x-slot:footer>
             <p class="text-center text-sm text-gray-500">
-                ¿Ya tienes cuenta?
+                {{ app()->getLocale() === 'en' ? 'Already have an account?' : '¿Ya tienes cuenta?' }}
                 <a href="{{ route('login') }}" wire:navigate class="font-semibold text-gray-900 underline-offset-4 transition hover:underline">
-                    Inicia sesión
+                    {{ __('storefront.common.sign_in') }}
                 </a>
             </p>
         </x-slot:footer>
@@ -151,8 +160,8 @@ new #[Layout('layouts.guest')] class extends Component
             class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
         >
             <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                <h2 class="text-base font-semibold text-gray-900" x-text="legalModal === 'terms' ? 'Términos y Condiciones' : 'Política de Privacidad'"></h2>
-                <button type="button" @click="legalModal = null" class="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Cerrar">
+                <h2 class="text-base font-semibold text-gray-900" x-text="legalModal === 'terms' ? @js(__('storefront.footer.terms')) : @js(__('storefront.footer.privacy'))"></h2>
+                <button type="button" @click="legalModal = null" class="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900" aria-label="{{ __('storefront.common.close') }}">
                     <flux:icon name="x-mark" class="size-5" />
                 </button>
             </div>
@@ -168,7 +177,7 @@ new #[Layout('layouts.guest')] class extends Component
 
             <div class="border-t border-gray-100 px-6 py-4">
                 <x-brevare.button type="button" @click="legalModal = null" class="w-full">
-                    Entendido
+                    {{ app()->getLocale() === 'en' ? 'Got it' : 'Entendido' }}
                 </x-brevare.button>
             </div>
         </div>

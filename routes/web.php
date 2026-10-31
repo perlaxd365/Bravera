@@ -13,6 +13,7 @@ use App\Http\Controllers\Store\FavoriteController;
 use App\Http\Controllers\Store\CourseAssetController;
 use App\Http\Controllers\ShalomAgencyController;
 use App\Http\Controllers\Store\SearchSuggestionController;
+use App\Http\Controllers\Store\StorefrontPreferenceController;
 use App\Livewire\Account\Addresses;
 use App\Livewire\Account\OrderDetail;
 use App\Livewire\Account\Orders;
@@ -63,6 +64,12 @@ Route::post('pagos/izipay/retorno', IzipayReturnController::class)
 
 Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('feeds/google-shopping.xml', GoogleMerchantFeedController::class)->name('google.merchant-feed');
+
+Route::get('preferencias/idioma/{locale}', [StorefrontPreferenceController::class, 'language'])
+    ->name('storefront.language');
+
+Route::get('preferencias/moneda/{currency}', [StorefrontPreferenceController::class, 'currency'])
+    ->name('storefront.currency');
 
 /*
 |--------------------------------------------------------------------------

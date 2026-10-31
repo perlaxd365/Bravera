@@ -49,9 +49,15 @@
             <td align="right" style="padding:4px 0;color:#111827;">S/ {{ number_format((float) $order->subtotal, 2) }}</td>
         </tr>
         <tr>
-            <td style="padding:4px 0;color:#6b7280;">Envío</td>
+            <td style="padding:4px 0;color:#6b7280;">Envío pagado ahora</td>
             <td align="right" style="padding:4px 0;color:#111827;">S/ {{ number_format((float) $order->shipping_total, 2) }}</td>
         </tr>
+        @if ((float) $order->cod_shipping_amount > 0)
+            <tr>
+                <td style="padding:4px 0;color:#047857;">Envío a pagar en Shalom</td>
+                <td align="right" style="padding:4px 0;color:#047857;">S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}</td>
+            </tr>
+        @endif
         @if ($order->delivery_days)
             <tr>
                 <td style="padding:4px 0;color:#6b7280;">Tiempo de entrega</td>

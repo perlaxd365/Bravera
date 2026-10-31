@@ -12,12 +12,19 @@ class Cart extends Model
         'user_id',
         'session_id',
         'status',
+        'recovery_token',
+        'last_activity_at',
+        'recovery_email_sent_at',
+        'recovery_email_count',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => 'string',
+            'last_activity_at' => 'datetime',
+            'recovery_email_sent_at' => 'datetime',
+            'recovery_email_count' => 'integer',
         ];
     }
 

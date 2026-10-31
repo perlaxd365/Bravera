@@ -38,7 +38,10 @@
     <h2>Resumen del pago</h2>
     <p><strong>Método:</strong> {{ $payment?->method ?? '—' }}<br>
         <strong>Subtotal:</strong> S/ {{ number_format((float) $order->subtotal, 2) }}<br>
-        <strong>Envío:</strong> S/ {{ number_format((float) $order->shipping_total, 2) }}<br>
+        <strong>Envío pagado ahora:</strong> S/ {{ number_format((float) $order->shipping_total, 2) }}<br>
+        @if ((float) $order->cod_shipping_amount > 0)
+            <strong>Envío a cobrar en Shalom:</strong> S/ {{ number_format((float) $order->cod_shipping_amount, 2) }}<br>
+        @endif
         @if ((float) $order->discount_total > 0)
             <strong>Descuento:</strong> − S/ {{ number_format((float) $order->discount_total, 2) }}<br>
         @endif

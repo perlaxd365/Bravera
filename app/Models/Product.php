@@ -93,6 +93,46 @@ class Product extends Model
             ->orderBy('id');
     }
 
+    public function translations(): HasMany
+    {
+        return $this->hasMany(ProductTranslation::class);
+    }
+
+    public function localized(string $field, ?string $locale = null, ?string $fallback = null): ?string
+    {
+        $locale ??= app()->getLocale();
+        $allowed = ['name', 'short_description', 'description', 'seo_title', 'seo_description'];
+
+        if (! in_array($field, $allowed, true)) {
+            return null;
+        }
+
+        if ($locale !== 'es') {
+            $translation = $this->relationLoaded('translations')
+                ? $this->translations->firstWhere('locale', $locale)
+                : $this->translations()->where('locale', $locale)->first();
+
+            if (filled($translation?->{$field})) {
+                return (string) $translation->{$field};
+            }
+        }
+
+        return $fallback ?? ($this->{$field} ?: null);
+    }
+
+    public function courseAssetsForLocale(?string $locale = null): \Illuminate\Support\Collection
+    {
+        $locale ??= app()->getLocale();
+        $assets = $this->relationLoaded('courseAssets')
+            ? $this->courseAssets
+            : $this->courseAssets()->get();
+        $localized = $assets->where('locale', $locale);
+
+        return $localized->isNotEmpty()
+            ? $localized->values()
+            : $assets->where('locale', 'es')->values();
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', true);
@@ -150,11 +190,13 @@ class Product extends Model
             return 'Consultar';
         }
 
+        $context = \App\Support\Localization\StorefrontContext::current();
+
         if ($min === $max) {
-            return 'S/ '.number_format((float) $min, 2);
+            return $context->formatFromPen((float) $min);
         }
 
-        return 'S/ '.number_format((float) $min, 2).' - '.number_format((float) $max, 2);
+        return $context->formatFromPen((float) $min).' - '.$context->formatFromPen((float) $max);
     }
 
     public function hasStock(): bool

@@ -109,6 +109,39 @@ class CloudinaryImageService
     }
 
     /**
+     * Sube un video para anuncios conservando alta resolución.
+     *
+     * La ficha usa un video pequeño para no cargar la página. Meta necesita
+     * una pieza aparte, sin la reducción a 320 × 180 de la vitrina.
+     *
+     * @return array{public_id: string, url: string, secure_url: string, file_name: string, format: ?string, size: ?int, width: ?int, height: ?int, duration: ?float}
+     */
+    public function uploadAdVideo(UploadedFile|TemporaryUploadedFile $file): array
+    {
+        $response = $this->client->uploadApi()->upload(
+            $file->getRealPath(),
+            [
+                'folder' => self::FOLDER_PRODUCTS.'/anuncios',
+                'resource_type' => 'video',
+                'unique_filename' => true,
+                'use_filename' => true,
+            ]
+        );
+
+        return [
+            'public_id' => (string) $response['public_id'],
+            'url' => (string) $response['url'],
+            'secure_url' => (string) $response['secure_url'],
+            'file_name' => $file->getClientOriginalName(),
+            'format' => $response['format'] ?? null,
+            'size' => isset($response['bytes']) ? (int) $response['bytes'] : null,
+            'width' => isset($response['width']) ? (int) $response['width'] : null,
+            'height' => isset($response['height']) ? (int) $response['height'] : null,
+            'duration' => isset($response['duration']) ? (float) $response['duration'] : null,
+        ];
+    }
+
+    /**
      * Elimina un recurso de Cloudinary por su public_id.
      */
     public function delete(?string $publicId, string $resourceType = 'image'): void

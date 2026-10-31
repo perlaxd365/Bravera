@@ -64,16 +64,16 @@
             @keydown.escape="open = false"
             role="combobox" aria-autocomplete="list"
             :aria-expanded="open.toString()" aria-controls="{{ $listId }}"
-            placeholder="{{ $mobile ? '¿Qué estás buscando?' : 'Buscar productos...' }}"
+            placeholder="{{ app()->getLocale() === 'en' ? ($mobile ? 'What are you looking for?' : 'Search products…') : ($mobile ? '¿Qué estás buscando?' : 'Buscar productos...') }}"
             class="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-500 focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-400/20 focus:outline-none"
-            aria-label="Buscar productos">
+            aria-label="{{ __('storefront.common.search') }}">
         <span x-show="loading" x-cloak class="absolute right-3 top-1/2 -translate-y-1/2">
             <span class="block size-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-800 motion-reduce:animate-none"></span>
         </span>
 
         <div x-show="open" x-cloak x-transition.opacity.duration.150ms
             class="absolute left-0 right-0 top-full z-[90] mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-950/15">
-            <ul id="{{ $listId }}" role="listbox" aria-label="Sugerencias de productos" class="divide-y divide-gray-100">
+            <ul id="{{ $listId }}" role="listbox" aria-label="{{ app()->getLocale() === 'en' ? 'Product suggestions' : 'Sugerencias de productos' }}" class="divide-y divide-gray-100">
                 <template x-for="(result, index) in results" :key="result.url">
                     <li role="option" :aria-selected="(active === index).toString()">
                         <button type="button" @click="choose(index)" @mouseenter="active = index"

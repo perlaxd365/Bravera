@@ -10,6 +10,7 @@ class CourseAsset extends Model
 {
     protected $fillable = [
         'product_id',
+        'locale',
         'title',
         'type',
         'file_path',

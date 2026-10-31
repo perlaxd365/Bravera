@@ -20,7 +20,7 @@ class Home extends Component
             ->active()
             ->visible()
             ->featured()
-            ->with(['brand', 'category', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'translations', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereHas('variants', function ($query) {
@@ -35,7 +35,7 @@ class Home extends Component
         $latest = Product::query()
             ->active()
             ->visible()
-            ->with(['brand', 'category', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
+            ->with(['brand', 'category', 'translations', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
             ->whereHas('variants', function ($query) {
@@ -55,7 +55,7 @@ class Home extends Component
             ->whereHas('category', fn ($query) => $query
                 ->where('path', 'navidad')
                 ->orWhere('path', 'like', 'navidad/%'))
-            ->with(['category', 'variants.images', 'variants.supplierVariants.supplier'])
+            ->with(['category', 'translations', 'variants.images', 'variants.supplierVariants.supplier'])
             ->whereHas('variants', function ($query) {
                 $query->where('is_active', true)
                     ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
@@ -64,6 +64,21 @@ class Home extends Component
             })
             ->latest()
             ->limit(6)
+            ->get();
+
+        $newestProducts = Product::query()
+            ->active()
+            ->visible()
+            ->with(['category', 'translations', 'variants.images', 'variants.supplierVariants.supplier'])
+            ->whereHas('variants', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
+                        ->active()
+                        ->whereColumn('stock', '>', 'reserved_stock'));
+            })
+            ->latest('created_at')
+            ->latest('id')
+            ->limit(8)
             ->get();
 
         $categoryFallbacks = [
@@ -116,8 +131,53 @@ class Home extends Component
 
         $savedSettings = HomepageSetting::query()->first();
         $savedHeroSlides = collect($savedSettings?->hero_slides ?: config('homepage.slides', []));
+
+        if (app()->getLocale() === 'en') {
+            $englishHeroCopy = [
+                ['eyebrow' => 'Holiday at Brevare', 'title' => 'Gifts that arrive', 'highlight' => 'with delight', 'subtitle' => 'Find that special detail to share this holiday season.', 'cta' => 'Discover gifts'],
+                ['eyebrow' => 'Holiday at home', 'title' => 'Moments to', 'highlight' => 'celebrate together', 'subtitle' => 'Ideas to refresh your home and enjoy every gathering.', 'cta' => 'Explore the shop'],
+                ['eyebrow' => 'Seasonal inspiration', 'title' => 'A touch of mystery', 'highlight' => 'and fun', 'subtitle' => 'Discover new finds for a different kind of season.', 'cta' => 'See new arrivals'],
+                ['eyebrow' => 'Technology', 'title' => 'Smartphones and laptops', 'highlight' => 'up to 20% off', 'subtitle' => 'The latest devices with fast shipping throughout Peru.', 'cta' => 'View deals'],
+                ['eyebrow' => 'Fashion', 'title' => 'New collection', 'highlight' => 'Women’s fashion', 'subtitle' => 'Dresses, blazers, and accessories for the season.', 'cta' => 'Discover'],
+                ['eyebrow' => 'Home', 'title' => 'Refresh your rest', 'highlight' => 'from S/ 99', 'subtitle' => 'Sheets and comforters to transform your bedroom.', 'cta' => 'View bedroom'],
+                ['eyebrow' => 'Kitchen', 'title' => 'Equip your kitchen', 'highlight' => 'up to 25% off', 'subtitle' => 'Find tools and appliances for your home.', 'cta' => 'Explore kitchen'],
+            ];
+
+            $savedHeroSlides = $savedHeroSlides
+                ->values()
+                ->map(fn (array $slide, int $index): array => array_merge(
+                    $slide,
+                    $englishHeroCopy[$index] ?? [
+                        'eyebrow' => 'Brevare selection',
+                        'title' => 'Find something',
+                        'highlight' => 'worth discovering',
+                        'subtitle' => 'Explore our latest selection.',
+                        'cta' => 'Shop now',
+                    ],
+                ));
+        }
+
         $christmasSlides = $christmasProducts->take(3)->values()->map(function (Product $product, int $index): array {
-            $copy = [
+            $copy = app()->getLocale() === 'en' ? [
+                [
+                    'eyebrow' => 'Holiday at home',
+                    'title' => 'Details that brighten',
+                    'highlight' => 'your holidays',
+                    'subtitle' => 'Wreaths, garlands, and decorations to warm every corner.',
+                ],
+                [
+                    'eyebrow' => 'Moments to share',
+                    'title' => 'Your table, ready to',
+                    'highlight' => 'celebrate',
+                    'subtitle' => 'Small details that make the season feel special.',
+                ],
+                [
+                    'eyebrow' => 'Decorate your way',
+                    'title' => 'A holiday season with',
+                    'highlight' => 'your personality',
+                    'subtitle' => 'Find seasonal pieces that transform your home effortlessly.',
+                ],
+            ] : [
                 [
                     'eyebrow' => 'Navidad en casa',
                     'title' => 'Detalles que iluminan',
@@ -141,7 +201,7 @@ class Home extends Component
             return [
                 ...$copy,
                 'image' => $product->coverImageModel()?->sizedUrl(1600),
-                'cta' => 'Ver el producto',
+                'cta' => app()->getLocale() === 'en' ? 'View product' : 'Ver el producto',
                 'url' => route('store.product', ['slug' => $product->slug]),
                 'tone' => 'christmas',
             ];
@@ -157,19 +217,13 @@ class Home extends Component
             ->all();
         $heroFallbackImage = config('homepage.slides.0.image');
         $homeTexts = array_merge(config('homepage.texts', []), $savedSettings?->section_texts ?? []);
-        $promoTickerPhrases = [
-            'Navidad empieza en casa',
-            'Detalles que se sienten como regalo',
-            'Decora sin complicarte',
-            'Momentos para compartir',
-            'Ilumina cada rincón',
-            'Un detalle especial',
-        ];
-        $promoTickerItems = $christmasProducts->values()
-            ->map(function (Product $product, int $index) use ($promoTickerPhrases): array {
+        $promoTickerItems = $newestProducts
+            ->map(function (Product $product): array {
                 return [
-                    'eyebrow' => $promoTickerPhrases[$index % count($promoTickerPhrases)],
-                    'name' => $product->name,
+                    'eyebrow' => $product->category?->name
+                        ? (app()->getLocale() === 'en' ? 'New · ' : 'Nuevo · ').$product->category->name
+                        : (app()->getLocale() === 'en' ? 'New at Brevare' : 'Nuevo en Brevare'),
+                    'name' => $product->localized('name') ?? $product->name,
                     'image' => $product->coverImageModel()?->sizedUrl(220),
                     'url' => route('store.product', ['slug' => $product->slug]),
                 ];
@@ -178,8 +232,12 @@ class Home extends Component
             ->values()
             ->all();
 
-        $seoTitle = 'Brevare Perú | Moda, tecnología, hogar y regalos';
-        $seoDescription = 'Compra moda, tecnología, hogar y regalos en Brevare Perú. Entrega garantizada y envíos a todo el Perú.';
+        $seoTitle = app()->getLocale() === 'en'
+            ? __('storefront.home.seo_title')
+            : 'Brevare Perú | Moda, tecnología, hogar y regalos';
+        $seoDescription = app()->getLocale() === 'en'
+            ? __('storefront.home.seo_description')
+            : 'Compra moda, tecnología, hogar y regalos en Brevare Perú. Entrega garantizada y envíos a todo el Perú.';
         $seoImage = $heroSlides[0]['image'] ?? asset('favicon-192.png');
 
         return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'promoTickerItems', 'homeTexts'))

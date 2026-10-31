@@ -13,6 +13,8 @@ readonly class ProductVariantData
         public ?string $barcode,
         public float $cost_price,
         public float $sale_price,
+        public ?float $wholesale_price,
+        public ?int $wholesale_min_quantity,
         public ?float $compare_price,
         public float $discount_percent,
         public ?float $weight,
@@ -44,6 +46,14 @@ readonly class ProductVariantData
             cost_price: (float) ($data['cost_price'] ?? 0),
 
             sale_price: (float) ($data['sale_price'] ?? 0),
+
+            wholesale_price: isset($data['wholesale_price']) && $data['wholesale_price'] !== ''
+                ? (float) $data['wholesale_price']
+                : null,
+
+            wholesale_min_quantity: isset($data['wholesale_min_quantity']) && $data['wholesale_min_quantity'] !== ''
+                ? (int) $data['wholesale_min_quantity']
+                : null,
 
             compare_price: isset($data['compare_price'])
                 ? (float) $data['compare_price']
@@ -109,6 +119,14 @@ readonly class ProductVariantData
                 ? $variant->compare_price
                 : $variant->sale_price),
 
+            wholesale_price: $variant->wholesale_price !== null
+                ? (float) $variant->wholesale_price
+                : null,
+
+            wholesale_min_quantity: $variant->wholesale_min_quantity !== null
+                ? (int) $variant->wholesale_min_quantity
+                : null,
+
             compare_price: $variant->compare_price !== null
                 ? (float) $variant->compare_price
                 : null,
@@ -158,6 +176,8 @@ readonly class ProductVariantData
             'barcode' => $this->barcode,
             'cost_price' => $this->cost_price,
             'sale_price' => $discountedPrice,
+            'wholesale_price' => $this->wholesale_price,
+            'wholesale_min_quantity' => $this->wholesale_min_quantity,
             'compare_price' => $this->discount_percent > 0 ? $basePrice : $this->compare_price,
             'discount_percent' => $this->discount_percent,
             'weight' => $this->weight,

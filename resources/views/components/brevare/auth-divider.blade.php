@@ -8,7 +8,7 @@
     </div>
     <div class="relative flex justify-center">
         <span class="bg-white px-4 text-xs font-medium uppercase tracking-wider text-gray-400">
-            {{ $label }}
+            {{ $label === 'o continúa con tu correo' && app()->getLocale() === 'en' ? 'or continue with email' : $label }}
         </span>
     </div>
 </div>
