@@ -30,6 +30,17 @@ return [
         'X-Vercel-IP-Country',
     ],
 
+    /*
+    | Country lookup is cached per IP. It is only used when the hosting or CDN
+    | does not provide a country header. Private/reserved IPs are never sent.
+    */
+    'geoip' => [
+        'enabled' => env('STOREFRONT_GEOIP_ENABLED', true),
+        'endpoint' => env('STOREFRONT_GEOIP_ENDPOINT', 'https://ipwho.is/{ip}'),
+        'timeout' => env('STOREFRONT_GEOIP_TIMEOUT', 2),
+        'cache_hours' => env('STOREFRONT_GEOIP_CACHE_HOURS', 24),
+    ],
+
     'cookies' => [
         'locale' => 'brevare_locale',
         'currency' => 'brevare_currency',

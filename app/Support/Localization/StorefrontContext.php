@@ -104,6 +104,10 @@ final readonly class StorefrontContext
         }
 
         if ($country === '') {
+            $country = (string) (app(IpCountryResolver::class)->resolve($request->ip()) ?? '');
+        }
+
+        if ($country === '') {
             $acceptLanguage = (string) $request->header('Accept-Language', '');
 
             if (preg_match('/(?:^|,)\s*[a-z]{2}(?:-[A-Z]{2})?/i', $acceptLanguage, $match)) {
