@@ -73,4 +73,8 @@ return [
         'secure' => (bool) env('CLOUDINARY_SECURE', true),
     ],
 
+    'product_api' => [
+        'password' => env('PRODUCT_API_PASSWORD'),
+    ],
+
 ];

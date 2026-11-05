@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brevare Product API"
+  short_description: "Publica productos completos por API"
+  default_prompt: "Usa $brevare-product-api para publicar un producto completo en Brevare."
