@@ -13,6 +13,10 @@ El servidor original del ZIP requería `mcp.brevare.com`, Node.js, Nginx y syste
 El hosting actual no ofrece esas piezas ni el subdominio. La integración Laravel
 mantiene el mismo protocolo y herramientas sin añadir un proceso adicional.
 
+Las herramientas llaman directamente a los servicios y validaciones internas de
+Laravel. No realizan solicitudes a la URL pública ni pasan `PRODUCT_API_PASSWORD`
+por la URL o por logs de acceso.
+
 ## Autenticación
 
 Las solicitudes MCP requieren:
@@ -93,7 +97,5 @@ plan Go puede no habilitar esta función.
 ```dotenv
 PRODUCT_API_PASSWORD=<ALEATORIA>
 MCP_ACCESS_TOKEN=<ALEATORIO_DE_AL_MENOS_32_CARACTERES>
-BREVARE_API_BASE=https://brevare.com/api/v1
-MCP_API_TIMEOUT=120
 MCP_ALLOWED_ORIGINS=https://chatgpt.com,https://www.chatgpt.com,https://chat.openai.com
 ```

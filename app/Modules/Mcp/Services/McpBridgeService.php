@@ -2,13 +2,21 @@
 
 namespace App\Modules\Mcp\Services;
 
+use App\Http\Controllers\Api\V1\CatalogOptionsController;
+use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Requests\Api\StoreProductRequest;
 use App\Modules\Mcp\Exceptions\McpToolException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
+use App\Modules\Product\Services\ProductPublicationApiService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class McpBridgeService
 {
+    public function __construct(
+        private readonly ProductPublicationApiService $publication,
+    ) {}
+
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -58,7 +66,7 @@ class McpBridgeService
     public function callTool(string $name, array $arguments): array
     {
         return match ($name) {
-            'consultar_catalogo' => $this->api('catalog/options'),
+            'consultar_catalogo' => app(CatalogOptionsController::class)()->getData(true),
             'consultar_producto' => $this->consultProduct($arguments),
             'publicar_producto' => $this->publishProduct($arguments),
             default => throw new McpToolException('Herramienta MCP desconocida.'),
@@ -77,7 +85,11 @@ class McpBridgeService
             throw new McpToolException('Debes indicar id_o_slug.');
         }
 
-        return $this->api('products/'.rawurlencode($identifier));
+        try {
+            return app(ProductController::class)->show($identifier)->getData(true);
+        } catch (ModelNotFoundException) {
+            throw new McpToolException('Producto no encontrado.');
+        }
     }
 
     /**
@@ -86,67 +98,32 @@ class McpBridgeService
      */
     private function publishProduct(array $arguments): array
     {
-        if (! is_array($arguments['product'] ?? null) || ! is_array($arguments['variants'] ?? null)) {
-            throw new McpToolException('El payload debe incluir product y variants.');
-        }
-
-        return $this->api('products', 'POST', [
-            'product' => $arguments['product'],
-            'variants' => $arguments['variants'],
-        ]);
-    }
-
-    /**
-     * @param  array<string, mixed>|null  $body
-     * @return array<string, mixed>
-     */
-    private function api(string $path, string $method = 'GET', ?array $body = null): array
-    {
-        $password = trim((string) config('services.product_api.password'));
-        $baseUrl = rtrim((string) config('services.mcp.api_base'), '/');
-
-        if ($password === '' || $baseUrl === '') {
-            throw new McpToolException('La conexión interna con la API Brevare no está configurada.');
-        }
-
-        $url = $baseUrl.'/'.ltrim($path, '/').'?'.http_build_query(['password' => $password]);
-        $client = Http::acceptJson()
-            ->timeout(max(10, (int) config('services.mcp.timeout', 120)));
+        $request = StoreProductRequest::create('/api/v1/products', 'POST', $arguments);
+        $request->setContainer(app());
+        $request->setRedirector(app('redirect'));
 
         try {
-            $response = $method === 'POST'
-                ? $client->post($url, $body ?? [])
-                : $client->get($url);
+            $request->validateResolved();
+            $product = $this->publication->publish($request->validated());
+
+            return app(ProductController::class)->show((string) $product->id)->getData(true);
+        } catch (ValidationException $exception) {
+            throw new McpToolException('La API Brevare rechazó la publicación.', [
+                'status' => 422,
+                'response' => [
+                    'message' => $exception->getMessage(),
+                    'errors' => $exception->errors(),
+                ],
+            ]);
+        } catch (McpToolException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
-            logger()->warning('No se pudo conectar el conector MCP con la API Brevare.', [
+            logger()->warning('Falló una publicación desde el conector MCP.', [
                 'exception' => $exception::class,
             ]);
 
-            throw new McpToolException('No se pudo conectar con la API Brevare.');
+            throw new McpToolException('No se pudo publicar el producto.');
         }
-
-        if (! $response->successful()) {
-            throw new McpToolException(
-                'La API Brevare rechazó la operación.',
-                $this->safeErrorDetails($response),
-            );
-        }
-
-        $data = $response->json();
-
-        return is_array($data) ? $data : ['raw' => mb_substr($response->body(), 0, 3000)];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function safeErrorDetails(Response $response): array
-    {
-        $body = $response->json();
-
-        return is_array($body)
-            ? ['status' => $response->status(), 'response' => $body]
-            : ['status' => $response->status()];
     }
 
     /**

@@ -79,8 +79,6 @@ return [
 
     'mcp' => [
         'access_token' => env('MCP_ACCESS_TOKEN'),
-        'api_base' => env('BREVARE_API_BASE', 'https://brevare.com/api/v1'),
-        'timeout' => (int) env('MCP_API_TIMEOUT', 120),
         'allowed_origins' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env(

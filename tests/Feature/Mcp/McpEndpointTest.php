@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Models\Category;
+use App\Models\Supplier;
+use App\Services\CloudinaryImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Http;
+use Mockery;
 use Tests\TestCase;
 
 class McpEndpointTest extends TestCase
@@ -19,8 +21,6 @@ class McpEndpointTest extends TestCase
 
         config()->set('services.mcp.access_token', self::TOKEN);
         config()->set('services.product_api.password', 'api-test-password');
-        config()->set('services.mcp.api_base', 'https://brevare.com/api/v1');
-        config()->set('services.mcp.timeout', 30);
     }
 
     public function test_health_no_expone_secretos(): void
@@ -65,11 +65,16 @@ class McpEndpointTest extends TestCase
 
     public function test_consulta_catalogo_a_traves_de_la_api_interna(): void
     {
-        Http::fake([
-            'brevare.com/api/v1/catalog/options?*' => Http::response([
-                'categories' => [['path' => 'hogar/decoracion']],
-                'suppliers' => [['code' => 'BREVARE']],
-            ]),
+        Category::create([
+            'name' => 'Decoración',
+            'slug' => 'decoracion-mcp',
+            'path' => 'hogar/decoracion',
+            'is_visible' => true,
+        ]);
+        Supplier::create([
+            'code' => 'MCP-TEST',
+            'business_name' => 'Proveedor MCP',
+            'status' => 'active',
         ]);
 
         $response = $this->withToken(self::TOKEN)
@@ -87,24 +92,10 @@ class McpEndpointTest extends TestCase
             ->assertOk()
             ->assertJsonPath('result.isError', false)
             ->assertSee('hogar\\/decoracion', false);
-
-        Http::assertSent(fn (Request $request) => str_starts_with(
-            $request->url(),
-            'https://brevare.com/api/v1/catalog/options?password=api-test-password',
-        ));
     }
 
     public function test_error_de_publicacion_se_devuelve_como_error_de_herramienta(): void
     {
-        Http::fake([
-            'brevare.com/api/v1/products?*' => Http::response([
-                'message' => 'The given data was invalid.',
-                'errors' => [
-                    'variants.0.supplier.stock' => ['El stock es obligatorio.'],
-                ],
-            ], 422),
-        ]);
-
         $this->withToken(self::TOKEN)
             ->postJson('/mcp', [
                 'jsonrpc' => '2.0',
@@ -113,14 +104,52 @@ class McpEndpointTest extends TestCase
                 'params' => [
                     'name' => 'publicar_producto',
                     'arguments' => [
-                        'product' => ['name' => 'Prueba'],
+                        'product' => [],
                         'variants' => [],
                     ],
                 ],
             ])
             ->assertOk()
             ->assertJsonPath('result.isError', true)
-            ->assertSee('stock es obligatorio', false);
+            ->assertSee('product.category_path', false);
+    }
+
+    public function test_publica_producto_sin_pasar_por_la_api_publica(): void
+    {
+        $category = Category::create([
+            'name' => 'Hogar',
+            'slug' => 'hogar-mcp',
+            'path' => 'hogar',
+            'is_visible' => true,
+        ]);
+        Supplier::create([
+            'code' => 'MCP-PUBLISH',
+            'business_name' => 'Proveedor de publicación MCP',
+            'status' => 'active',
+        ]);
+        $this->mockCloudinaryUpload();
+
+        $response = $this->withToken(self::TOKEN)
+            ->postJson('/mcp', [
+                'jsonrpc' => '2.0',
+                'id' => 5,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'publicar_producto',
+                    'arguments' => $this->publishPayload($category),
+                ],
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('result.isError', false)
+            ->assertSee('producto-mcp', false);
+
+        $this->assertDatabaseHas('products', [
+            'slug' => 'producto-mcp',
+            'status' => true,
+            'is_visible' => true,
+        ]);
     }
 
     public function test_rechaza_origen_no_autorizado(): void
@@ -150,5 +179,55 @@ class McpEndpointTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function publishPayload(Category $category): array
+    {
+        return [
+            'product' => [
+                'category_path' => $category->path,
+                'name' => 'Producto MCP',
+                'slug' => 'producto-mcp',
+                'short_description' => 'Producto creado desde MCP.',
+                'description' => 'Producto de prueba creado por el conector MCP.',
+            ],
+            'variants' => [[
+                'sku' => 'MCP-PRODUCT-001',
+                'sale_price' => 29.90,
+                'is_default' => true,
+                'supplier' => [
+                    'code' => 'MCP-PUBLISH',
+                    'stock' => 10,
+                ],
+                'images' => [[
+                    'file_name' => 'producto.png',
+                    'content_base64' => 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=',
+                    'is_primary' => true,
+                ]],
+            ]],
+        ];
+    }
+
+    private function mockCloudinaryUpload(): void
+    {
+        $cloudinary = Mockery::mock(CloudinaryImageService::class);
+        $cloudinary->shouldReceive('upload')
+            ->once()
+            ->andReturn([
+                'public_id' => 'productos/producto-mcp',
+                'url' => 'http://res.cloudinary.com/demo/image/upload/productos/producto-mcp.png',
+                'secure_url' => 'https://res.cloudinary.com/demo/image/upload/productos/producto-mcp.png',
+                'file_name' => 'producto.png',
+                'format' => 'png',
+                'size' => 68,
+                'width' => 1,
+                'height' => 1,
+            ]);
+        $cloudinary->shouldReceive('delete')->zeroOrMoreTimes();
+
+        $this->app->instance(CloudinaryImageService::class, $cloudinary);
     }
 }
