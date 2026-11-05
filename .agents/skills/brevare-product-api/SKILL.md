@@ -10,13 +10,13 @@ Publica el producto por la API, no insertando filas directamente en la base de d
 ## Datos que debes recibir
 
 - URL base de Brevare, por ejemplo `https://brevare.com`.
-- Contraseña de la API: `bacaxd365`.
+- Contraseña actual de la API por un canal privado, nunca desde este repositorio.
 - Datos comerciales del producto, variantes, proveedor, stock, precios e imágenes locales.
 
 La API es pública, pero cada solicitud debe incluir el query parameter `password`:
 
 ```http
-GET /api/v1/catalog/options?password=bacaxd365
+GET /api/v1/catalog/options?password=<PRODUCT_API_PASSWORD>
 Content-Type: application/json
 Accept: application/json
 ```
@@ -25,13 +25,13 @@ No uses `Authorization: Bearer`. Si la URL no está disponible, pídela al opera
 
 ## Flujo obligatorio
 
-1. Consulta `GET /api/v1/catalog/options?password=bacaxd365`.
+1. Consulta `GET /api/v1/catalog/options?password=<PRODUCT_API_PASSWORD>`.
 2. Usa una categoría visible y una marca activa existentes.
-3. Usa un proveedor activo existente o crea uno con `POST /api/v1/suppliers?password=bacaxd365`.
+3. Usa un proveedor activo existente o crea uno con `POST /api/v1/suppliers?password=<PRODUCT_API_PASSWORD>`.
 4. Convierte cada imagen local a Base64. No envíes una URL en lugar del contenido.
-5. Publica con `POST /api/v1/products?password=bacaxd365`.
+5. Publica con `POST /api/v1/products?password=<PRODUCT_API_PASSWORD>`.
 6. Acepta el producto solo si responde `201`, `data.ready_for_publication` es `true` y `data.missing` está vacío.
-7. Verifica con `GET /api/v1/products/{slug}?password=bacaxd365`.
+7. Verifica con `GET /api/v1/products/{slug}?password=<PRODUCT_API_PASSWORD>`.
 
 No reintentes un `422` sin corregir los errores. Un slug o SKU existente no se sobrescribe.
 
@@ -39,10 +39,10 @@ No reintentes un `422` sin corregir los errores. Un slug o SKU existente no se s
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| `GET` | `/api/v1/catalog/options?password=bacaxd365` | Categorías, marcas, proveedores, atributos y límites |
-| `POST` | `/api/v1/suppliers?password=bacaxd365` | Crea un proveedor y devuelve su código |
-| `POST` | `/api/v1/products?password=bacaxd365` | Crea y publica el producto completo |
-| `GET` | `/api/v1/products/{id-o-slug}?password=bacaxd365` | Verifica publicación y readiness |
+| `GET` | `/api/v1/catalog/options?password=<PRODUCT_API_PASSWORD>` | Categorías, marcas, proveedores, atributos y límites |
+| `POST` | `/api/v1/suppliers?password=<PRODUCT_API_PASSWORD>` | Crea un proveedor y devuelve su código |
+| `POST` | `/api/v1/products?password=<PRODUCT_API_PASSWORD>` | Crea y publica el producto completo |
+| `GET` | `/api/v1/products/{id-o-slug}?password=<PRODUCT_API_PASSWORD>` | Verifica publicación y readiness |
 
 ## Contrato del producto
 
@@ -156,3 +156,15 @@ La operación es atómica. Si falla la base de datos o no alcanza readiness, se 
 La referencia humana extendida está en `docs/API_PRODUCTOS.md` dentro del
 repositorio Brevare. Si recibes esta skill como carpeta exportada, lee el archivo
 `API_PRODUCTOS.md` que se encuentra junto a este `SKILL.md`.
+
+## Conector MCP
+
+Si el operador ya registró el conector MCP de Brevare, prefiere sus herramientas
+sobre llamadas HTTP directas:
+
+- `consultar_catalogo`
+- `consultar_producto`
+- `publicar_producto`
+
+El endpoint es `https://brevare.com/mcp` y requiere un Bearer independiente. No
+confundas ese token con `PRODUCT_API_PASSWORD`.

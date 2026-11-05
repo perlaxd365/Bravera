@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\McpController;
+use App\Http\Middleware\AuthenticateMcpAccess;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureVerifiedIfAuthenticated;
 use App\Http\Middleware\ForceCanonicalHost;
@@ -26,6 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('panel')
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
+
+            Route::get('mcp/health', [McpController::class, 'health']);
+            Route::middleware(AuthenticateMcpAccess::class)->group(function () {
+                Route::post('mcp', [McpController::class, 'handle']);
+                Route::get('mcp', [McpController::class, 'methodNotAllowed']);
+                Route::delete('mcp', [McpController::class, 'methodNotAllowed']);
+            });
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -47,7 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->is('mcp*'),
         );
     })
     ->create();

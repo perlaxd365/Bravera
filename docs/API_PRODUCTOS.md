@@ -6,10 +6,10 @@ No modifica el flujo de Culqi, Mercado Pago, checkout ni pedidos.
 
 ## 1. Configuración
 
-Configura la contraseña pública de la API en el `.env` del servidor:
+Configura la contraseña privada de la API en el `.env` del servidor:
 
 ```dotenv
-PRODUCT_API_PASSWORD=bacaxd365
+PRODUCT_API_PASSWORD=<CONTRASEÑA_ALEATORIA>
 ```
 
 También deben estar configuradas las credenciales de Cloudinary que ya usa el catálogo.
@@ -34,7 +34,7 @@ Content-Type: application/json
 Ejemplo:
 
 ```text
-https://brevare.com/api/v1/catalog/options?password=bacaxd365
+https://brevare.com/api/v1/catalog/options?password=<PRODUCT_API_PASSWORD>
 ```
 
 No uses `Authorization: Bearer`. Como la contraseña viaja en la URL, evita compartir enlaces completos en capturas o notas públicas.
@@ -52,7 +52,7 @@ El límite actual es de 30 solicitudes por minuto.
 
 ```bash
 curl --request GET \
-  --url "https://brevare.com/api/v1/catalog/options?password=bacaxd365" \
+  --url "https://brevare.com/api/v1/catalog/options?password=<PRODUCT_API_PASSWORD>" \
   --header "Accept: application/json"
 ```
 
@@ -62,7 +62,7 @@ La respuesta incluye `categories`, `brands`, `suppliers`, `attributes`, `limits`
 
 ```bash
 curl --request POST \
-  --url "https://brevare.com/api/v1/suppliers?password=bacaxd365" \
+  --url "https://brevare.com/api/v1/suppliers?password=<PRODUCT_API_PASSWORD>" \
   --header "Accept: application/json" \
   --header "Content-Type: application/json" \
   --data '{
@@ -223,7 +223,7 @@ $imageBase64 = [Convert]::ToBase64String(
 
 ```bash
 curl --request POST \
-  --url "https://brevare.com/api/v1/products?password=bacaxd365" \
+  --url "https://brevare.com/api/v1/products?password=<PRODUCT_API_PASSWORD>" \
   --header "Accept: application/json" \
   --header "Content-Type: application/json" \
   --data @producto.json
@@ -274,7 +274,7 @@ Por slug:
 
 ```bash
 curl --request GET \
-  --url "https://brevare.com/api/v1/products/guirnalda-led-3-m?password=bacaxd365" \
+  --url "https://brevare.com/api/v1/products/guirnalda-led-3-m?password=<PRODUCT_API_PASSWORD>" \
   --header "Accept: application/json"
 ```
 
@@ -328,4 +328,5 @@ La skill lista para entregar está en:
 .agents/skills/brevare-product-api/
 ```
 
-Se puede pasar completa a otro agente o proyecto. La URL base debe incluir `?password=bacaxd365` en cada solicitud.
+Se puede pasar completa a otro agente o proyecto. El operador debe entregar la
+contraseña actual por un canal privado; no debe incluirse en el repositorio.
