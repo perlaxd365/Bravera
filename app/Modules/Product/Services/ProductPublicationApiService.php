@@ -257,11 +257,11 @@ class ProductPublicationApiService
 
     private function attachAttributes(ProductVariant $variant, array $attributes): void
     {
-        foreach ($attributes as $name => $value) {
+        foreach ($attributes as $name => $values) {
             $name = trim((string) $name);
-            $value = trim((string) $value);
+            $values = is_array($values) ? $values : [$values];
 
-            if ($name === '' || $value === '') {
+            if ($name === '') {
                 continue;
             }
 
@@ -281,26 +281,42 @@ class ProductPublicationApiService
 
             $attribute->save();
 
-            $attributeValue = AttributeValue::withTrashed()->firstOrNew([
-                'attribute_id' => $attribute->id,
-                'slug' => Str::slug($value),
-            ]);
-            $attributeValue->fill([
-                'value' => $value,
-                'is_active' => true,
-            ]);
+            $seenValues = [];
 
-            if ($attributeValue->trashed()) {
-                $attributeValue->restore();
+            foreach ($values as $value) {
+                if (! is_scalar($value)) {
+                    continue;
+                }
+
+                $value = trim((string) $value);
+
+                if ($value === '' || isset($seenValues[$value])) {
+                    continue;
+                }
+
+                $seenValues[$value] = true;
+
+                $attributeValue = AttributeValue::withTrashed()->firstOrNew([
+                    'attribute_id' => $attribute->id,
+                    'slug' => Str::slug($value),
+                ]);
+                $attributeValue->fill([
+                    'value' => $value,
+                    'is_active' => true,
+                ]);
+
+                if ($attributeValue->trashed()) {
+                    $attributeValue->restore();
+                }
+
+                $attributeValue->save();
+
+                ProductVariantAttributeValue::create([
+                    'product_variant_id' => $variant->id,
+                    'attribute_id' => $attribute->id,
+                    'attribute_value_id' => $attributeValue->id,
+                ]);
             }
-
-            $attributeValue->save();
-
-            ProductVariantAttributeValue::create([
-                'product_variant_id' => $variant->id,
-                'attribute_id' => $attribute->id,
-                'attribute_value_id' => $attributeValue->id,
-            ]);
         }
     }
 

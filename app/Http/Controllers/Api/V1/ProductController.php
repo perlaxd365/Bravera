@@ -88,10 +88,20 @@ class ProductController extends Controller
                         && $supplierVariant->supplier?->status === 'active')
                     ->sum(fn ($supplierVariant) => $supplierVariant->availableStock()),
                 'attributes' => $variant->attributeValues
-                    ->mapWithKeys(fn ($attributeValue) => [
-                        $attributeValue->attribute?->name => $attributeValue->value?->value,
-                    ])
-                    ->filter(fn ($value, $name) => filled($name) && filled($value))
+                    ->filter(fn ($attributeValue) => filled($attributeValue->attribute?->name)
+                        && filled($attributeValue->value?->value))
+                    ->groupBy(fn ($attributeValue) => $attributeValue->attribute->name)
+                    ->map(function ($attributeValues) {
+                        $values = $attributeValues
+                            ->pluck('value.value')
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        return $values->count() === 1
+                            ? $values->first()
+                            : $values->all();
+                    })
                     ->all(),
                 'images' => $variant->images->map(fn ($image) => [
                     'id' => $image->id,

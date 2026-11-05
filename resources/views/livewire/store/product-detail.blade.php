@@ -785,9 +785,13 @@
             ]);
 
             if ($currentVariant) {
-                foreach ($currentVariant->attributeValues as $attributeValue) {
-                    $name = $attributeValue->attribute?->name;
-                    $value = $attributeValue->value?->value;
+                foreach ($currentVariant->attributeValues->groupBy('attribute_id') as $attributeValues) {
+                    $name = $attributeValues->first()->attribute?->name;
+                    $value = $attributeValues
+                        ->pluck('value.value')
+                        ->filter()
+                        ->unique()
+                        ->join(', ');
 
                     if (filled($name) && filled($value)) {
                         $specifications->put($name, $value);

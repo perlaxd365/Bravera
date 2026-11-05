@@ -60,7 +60,10 @@ class AddProductCommandTest extends TestCase
                 'sale_price' => 38.90,
                 'wholesale_price' => 35.90,
                 'wholesale_min_quantity' => 3,
-                'attributes' => ['Largo' => '3 m'],
+                'attributes' => [
+                    'Largo' => '3 m',
+                    'Talla' => ['S', 'M'],
+                ],
                 'supplier' => [
                     'code' => 'BREVARE',
                     'stock' => 50,
@@ -110,5 +113,15 @@ class AddProductCommandTest extends TestCase
         $this->assertSame(3, (int) $variant->wholesale_min_quantity);
         $this->assertSame(2, $variant->images()->count());
         $this->assertSame(50, (int) $variant->supplierVariants()->firstOrFail()->stock);
+        $this->assertSame(
+            ['3 m', 'M', 'S'],
+            $variant->attributeValues()
+                ->with('value')
+                ->get()
+                ->pluck('value.value')
+                ->sort()
+                ->values()
+                ->all(),
+        );
     }
 }

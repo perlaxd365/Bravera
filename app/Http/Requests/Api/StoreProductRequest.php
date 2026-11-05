@@ -132,8 +132,20 @@ class StoreProductRequest extends FormRequest
             'variants.*.attributes.*' => [
                 'nullable',
                 function (string $attribute, mixed $value, Closure $fail): void {
-                    if (! is_scalar($value)) {
-                        $fail('Cada atributo debe ser texto o un número.');
+                    $values = is_array($value) ? $value : [$value];
+
+                    if (is_array($value) && ! array_is_list($value)) {
+                        $fail('Los valores múltiples de un atributo deben ser una lista.');
+
+                        return;
+                    }
+
+                    foreach ($values as $selectedValue) {
+                        if (! is_scalar($selectedValue)) {
+                            $fail('Cada valor de atributo debe ser texto o un número.');
+
+                            return;
+                        }
                     }
                 },
             ],
@@ -211,11 +223,20 @@ class StoreProductRequest extends FormRequest
                             );
                         }
 
-                        if (is_scalar($attributeValue) && mb_strlen(trim((string) $attributeValue)) > 150) {
-                            $validator->errors()->add(
-                                "variants.{$variantIndex}.attributes.{$attributeName}",
-                                'Cada valor de atributo puede tener como máximo 150 caracteres.',
-                            );
+                        $attributeValues = is_array($attributeValue)
+                            ? $attributeValue
+                            : [$attributeValue];
+
+                        foreach ($attributeValues as $selectedValue) {
+                            if (is_scalar($selectedValue)
+                                && mb_strlen(trim((string) $selectedValue)) > 150) {
+                                $validator->errors()->add(
+                                    "variants.{$variantIndex}.attributes.{$attributeName}",
+                                    'Cada valor de atributo puede tener como máximo 150 caracteres.',
+                                );
+
+                                break;
+                            }
                         }
                     }
 

@@ -88,9 +88,12 @@ class GoogleMerchantFeedController
             ? preg_replace('/\D+/', '', $variant->barcode)
             : null;
         $attributes = $variant->attributeValues
-            ->mapWithKeys(fn ($pivot) => [
-                mb_strtolower((string) ($pivot->attribute?->slug ?? '')) => $pivot->value?->value,
-            ])
+            ->groupBy(fn ($pivot) => mb_strtolower((string) ($pivot->attribute?->slug ?? '')))
+            ->map(fn ($values) => $values
+                ->pluck('value.value')
+                ->filter()
+                ->unique()
+                ->join(', '))
             ->filter();
 
         $xml = '<item>';

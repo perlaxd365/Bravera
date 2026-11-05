@@ -157,6 +157,88 @@ class ProductDetailTest extends TestCase
         $this->assertCount(1, CartItem::all());
     }
 
+    public function test_una_variante_con_varias_tallas_resuelve_cualquiera_de_sus_valores(): void
+    {
+        $category = Category::create([
+            'name' => 'Ropa',
+            'slug' => 'ropa-multi-'.Str::random(6),
+            'path' => 'ropa',
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Polo multitala',
+            'slug' => 'polo-multitala-'.Str::random(6),
+            'status' => true,
+            'is_visible' => true,
+        ]);
+        $supplier = Supplier::create([
+            'code' => 'SUP-'.Str::upper(Str::random(6)),
+            'business_name' => 'Textilero Andino',
+            'status' => 'active',
+        ]);
+        $size = Attribute::create([
+            'name' => 'Talla',
+            'slug' => 'talla-'.Str::random(6),
+            'type' => 'select',
+            'is_active' => true,
+        ]);
+        $small = AttributeValue::create([
+            'attribute_id' => $size->id,
+            'value' => 'S',
+            'slug' => 's',
+            'is_active' => true,
+        ]);
+        $medium = AttributeValue::create([
+            'attribute_id' => $size->id,
+            'value' => 'M',
+            'slug' => 'm',
+            'is_active' => true,
+        ]);
+        $variant = ProductVariant::create([
+            'product_id' => $product->id,
+            'sku' => 'POLO-MULTI-'.Str::upper(Str::random(5)),
+            'sale_price' => 79.90,
+            'is_active' => true,
+        ]);
+
+        ProductVariantAttributeValue::insert([
+            [
+                'product_variant_id' => $variant->id,
+                'attribute_id' => $size->id,
+                'attribute_value_id' => $small->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'product_variant_id' => $variant->id,
+                'attribute_id' => $size->id,
+                'attribute_value_id' => $medium->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        SupplierVariant::create([
+            'supplier_id' => $supplier->id,
+            'product_variant_id' => $variant->id,
+            'stock' => 10,
+            'reserved_stock' => 0,
+            'is_active' => true,
+        ]);
+
+        Livewire::test(ProductDetail::class, ['slug' => $product->slug])
+            ->assertSet('selectedVariantId', $variant->id)
+            ->set('selectedAttributes', [$size->id => $medium->id])
+            ->assertSet('selectedVariantId', $variant->id)
+            ->call('addToCart')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cart_items', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+        ]);
+    }
+
     /**
      * Producto con atributo Talla (S/M) y stock disponible.
      *

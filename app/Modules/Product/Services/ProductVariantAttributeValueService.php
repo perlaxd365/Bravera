@@ -64,8 +64,12 @@ class ProductVariantAttributeValueService
      * Formato esperado:
      *
      * [
-     *     attribute_id => attribute_value_id,
+     *     attribute_id => attribute_value_id
+     *     attribute_id => [attribute_value_id, ...],
      * ]
+     *
+     * El primer formato se conserva para compatibilidad con código y datos
+     * anteriores.
      */
     public function sync(
         int $variantId,
@@ -77,19 +81,23 @@ class ProductVariantAttributeValueService
         ) {
             $this->repository->deleteByVariant($variantId);
 
-            foreach ($attributeValues as $attributeId => $attributeValueId) {
+            foreach ($attributeValues as $attributeId => $selectedValues) {
+                $selectedValues = is_array($selectedValues)
+                    ? $selectedValues
+                    : [$selectedValues];
 
-                if (blank($attributeValueId)) {
-                    continue;
+                foreach (array_unique(array_filter(
+                    $selectedValues,
+                    fn ($value) => ! blank($value)
+                )) as $attributeValueId) {
+                    $this->repository->create(
+                        ProductVariantAttributeValueData::fromArray([
+                            'product_variant_id' => $variantId,
+                            'attribute_id' => (int) $attributeId,
+                            'attribute_value_id' => (int) $attributeValueId,
+                        ])
+                    );
                 }
-
-                $this->repository->create(
-                    ProductVariantAttributeValueData::fromArray([
-                        'product_variant_id' => $variantId,
-                        'attribute_id' => (int) $attributeId,
-                        'attribute_value_id' => (int) $attributeValueId,
-                    ])
-                );
             }
         });
     }

@@ -159,6 +159,7 @@ $imageBase64 = [Convert]::ToBase64String(
       "is_default": true,
       "attributes": {
         "Largo": "3 m",
+        "Talla": ["S", "M"],
         "Color": "Cálido"
       },
       "supplier": {
@@ -212,7 +213,7 @@ $imageBase64 = [Convert]::ToBase64String(
 | `variants[].compare_price` | No | Precio anterior; debe ser mayor que `sale_price` |
 | `variants[].wholesale_price` | No | Debe ser menor que `sale_price` |
 | `variants[].wholesale_min_quantity` | Con precio mayorista | Entero mayor o igual a 2 |
-| `variants[].attributes` | No | Objeto de nombre y valor escalar |
+| `variants[].attributes` | No | Objeto de nombre y uno o varios valores; `"Color": "Negro"` y `"Talla": ["S", "M"]` son válidos |
 | `variants[].supplier.code` | Sí | Código de proveedor activo |
 | `variants[].supplier.stock` | Sí | Entero mayor que cero |
 | `variants[].images` | Sí | Al menos una imagen válida |

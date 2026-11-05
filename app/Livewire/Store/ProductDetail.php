@@ -4,6 +4,7 @@ namespace App\Livewire\Store;
 
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\ProductVariant;
 use App\Services\CartService;
 use App\Services\MetaConversionsService;
 use App\Support\Seo\CatalogLinks;
@@ -66,9 +67,7 @@ class ProductDetail extends Component
                 fn ($supplier) => $supplier->is_active && $supplier->availableStock() > 0
             )) {
                 $this->selectedVariantId = $requestedVariant->id;
-                $this->selectedAttributes = $requestedVariant->attributeValues
-                    ->mapWithKeys(fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id])
-                    ->all();
+                $this->selectedAttributes = $this->selectedAttributesForVariant($requestedVariant);
             }
         }
 
@@ -85,9 +84,7 @@ class ProductDetail extends Component
             if ($availableVariants->count() === 1) {
                 $onlyVariant = $availableVariants->first();
                 $this->selectedVariantId = (int) $onlyVariant->id;
-                $this->selectedAttributes = $onlyVariant->attributeValues
-                    ->mapWithKeys(fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id])
-                    ->all();
+                $this->selectedAttributes = $this->selectedAttributesForVariant($onlyVariant);
                 $this->resolveSupplierForVariant();
             }
         }
@@ -171,11 +168,7 @@ class ProductDetail extends Component
         );
 
         if ($variant) {
-            $this->selectedAttributes = $variant->attributeValues
-                ->mapWithKeys(
-                    fn ($pivot) => [(int) $pivot->attribute_id => (int) $pivot->attribute_value_id]
-                )
-                ->toArray();
+            $this->selectedAttributes = $this->selectedAttributesForVariant($variant);
         }
 
         $this->resolveSupplierForVariant();
@@ -240,18 +233,30 @@ class ProductDetail extends Component
 
         [$matrixVariants] = $this->variantMatrix();
 
-        $variant = $matrixVariants->first(function ($variant) {
-            $attrs = $variant->attributeValues
-                ->pluck('attribute_value_id')
-                ->map(fn ($id) => (int) $id)
-                ->toArray();
+        $selected = collect($this->selectedAttributes)
+            ->mapWithKeys(fn ($value, $attributeId) => [
+                (int) $attributeId => (int) $value,
+            ])
+            ->sortKeys();
 
-            $selected = array_values(array_map('intval', $this->selectedAttributes));
+        $variant = $matrixVariants->first(function ($variant) use ($selected) {
+            $available = $variant->attributeValues
+                ->groupBy('attribute_id')
+                ->map(fn ($items) => $items
+                    ->pluck('attribute_value_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values());
 
-            sort($attrs);
-            sort($selected);
+            if ($available->keys()->map(fn ($id) => (int) $id)->sort()->values()->all()
+                !== $selected->keys()->all()) {
+                return false;
+            }
 
-            return $attrs === $selected;
+            return $selected->every(
+                fn ($valueId, $attributeId) => $available
+                    ->get($attributeId, collect())
+                    ->contains($valueId)
+            );
         });
 
         $this->selectedVariantId = $variant?->id;
@@ -261,6 +266,20 @@ class ProductDetail extends Component
         } else {
             $this->selectedSupplierVariantId = null;
         }
+    }
+
+    /**
+     * Deja una opción visible por atributo en el selector. La variante sigue
+     * conservando todos sus valores para resolver stock y combinaciones.
+     *
+     * @return array<int, int>
+     */
+    private function selectedAttributesForVariant(ProductVariant $variant): array
+    {
+        return $variant->attributeValues
+            ->groupBy('attribute_id')
+            ->map(fn ($items) => (int) $items->first()->attribute_value_id)
+            ->all();
     }
 
     /**

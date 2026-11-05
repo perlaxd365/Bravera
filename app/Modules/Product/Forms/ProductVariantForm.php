@@ -2,6 +2,7 @@
 
 namespace App\Modules\Product\Forms;
 
+use App\Models\AttributeValue;
 use App\Models\ProductVariant;
 use App\Modules\Product\DTO\ProductVariantData;
 use Livewire\Form;
@@ -62,8 +63,10 @@ class ProductVariantForm extends Form
      * Formato:
      *
      * [
-     *     attribute_id => attribute_value_id,
+     *     attribute_id => [attribute_value_id, ...],
      * ]
+     *
+     * También se acepta un único ID por atributo para mantener compatibilidad.
      */
     public array $attribute_values = [];
 
@@ -192,8 +195,26 @@ class ProductVariantForm extends Form
 
             'attribute_values.*' => [
                 'nullable',
-                'integer',
-                'exists:attribute_values,id',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $attributeId = (int) str($attribute)->afterLast('.')->value();
+                    $selectedValues = is_array($value) ? $value : [$value];
+
+                    foreach ($selectedValues as $selectedValue) {
+                        if (blank($selectedValue)) {
+                            continue;
+                        }
+
+                        if (! is_numeric($selectedValue)
+                            || ! AttributeValue::query()
+                                ->whereKey((int) $selectedValue)
+                                ->where('attribute_id', $attributeId)
+                                ->exists()) {
+                            $fail('Uno de los valores seleccionados no pertenece al atributo.');
+
+                            return;
+                        }
+                    }
+                },
             ],
         ];
     }
@@ -251,9 +272,7 @@ class ProductVariantForm extends Form
 
             'attribute_values.array' => 'Los atributos seleccionados no son válidos.',
 
-            'attribute_values.*.integer' => 'El valor del atributo no es válido.',
-
-            'attribute_values.*.exists' => 'Uno de los valores de atributo seleccionados no existe.',
+            'attribute_values.*' => 'Uno de los valores de atributo seleccionados no es válido.',
         ];
     }
 
@@ -281,7 +300,7 @@ class ProductVariantForm extends Form
             'is_default' => 'variante principal',
             'is_active' => 'estado',
             'attribute_values' => 'atributos',
-            'attribute_values.*' => 'valor del atributo',
+            'attribute_values.*' => 'valores del atributo',
         ];
     }
 
@@ -359,12 +378,14 @@ class ProductVariantForm extends Form
 
         $this->attribute_values = $variant->attributeValues()
             ->get()
-            ->mapWithKeys(function ($item) {
-                return [
-                    $item->attribute_id => $item->attribute_value_id,
-                ];
-            })
-            ->toArray();
+            ->groupBy('attribute_id')
+            ->map(fn ($items) => $items
+                ->pluck('attribute_value_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all())
+            ->all();
     }
 
     /**
@@ -425,6 +446,18 @@ class ProductVariantForm extends Form
         $this->wholesale_ratio = 0.9;
 
         $this->attribute_values = [];
+    }
+
+    /**
+     * Comprueba si un valor está marcado, aceptando el formato antiguo
+     * de un solo valor y el nuevo de varios valores.
+     */
+    public function hasAttributeValue(int $attributeId, int $attributeValueId): bool
+    {
+        $selected = $this->attribute_values[$attributeId] ?? [];
+        $selected = is_array($selected) ? $selected : [$selected];
+
+        return in_array($attributeValueId, array_map('intval', $selected), true);
     }
 
     /**

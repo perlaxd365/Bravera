@@ -110,31 +110,43 @@
                         @if ($attributes->isNotEmpty())
                             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 @foreach ($attributes as $attribute)
-                                    <div>
-                                        <label class="mb-1.5 block text-sm font-medium text-stone-800">
+                                    <fieldset>
+                                        <legend class="mb-1.5 block text-sm font-medium text-stone-800">
                                             {{ $attribute->name }}
                                             @if ($attribute->is_required)
                                                 <span class="text-red-600" aria-hidden="true">*</span>
                                             @endif
-                                        </label>
-                                        <div class="relative">
-                                            <select wire:model.live="variantForm.attribute_values.{{ $attribute->id }}"
-                                                @class([
-                                                    'min-h-11 w-full appearance-none rounded-xl border bg-white px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2',
-                                                    'border-stone-300 focus:border-stone-900 focus:ring-stone-900/10' => ! $errors->has("variantForm.attribute_values.{$attribute->id}"),
-                                                    'border-red-300 focus:border-red-400 focus:ring-red-500/10' => $errors->has("variantForm.attribute_values.{$attribute->id}"),
+                                        </legend>
+                                        <div @class([
+                                            'flex min-h-11 flex-wrap gap-2 rounded-xl border bg-white p-2',
+                                            'border-stone-300' => ! $errors->has("variantForm.attribute_values.{$attribute->id}"),
+                                            'border-red-300' => $errors->has("variantForm.attribute_values.{$attribute->id}"),
+                                        ])>
+                                            @forelse ($attribute->values as $value)
+                                                <label @class([
+                                                    'relative inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                                                    'border-stone-950 bg-stone-950 text-white' => $variantForm->hasAttributeValue($attribute->id, $value->id),
+                                                    'border-stone-200 text-stone-700 hover:border-stone-400' => ! $variantForm->hasAttributeValue($attribute->id, $value->id),
                                                 ])>
-                                                <option value="">Selecciona…</option>
-                                                @foreach ($attribute->values as $value)
-                                                    <option value="{{ $value->id }}">{{ $value->value }}</option>
-                                                @endforeach
-                                            </select>
-                                            <flux:icon name="chevron-down" variant="mini" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+                                                    <input
+                                                        type="checkbox"
+                                                        wire:model.live="variantForm.attribute_values.{{ $attribute->id }}"
+                                                        value="{{ $value->id }}"
+                                                        class="size-3.5 rounded border-stone-300 text-stone-950 focus:ring-stone-900/20">
+                                                    @if ($value->color)
+                                                        <span class="size-3 rounded-full ring-1 ring-inset ring-black/10" style="background:{{ $value->color }};" aria-hidden="true"></span>
+                                                    @endif
+                                                    <span>{{ $value->value }}</span>
+                                                </label>
+                                            @empty
+                                                <span class="px-2 py-1 text-xs text-stone-500">Este atributo no tiene valores activos.</span>
+                                            @endforelse
                                         </div>
+                                        <p class="mt-1 text-[11px] leading-4 text-stone-500">Marca uno o varios valores.</p>
                                         @error("variantForm.attribute_values.{$attribute->id}")
                                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                         @enderror
-                                    </div>
+                                    </fieldset>
                                 @endforeach
                             </div>
                         @else
@@ -213,6 +225,16 @@
                                 @endif
                             </div>
                             <p class="mt-1 text-xs text-stone-500">{{ $variant->barcode ?: 'Sin código de barras' }}</p>
+                            @if ($variant->attributeValues->isNotEmpty())
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    @foreach ($variant->attributeValues->groupBy('attribute_id') as $attributeValues)
+                                        <span class="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-700">
+                                            {{ $attributeValues->first()->attribute?->name }}:
+                                            {{ $attributeValues->pluck('value.value')->filter()->join(', ') }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                             <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                                 <span class="text-lg font-bold text-stone-950">S/ {{ number_format((float) $variant->sale_price, 2) }}</span>
                                 @if ($variant->hasWholesalePrice())

@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantAttributeValue;
 use App\Models\Supplier;
 use App\Models\SupplierVariant;
 use App\Services\CloudinaryImageService;
@@ -106,6 +107,45 @@ class ProductApiTest extends TestCase
             ->assertJsonValidationErrors('variants.0.supplier.stock');
 
         $this->assertDatabaseCount('products', 0);
+    }
+
+    public function test_acepta_varios_valores_en_un_atributo_sin_romper_el_formato_anterior(): void
+    {
+        $category = $this->createCategory();
+        $this->createSupplier();
+        Brand::create([
+            'name' => 'Casa Joven',
+            'slug' => 'casa-joven',
+            'is_active' => true,
+        ]);
+        $this->mockCloudinaryUpload();
+
+        $payload = $this->payload($category);
+        $payload['variants'][0]['sku'] = 'BVR-API-GUIR-MULTI';
+        $payload['variants'][0]['attributes'] = [
+            'Talla' => ['S', 'M'],
+            'Color' => 'Cálido',
+        ];
+
+        $this->postJson('/api/v1/products?password='.self::PASSWORD, $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.variants.0.attributes.Talla', ['S', 'M'])
+            ->assertJsonPath('data.variants.0.attributes.Color', 'Cálido');
+
+        $variant = ProductVariant::where('sku', 'BVR-API-GUIR-MULTI')->firstOrFail();
+
+        $this->assertSame(
+            2,
+            ProductVariantAttributeValue::where('product_variant_id', $variant->id)
+                ->whereHas('attribute', fn ($query) => $query->where('name', 'Talla'))
+                ->count(),
+        );
+        $this->assertSame(
+            1,
+            ProductVariantAttributeValue::where('product_variant_id', $variant->id)
+                ->whereHas('attribute', fn ($query) => $query->where('name', 'Color'))
+                ->count(),
+        );
     }
 
     public function test_crea_proveedor_y_opciones_de_catalogo_para_la_ia(): void

@@ -96,11 +96,13 @@ readonly class ProductVariantData
 
         if ($variant->relationLoaded('attributeValues')) {
             $attributeValues = $variant->attributeValues
-                ->mapWithKeys(function ($item) {
-                    return [
-                        $item->attribute_id => $item->attribute_value_id,
-                    ];
-                })
+                ->groupBy('attribute_id')
+                ->map(fn ($items) => $items
+                    ->pluck('attribute_value_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all())
                 ->toArray();
         }
 

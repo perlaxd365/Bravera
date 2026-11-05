@@ -3,6 +3,8 @@
 namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\Catalog\Products\Form;
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -313,5 +315,95 @@ class ProductWizardUiTest extends TestCase
                 ->where('supplier_id', $supplier->id)
                 ->count(),
         );
+    }
+
+    public function test_variant_accepts_multiple_values_for_an_attribute_and_a_single_value_for_another(): void
+    {
+        $this->actingAs(User::where('email', 'administracion@brevare.com')->firstOrFail());
+
+        $category = Category::create([
+            'name' => 'Ropa',
+            'slug' => 'ropa',
+            'path' => 'ropa',
+            'is_visible' => true,
+        ]);
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Polo flexible',
+            'slug' => 'polo-flexible',
+            'status' => true,
+            'is_visible' => false,
+        ]);
+
+        $size = Attribute::create([
+            'name' => 'Talla',
+            'slug' => 'talla',
+            'type' => 'select',
+            'is_active' => true,
+        ]);
+        $color = Attribute::create([
+            'name' => 'Color',
+            'slug' => 'color',
+            'type' => 'color',
+            'is_active' => true,
+        ]);
+
+        $small = AttributeValue::create([
+            'attribute_id' => $size->id,
+            'value' => 'S',
+            'slug' => 's',
+            'is_active' => true,
+        ]);
+        $medium = AttributeValue::create([
+            'attribute_id' => $size->id,
+            'value' => 'M',
+            'slug' => 'm',
+            'is_active' => true,
+        ]);
+        $black = AttributeValue::create([
+            'attribute_id' => $color->id,
+            'value' => 'Negro',
+            'slug' => 'negro',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test(Form::class)
+            ->call('edit', $product->id)
+            ->call('createVariant')
+            ->set('variantForm.sku', 'POLO-FLEX-001')
+            ->set('variantForm.cost_price', 30)
+            ->set('variantForm.sale_price', 100)
+            ->set('variantForm.retail_price', 100)
+            ->set('variantForm.discount_percent', 0)
+            ->set('variantForm.attribute_values', [
+                $size->id => [$small->id, $medium->id],
+                $color->id => $black->id,
+            ])
+            ->call('saveVariant')
+            ->assertHasNoErrors();
+
+        $variant = ProductVariant::where('sku', 'POLO-FLEX-001')->firstOrFail();
+
+        $this->assertDatabaseHas('product_variant_attribute_values', [
+            'product_variant_id' => $variant->id,
+            'attribute_id' => $size->id,
+            'attribute_value_id' => $small->id,
+        ]);
+        $this->assertDatabaseHas('product_variant_attribute_values', [
+            'product_variant_id' => $variant->id,
+            'attribute_id' => $size->id,
+            'attribute_value_id' => $medium->id,
+        ]);
+        $this->assertDatabaseHas('product_variant_attribute_values', [
+            'product_variant_id' => $variant->id,
+            'attribute_id' => $color->id,
+            'attribute_value_id' => $black->id,
+        ]);
+
+        $component
+            ->call('editVariant', $variant->id)
+            ->assertSet("variantForm.attribute_values.{$size->id}", [$small->id, $medium->id])
+            ->assertSet("variantForm.attribute_values.{$color->id}", [$black->id]);
     }
 }

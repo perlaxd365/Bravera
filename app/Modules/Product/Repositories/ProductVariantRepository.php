@@ -19,6 +19,11 @@ class ProductVariantRepository
 
         return ProductVariant::query()
             ->where('product_id', $productId)
+            ->with([
+                'images',
+                'attributeValues.attribute',
+                'attributeValues.value',
+            ])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('sku', 'like', "%{$search}%")
