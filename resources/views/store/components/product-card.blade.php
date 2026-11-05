@@ -2,13 +2,8 @@
     $preview = $preview ?? false;
     $localizedProductName = $product->localized('name') ?? $product->name;
     $coverImage = $product->coverImageModel()?->sizedUrl(900);
-    $cardVariants = $product->availableVariants()->get([
-        'id',
-        'sale_price',
-        'compare_price',
-        'wholesale_price',
-        'wholesale_min_quantity',
-    ]);
+    $cardVariants = $product->availableVariantModels();
+    $availableStock = $product->availableStock();
     $minVariant = $cardVariants->sortBy('sale_price')->first();
     $minPrice = $minVariant ? (float) $minVariant->sale_price : 0;
     $maxPrice = (float) ($cardVariants->max('sale_price') ?? 0);
@@ -20,8 +15,7 @@
     $filledReviewStars = min(5, max(0, (int) round((float) ($product->reviews_avg_rating ?? 0))));
     $favoriteIds = app(\App\Services\FavoriteService::class)->productIdsFor(auth()->id());
     $isFavorite = in_array($product->id, $favoriteIds, true);
-    $availableColors = $product->variants
-        ->filter(fn ($variant) => $variant->is_active && $variant->supplierVariants->contains(fn ($supplierVariant) => $supplierVariant->is_active && $supplierVariant->availableStock() > 0))
+    $availableColors = $cardVariants
         ->flatMap(fn ($variant) => $variant->attributeValues
             ->filter(fn ($attributeValue) => $attributeValue->attribute?->slug === 'color')
             ->map(fn ($attributeValue) => [
@@ -79,14 +73,15 @@
                 {{ $localizedProductName }}
             </p>
 
-            <div class="mt-2 flex min-h-5 items-center gap-1.5" aria-label="{{ __('storefront.catalog.reviews', ['count' => $product->reviews_count ?? 0]) }}">
-                @if (($product->reviews_count ?? 0) > 0)
-                    <span class="text-sm leading-none tracking-[1px] text-amber-600" aria-label="{{ __('storefront.catalog.rating', ['rating' => number_format((float) $product->reviews_avg_rating, 1)]) }}">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
-                    <span class="text-xs font-semibold text-gray-700">{{ number_format((float) $product->reviews_avg_rating, 1) }}</span>
-                    <span class="text-xs text-gray-600">({{ $product->reviews_count }})</span>
-                @else
-                    <span class="text-[11px] font-medium text-emerald-700">{{ __('storefront.catalog.available') }}</span>
-                @endif
+            <div class="mt-2 flex min-h-5 flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+                <div class="flex min-h-5 items-center gap-1.5" aria-label="{{ __('storefront.catalog.reviews', ['count' => $product->reviews_count ?? 0]) }}">
+                    @if (($product->reviews_count ?? 0) > 0)
+                        <span class="text-sm leading-none tracking-[1px] text-amber-600" aria-label="{{ __('storefront.catalog.rating', ['rating' => number_format((float) $product->reviews_avg_rating, 1)]) }}">{{ str_repeat('★', $filledReviewStars).str_repeat('☆', 5 - $filledReviewStars) }}</span>
+                        <span class="text-xs font-semibold text-gray-700">{{ number_format((float) $product->reviews_avg_rating, 1) }}</span>
+                        <span class="text-xs text-gray-600">({{ $product->reviews_count }})</span>
+                    @endif
+                </div>
+                <x-brevare.stock-indicator :count="$availableStock" :digital="$product->isCourse()" />
             </div>
 
             @if ($availableColors->isNotEmpty())

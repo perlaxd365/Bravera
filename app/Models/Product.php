@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\ProductType;
+use App\Support\Localization\StorefrontContext;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -171,6 +173,34 @@ class Product extends Model
             });
     }
 
+    /**
+     * Variantes comprables usando las relaciones ya cargadas por el catálogo.
+     */
+    public function availableVariantModels(): Collection
+    {
+        $this->loadMissing(['variants.supplierVariants']);
+
+        return $this->variants
+            ->filter(fn (ProductVariant $variant) => $variant->is_active
+                && $variant->supplierVariants->contains(
+                    fn (SupplierVariant $supplierVariant) => $supplierVariant->is_active
+                        && $supplierVariant->availableStock() > 0
+                ))
+            ->values();
+    }
+
+    /**
+     * Unidades libres de todas las variantes y proveedores activos.
+     */
+    public function availableStock(): int
+    {
+        return $this->availableVariantModels()
+            ->flatMap(fn (ProductVariant $variant) => $variant->supplierVariants)
+            ->filter(fn (SupplierVariant $supplierVariant) => $supplierVariant->is_active
+                && $supplierVariant->availableStock() > 0)
+            ->sum(fn (SupplierVariant $supplierVariant) => $supplierVariant->availableStock());
+    }
+
     public function minPrice(): ?float
     {
         return $this->availableVariants()->get()->min('sale_price');
@@ -190,7 +220,7 @@ class Product extends Model
             return 'Consultar';
         }
 
-        $context = \App\Support\Localization\StorefrontContext::current();
+        $context = StorefrontContext::current();
 
         if ($min === $max) {
             return $context->formatFromPen((float) $min);

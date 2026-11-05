@@ -121,6 +121,11 @@ return [
         'rating' => ':rating de 5 estrellas',
         'colors' => 'Colores disponibles: :colors',
         'variants_up_to' => 'Variantes hasta :price',
+        'stock_available' => ':count disponibles',
+        'stock_low_left' => 'Quedan :count',
+        'stock_one_left' => 'Queda 1',
+        'stock_out' => 'Agotado',
+        'stock_digital' => 'Acceso digital',
     ],
     'product' => [
         'loading' => 'Cargando producto…',

@@ -393,19 +393,16 @@
                     </div>
                 @endif
 
-                @if ($currentVariant && $currentVariant->total_available > 0)
+                @if ($currentVariant)
                     @if ($product->isCourse())
                         <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800">
                             <flux:icon name="document-arrow-down" class="size-3.5" />
                             {{ __('storefront.product.digital_product') }}
                         </p>
                     @else
-                        <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
-                            <span class="size-2 rounded-full bg-emerald-600"></span>
-                            {{ __('storefront.product.in_stock') }} · {{ $currentVariant->total_available === 1
-                                ? __('storefront.product.one_unit_available')
-                                : __('storefront.product.units_available', ['count' => $currentVariant->total_available]) }}
-                        </p>
+                        <x-brevare.stock-indicator
+                            :count="$currentVariant->total_available"
+                            class="mt-3" />
                     @endif
                 @endif
 

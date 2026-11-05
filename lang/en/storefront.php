@@ -121,6 +121,11 @@ return [
         'rating' => ':rating out of 5 stars',
         'colors' => 'Available colors: :colors',
         'variants_up_to' => 'Options up to :price',
+        'stock_available' => ':count available',
+        'stock_low_left' => 'Only :count left',
+        'stock_one_left' => 'Only 1 left',
+        'stock_out' => 'Out of stock',
+        'stock_digital' => 'Digital access',
     ],
     'product' => [
         'loading' => 'Loading product…',
