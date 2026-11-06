@@ -436,16 +436,30 @@
 
                     {{-- Atributos (selector de variante) --}}
                     @foreach ($attributes as $attribute)
-                        <div>
-                            <p class="mb-2 text-sm font-semibold text-gray-900">{{ $attribute['name'] }}</p>
+                        @php
+                            $attributeLabelId = 'product-attribute-'.$attribute['id'];
+                        @endphp
+                        <div role="group" aria-labelledby="{{ $attributeLabelId }}">
+                            <p id="{{ $attributeLabelId }}" class="mb-2 text-sm font-semibold text-gray-900">{{ $attribute['name'] }}</p>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ($attribute['values'] as $value)
+                                    @php
+                                        $isSelected = (int) ($selectedAttributes[$attribute['id']] ?? 0) === (int) $value['id'];
+                                    @endphp
                                     <button type="button"
                                         wire:click="$set('selectedAttributes.{{ $attribute['id'] }}', {{ $value['id'] }})"
-                                        class="inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition {{ ($selectedAttributes[$attribute['id']] ?? null) == $value['id'] ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400' }}"
-                                        @if ($value['color']) style="border-color:{{ $value['color'] }};" @endif>
+                                        aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                        wire:key="product-attribute-{{ $attribute['id'] }}-{{ $value['id'] }}"
+                                        @class([
+                                            'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition',
+                                            'border-gray-900 bg-gray-900 text-white ring-2 ring-gray-900/10' => $isSelected,
+                                            'border-gray-300 bg-white text-gray-700 hover:border-gray-500 hover:text-gray-900' => ! $isSelected,
+                                        ])>
                                         @if ($value['color'])<span class="inline-block size-3 rounded-full" style="background:{{ $value['color'] }};"></span>@endif
                                         {{ $value['value'] }}
+                                        @if ($isSelected)
+                                            <flux:icon name="check" variant="micro" class="size-3" />
+                                        @endif
                                     </button>
                                 @endforeach
                             </div>

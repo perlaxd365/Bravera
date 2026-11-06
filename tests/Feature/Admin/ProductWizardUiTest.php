@@ -376,10 +376,16 @@ class ProductWizardUiTest extends TestCase
             ->set('variantForm.sale_price', 100)
             ->set('variantForm.retail_price', 100)
             ->set('variantForm.discount_percent', 0)
-            ->set('variantForm.attribute_values', [
-                $size->id => [$small->id, $medium->id],
-                $color->id => $black->id,
-            ])
+            ->call('toggleVariantAttributeValue', $size->id, $small->id)
+            ->assertSet("variantForm.attribute_values.{$size->id}", [$small->id])
+            ->call('toggleVariantAttributeValue', $size->id, $medium->id)
+            ->assertSet("variantForm.attribute_values.{$size->id}", [$small->id, $medium->id])
+            ->call('toggleVariantAttributeValue', $size->id, $small->id)
+            ->assertSet("variantForm.attribute_values.{$size->id}", [$medium->id])
+            ->call('toggleVariantAttributeValue', $size->id, $small->id)
+            ->assertSet("variantForm.attribute_values.{$size->id}", [$small->id, $medium->id])
+            ->call('toggleVariantAttributeValue', $color->id, $black->id)
+            ->assertSet("variantForm.attribute_values.{$color->id}", [$black->id])
             ->call('saveVariant')
             ->assertHasNoErrors();
 

@@ -123,21 +123,32 @@
                                             'border-red-300' => $errors->has("variantForm.attribute_values.{$attribute->id}"),
                                         ])>
                                             @forelse ($attribute->values as $value)
-                                                <label @class([
-                                                    'relative inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition',
-                                                    'border-stone-950 bg-stone-950 text-white' => $variantForm->hasAttributeValue($attribute->id, $value->id),
-                                                    'border-stone-200 text-stone-700 hover:border-stone-400' => ! $variantForm->hasAttributeValue($attribute->id, $value->id),
-                                                ])>
-                                                    <input
-                                                        type="checkbox"
-                                                        wire:model.live="variantForm.attribute_values.{{ $attribute->id }}"
-                                                        value="{{ $value->id }}"
-                                                        class="size-3.5 rounded border-stone-300 text-stone-950 focus:ring-stone-900/20">
+                                                <button
+                                                    type="button"
+                                                    role="checkbox"
+                                                    aria-checked="{{ $variantForm->hasAttributeValue($attribute->id, $value->id) ? 'true' : 'false' }}"
+                                                    aria-label="{{ $variantForm->hasAttributeValue($attribute->id, $value->id) ? 'Quitar' : 'Agregar' }} {{ $value->value }} de {{ $attribute->name }}"
+                                                    wire:click="toggleVariantAttributeValue({{ $attribute->id }}, {{ $value->id }})"
+                                                    wire:key="variant-attribute-{{ $attribute->id }}-{{ $value->id }}"
+                                                    @class([
+                                                        'relative inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                                                        'border-stone-950 bg-stone-950 text-white' => $variantForm->hasAttributeValue($attribute->id, $value->id),
+                                                        'border-stone-200 text-stone-700 hover:border-stone-400' => ! $variantForm->hasAttributeValue($attribute->id, $value->id),
+                                                    ])>
+                                                    <span @class([
+                                                        'flex size-3.5 items-center justify-center rounded border',
+                                                        'border-white/60 bg-white text-stone-950' => $variantForm->hasAttributeValue($attribute->id, $value->id),
+                                                        'border-stone-300 bg-white' => ! $variantForm->hasAttributeValue($attribute->id, $value->id),
+                                                    ]) aria-hidden="true">
+                                                        @if ($variantForm->hasAttributeValue($attribute->id, $value->id))
+                                                            <flux:icon name="check" variant="micro" class="size-2.5" />
+                                                        @endif
+                                                    </span>
                                                     @if ($value->color)
                                                         <span class="size-3 rounded-full ring-1 ring-inset ring-black/10" style="background:{{ $value->color }};" aria-hidden="true"></span>
                                                     @endif
                                                     <span>{{ $value->value }}</span>
-                                                </label>
+                                                </button>
                                             @empty
                                                 <span class="px-2 py-1 text-xs text-stone-500">Este atributo no tiene valores activos.</span>
                                             @endforelse

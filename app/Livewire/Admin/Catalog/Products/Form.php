@@ -23,9 +23,9 @@ use App\Modules\Product\Services\ProductVariantService;
 use App\Modules\Product\Services\SupplierVariantService;
 use App\Services\CloudinaryImageService;
 use App\Services\MetaAdsService;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -851,6 +851,35 @@ class Form extends Component
         $this->supplierVariantForm->resetForm();
 
         $this->resetValidation();
+    }
+
+    /**
+     * Marca o desmarca un único valor del atributo de la variante.
+     *
+     * Se controla desde Livewire para que dos opciones del mismo atributo no
+     * compartan el estado nativo de un grupo de checkboxes.
+     */
+    public function toggleVariantAttributeValue(int $attributeId, int $attributeValueId): void
+    {
+        $selected = $this->variantForm->attribute_values[$attributeId] ?? [];
+        $selected = is_array($selected) ? $selected : [$selected];
+        $selected = array_values(array_unique(array_filter(
+            array_map('intval', $selected),
+            fn (int $valueId) => $valueId > 0,
+        )));
+
+        $index = array_search($attributeValueId, $selected, true);
+
+        if ($index === false) {
+            $selected[] = $attributeValueId;
+        } else {
+            unset($selected[$index]);
+        }
+
+        sort($selected);
+
+        $this->variantForm->attribute_values[$attributeId] = array_values($selected);
+        $this->resetErrorBag("variantForm.attribute_values.{$attributeId}");
     }
 
     /**
