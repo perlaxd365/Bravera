@@ -536,6 +536,46 @@ class CulqiGatewayTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_un_pedido_digital_usa_el_celular_del_cliente_sin_direccion(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_test_2'), 201),
+        ]);
+
+        $order = $this->order();
+        $order->update([
+            'address_snapshot' => null,
+            'customer_snapshot' => array_merge($order->customer_snapshot, [
+                'phone' => '+51 987 654 321',
+            ]),
+        ]);
+
+        app(CulqiGateway::class)->createPaymentOrder($order->fresh(), ['card']);
+
+        Http::assertSent(function (Request $request) {
+            return $request->url() === 'https://api.culqi.com/v2/orders'
+                && data_get($request->data(), 'client_details.phone_number') === '51987654321';
+        });
+    }
+
+    public function test_un_pedido_digital_usa_el_celular_de_la_cuenta_como_ultimo_recurso(): void
+    {
+        Http::fake([
+            'api.culqi.com/v2/orders' => Http::response(CulqiResponses::pendingOrder('ord_test_3'), 201),
+        ]);
+
+        $order = $this->order();
+        $order->user->update(['phone' => '51912345678']);
+        $order->update(['address_snapshot' => null]);
+
+        app(CulqiGateway::class)->createPaymentOrder($order->fresh(), ['card']);
+
+        Http::assertSent(function (Request $request) {
+            return $request->url() === 'https://api.culqi.com/v2/orders'
+                && data_get($request->data(), 'client_details.phone_number') === '51912345678';
+        });
+    }
+
     public function test_una_orden_pagada_se_reconoce_por_paid_at(): void
     {
         $this->assertSame(

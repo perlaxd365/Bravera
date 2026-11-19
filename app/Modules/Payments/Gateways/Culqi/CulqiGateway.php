@@ -419,7 +419,7 @@ class CulqiGateway implements PaymentGateway
         // 6 y 14 caracteres. Es mejor avisar aquí que devolver un 400 opaco.
         if ($clientDetails === null) {
             throw new RuntimeException(
-                'Para pagar con este método necesitamos un número de celular válido en tu dirección de entrega.'
+                'Para pagar con este método necesitamos un número de celular válido en tus datos de contacto.'
             );
         }
 
@@ -498,8 +498,8 @@ class CulqiGateway implements PaymentGateway
         $address = (array) ($order->address_snapshot ?? []);
         $name = trim((string) data_get($order?->customer_snapshot, 'name')
             ?: data_get($address, 'full_name', ''));
-        $parts = preg_split('/\s+/', $name, 2) ?: ['', ''];
-        $phone = preg_replace('/\D+/', '', (string) data_get($address, 'phone', '')) ?? '';
+        $nameParts = $this->nameParts($name);
+        $phone = $this->customerPhone($order);
 
         if (strlen($phone) < 6 || strlen($phone) > 14) {
             \Log::warning('[Culqi] Invalid customer phone number for payment order.', [
@@ -509,14 +509,69 @@ class CulqiGateway implements PaymentGateway
             return null;
         }
 
-        $details = array_filter([
+        return [
             'email' => (string) ($order?->user?->email ?? data_get($order?->customer_snapshot, 'email', '')),
-            'first_name' => $parts[0] ?? '',
-            'last_name' => $parts[1] ?? '',
+            'first_name' => $nameParts['first_name'],
+            'last_name' => $nameParts['last_name'],
             'phone_number' => $phone,
-        ], fn ($value) => $value !== '');
+        ];
+    }
 
-        return $details === [] ? null : $details;
+    /**
+     * Celular normalizado del comprador.
+     *
+     * Los pedidos digitales (cursos, ebooks) no tienen dirección de envío, así
+     * que `address_snapshot` es null. El teléfono se busca primero en la
+     * dirección, luego en el snapshot del cliente y por último en la cuenta.
+     * Se aceptan formatos internacionales: se descartan signos, espacios y el
+     * prefijo `00`, y se conserva el código de país.
+     */
+    private function customerPhone(?object $order): string
+    {
+        $address = (array) ($order->address_snapshot ?? []);
+        $raw = data_get($address, 'phone')
+            ?: data_get($order?->customer_snapshot, 'phone')
+            ?: $order?->user?->phone;
+
+        $phone = preg_replace('/\D+/', '', (string) $raw) ?? '';
+
+        if (str_starts_with($phone, '00')) {
+            $phone = substr($phone, 2);
+        }
+
+        return $phone;
+    }
+
+    /**
+     * Culqi exige first_name y last_name no vacíos y de menos de 50 caracteres.
+     * Si el cliente solo escribió un nombre, usamos un apellido por defecto.
+     *
+     * @return array{first_name: string, last_name: string}
+     */
+    private function nameParts(string $name): array
+    {
+        $name = trim((string) preg_replace('/\s+/', ' ', $name));
+
+        if ($name === '') {
+            return ['first_name' => 'Cliente', 'last_name' => 'Brevare'];
+        }
+
+        $parts = explode(' ', $name, 2);
+        $first = trim($parts[0]);
+        $last = trim($parts[1] ?? '');
+
+        if ($first === '') {
+            $first = 'Cliente';
+        }
+
+        if ($last === '') {
+            $last = 'Cliente';
+        }
+
+        return [
+            'first_name' => mb_substr($first, 0, 40),
+            'last_name' => mb_substr($last, 0, 40),
+        ];
     }
 
     /**
@@ -618,17 +673,18 @@ class CulqiGateway implements PaymentGateway
      */
     private function antifraudDetails(?object $order): array
     {
-        $address = $order->address_snapshot ?? [];
-        $name = (string) data_get($order?->customer_snapshot, 'name', '');
-        $parts = preg_split('/\s+/', trim($name), 2) ?: ['', ''];
+        $address = (array) ($order->address_snapshot ?? []);
+        $name = (string) data_get($order?->customer_snapshot, 'name', '')
+            ?: (string) data_get($address, 'full_name', '');
+        $nameParts = $this->nameParts($name);
 
         return array_filter([
-            'first_name' => $parts[0] ?? '',
-            'last_name' => $parts[1] ?? '',
+            'first_name' => $nameParts['first_name'],
+            'last_name' => $nameParts['last_name'],
             'address' => (string) data_get($address, 'address', ''),
             'address_city' => 'Lima',
             'country_code' => 'PE',
-            'phone' => (string) data_get($address, 'phone', ''),
+            'phone' => $this->customerPhone($order),
             'identification_type' => (string) data_get($order?->customer_snapshot, 'identification_type', ''),
             'identification_number' => (string) data_get($order?->customer_snapshot, 'identification_number', ''),
         ], fn ($value) => $value !== '');

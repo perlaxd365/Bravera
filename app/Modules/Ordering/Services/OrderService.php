@@ -47,6 +47,7 @@ class OrderService
                 'customer_snapshot' => [
                     'name' => $data->user->name,
                     'email' => $data->user->email,
+                    'phone' => $data->address?->phone ?: $data->user->phone,
                     'meta_fbc' => request()->cookie('_fbc'),
                     'meta_fbp' => request()->cookie('_fbp'),
                     'meta_client_ip' => request()->ip(),
