@@ -10,12 +10,24 @@
     @if ($heroSlides)
         <section x-data="{
             active: 0,
+            frame: 0,
             slides: @js($heroSlides),
             timer: null,
-            next() { this.active = (this.active + 1) % this.slides.length },
-            prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
-            go(i) { this.active = i },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 6000) },
+            step: 1500,
+            tick() {
+                const images = this.slides[this.active]?.images || [];
+                if (this.frame + 1 < images.length) { this.frame++; return; }
+                this.frame = 0;
+                this.active = (this.active + 1) % this.slides.length;
+            },
+            next() { this.go((this.active + 1) % this.slides.length) },
+            prev() { this.go((this.active - 1 + this.slides.length) % this.slides.length) },
+            go(i) { this.frame = 0; this.active = i; this.start() },
+            start() {
+                this.stop();
+                const total = this.slides.reduce((sum, slide) => sum + Math.max(1, (slide.images || []).length), 0);
+                if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && total > 1) this.timer = setInterval(() => this.tick(), this.step);
+            },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
@@ -33,15 +45,19 @@
                                 {{-- Imagen principal: ocupa más espacio y alterna izquierda / derecha --}}
                                 <div class="relative h-[260px] overflow-hidden bg-gradient-to-br from-[#f4efe6] via-[#faf8f3] to-[#efe7da] sm:h-[350px] lg:h-[500px]"
                                     :class="slide.side === 'left' ? 'lg:order-1' : 'lg:order-2'">
-                                    <img :src="slide.image" :alt="slide.title" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'"
-                                        onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }"
-                                        class="animate-kenburns h-full w-full object-contain p-8 drop-shadow-[0_26px_45px_rgba(28,25,23,.16)] sm:p-12">
+                                    <template x-for="(image, f) in (slide.images && slide.images.length ? slide.images : [slide.image])" :key="'img-' + i + '-' + f">
+                                        <img :src="image" :alt="slide.title" :fetchpriority="i === 0 && f === 0 ? 'high' : 'auto'" :loading="i === 0 && f === 0 ? 'eager' : 'lazy'"
+                                            onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }"
+                                            class="absolute inset-0 h-full w-full object-contain p-8 drop-shadow-[0_26px_45px_rgba(28,25,23,.16)] transition-opacity duration-700 ease-out sm:p-12"
+                                            :class="(i === active && f === frame) ? 'opacity-100 animate-kenburns' : 'opacity-0'">
+                                    </template>
                                     <span x-show="slide.discount > 0" x-text="'-' + slide.discount + '%'" class="absolute left-5 top-5 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-md"></span>
                                     <div x-show="slide.thumbs.length" class="absolute bottom-5 left-5 flex items-end gap-2" aria-hidden="true">
                                         <template x-for="(thumb, t) in slide.thumbs" :key="'thumb-' + i + '-' + t">
-                                            <span class="block size-11 overflow-hidden rounded-lg border-2 border-white bg-white shadow-md sm:size-14" :class="t === 0 ? 'ring-1 ring-amber-300' : 'opacity-80'">
+                                            <button type="button" @click="frame = t" class="block size-11 overflow-hidden rounded-lg border-2 border-white bg-white shadow-md transition sm:size-14"
+                                                :class="(i === active && t === frame) ? 'ring-2 ring-amber-400' : 'opacity-70 hover:opacity-100'">
                                                 <img :src="thumb" alt="" loading="lazy" decoding="async" class="size-full object-cover">
-                                            </span>
+                                            </button>
                                         </template>
                                     </div>
                                 </div>

@@ -154,11 +154,27 @@ class Home extends Component
                     : 0;
 
                 $cover = $product->coverImageModel();
-                $thumbnails = $product->variants
+                $gallery = $product->variants
                     ->flatMap(fn ($variant) => $variant->images)
                     ->unique('id')
-                    ->reject(fn ($image) => $cover && $image->id === $cover->id)
-                    ->take(3)
+                    ->values();
+
+                if ($cover) {
+                    $gallery = $gallery
+                        ->reject(fn ($image) => $image->id === $cover->id)
+                        ->prepend($cover)
+                        ->values();
+                }
+
+                $gallery = $gallery->take(4)->values();
+
+                $images = $gallery
+                    ->map(fn ($image) => $image->sizedUrl(1600))
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                $thumbnails = $gallery
                     ->map(fn ($image) => $image->sizedUrl(320))
                     ->filter()
                     ->values()
@@ -168,7 +184,8 @@ class Home extends Component
                 $description = $product->localized('short_description');
 
                 return [
-                    'image' => $cover?->sizedUrl(1600),
+                    'image' => $images[0] ?? null,
+                    'images' => $images,
                     'thumbs' => $thumbnails,
                     'eyebrow' => $product->brand?->name
                         ?? $product->category?->name
@@ -194,6 +211,7 @@ class Home extends Component
             ->values()
             ->map(fn (array $slide, int $index): array => [
                 'image' => $slide['image'] ?? null,
+                'images' => array_values(array_filter([$slide['image'] ?? null])),
                 'thumbs' => [],
                 'eyebrow' => $slide['eyebrow'] ?? '',
                 'title' => trim(($slide['title'] ?? '').' '.($slide['highlight'] ?? '')),
