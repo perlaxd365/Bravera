@@ -10,6 +10,8 @@
     @if ($heroSlides)
         <section x-data="{
             active: 0,
+            previous: -1,
+            direction: 1,
             frame: 0,
             slides: @js($heroSlides),
             timer: null,
@@ -17,12 +19,21 @@
             tick() {
                 const images = this.slides[this.active]?.images || [];
                 if (this.frame + 1 < images.length) { this.frame++; return; }
+                this.previous = this.active;
+                this.direction = 1;
                 this.frame = 0;
                 this.active = (this.active + 1) % this.slides.length;
             },
-            next() { this.go((this.active + 1) % this.slides.length) },
-            prev() { this.go((this.active - 1 + this.slides.length) % this.slides.length) },
-            go(i) { this.frame = 0; this.active = i; this.start() },
+            change(step) {
+                this.previous = this.active;
+                this.direction = step >= 0 ? 1 : -1;
+                this.frame = 0;
+                this.active = (this.active + step + this.slides.length) % this.slides.length;
+                this.start();
+            },
+            next() { this.change(1) },
+            prev() { this.change(-1) },
+            go(i) { if (i !== this.active) this.change(i - this.active); },
             start() {
                 this.stop();
                 const total = this.slides.reduce((sum, slide) => sum + Math.max(1, (slide.images || []).length), 0);
@@ -30,16 +41,20 @@
             },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
-            x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
-            @visibilitychange.window="document.hidden ? stop() : start()"
+            x-init="start()" @visibilitychange.window="document.hidden ? stop() : start()"
             class="mx-auto mt-3 max-w-[1440px] px-4 sm:px-6 lg:px-10">
             <div class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_60px_-46px_rgba(28,25,23,.45)]">
                 {{-- Todas las portadas comparten la misma celda: el alto lo marca la más
                      alta, así al cambiar de slide nada de la página se mueve. --}}
                 <div class="grid">
                     <template x-for="(slide, i) in slides" :key="'hero-' + i">
-                        <div class="col-start-1 row-start-1 opacity-0 transition-opacity duration-700 ease-out"
-                            :class="i === active ? 'z-10 opacity-100' : 'pointer-events-none opacity-0'"
+                        <div class="col-start-1 row-start-1 origin-center opacity-0 transition-[opacity,transform] duration-[900ms] ease-[cubic-bezier(.22,1,.36,1)] will-change-transform"
+                            :class="{
+                                'z-10 translate-x-0 scale-100 opacity-100': i === active,
+                                'pointer-events-none': i !== active,
+                                '-translate-x-[6%] scale-[0.97] opacity-0': i !== active && ((i === previous && direction > 0) || (i !== previous && direction < 0)),
+                                'translate-x-[6%] scale-[0.97] opacity-0': i !== active && ((i === previous && direction < 0) || (i !== previous && direction > 0))
+                            }"
                             :aria-hidden="i === active ? 'false' : 'true'">
                             <div class="grid lg:grid-cols-[1.15fr_1fr]">
                                 {{-- Imagen principal: ocupa más espacio y alterna izquierda / derecha --}}
