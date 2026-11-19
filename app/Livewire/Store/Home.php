@@ -6,8 +6,10 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\HomepageSetting;
 use App\Models\Product;
+use App\Support\Localization\StorefrontContext;
 use App\Support\Seo\CatalogLinks;
 use App\Support\Seo\StructuredData;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -53,23 +55,6 @@ class Home extends Component
             ->when($featured->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $featured->modelKeys()))
             ->latest()
             ->limit(12)
-            ->get();
-
-        $christmasProducts = Product::query()
-            ->active()
-            ->visible()
-            ->whereHas('category', fn ($query) => $query
-                ->where('path', 'navidad')
-                ->orWhere('path', 'like', 'navidad/%'))
-            ->with(['category', 'translations', 'variants.images', 'variants.supplierVariants.supplier'])
-            ->whereHas('variants', function ($query) {
-                $query->where('is_active', true)
-                    ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
-                        ->active()
-                        ->whereColumn('stock', '>', 'reserved_stock'));
-            })
-            ->latest()
-            ->limit(6)
             ->get();
 
         $newestProducts = Product::query()
@@ -136,91 +121,95 @@ class Home extends Component
             ->get();
 
         $savedSettings = HomepageSetting::query()->first();
-        $savedHeroSlides = collect($savedSettings?->hero_slides ?: config('homepage.slides', []));
 
-        if (app()->getLocale() === 'en') {
-            $englishHeroCopy = [
-                ['eyebrow' => 'Holiday at Brevare', 'title' => 'Gifts that arrive', 'highlight' => 'with delight', 'subtitle' => 'Find that special detail to share this holiday season.', 'cta' => 'Discover gifts'],
-                ['eyebrow' => 'Holiday at home', 'title' => 'Moments to', 'highlight' => 'celebrate together', 'subtitle' => 'Ideas to refresh your home and enjoy every gathering.', 'cta' => 'Explore the shop'],
-                ['eyebrow' => 'Seasonal inspiration', 'title' => 'A touch of mystery', 'highlight' => 'and fun', 'subtitle' => 'Discover new finds for a different kind of season.', 'cta' => 'See new arrivals'],
-                ['eyebrow' => 'Technology', 'title' => 'Smartphones and laptops', 'highlight' => 'up to 20% off', 'subtitle' => 'The latest devices with fast shipping throughout Peru.', 'cta' => 'View deals'],
-                ['eyebrow' => 'Fashion', 'title' => 'New collection', 'highlight' => 'Women’s fashion', 'subtitle' => 'Dresses, blazers, and accessories for the season.', 'cta' => 'Discover'],
-                ['eyebrow' => 'Home', 'title' => 'Refresh your rest', 'highlight' => 'from S/ 99', 'subtitle' => 'Sheets and comforters to transform your bedroom.', 'cta' => 'View bedroom'],
-                ['eyebrow' => 'Kitchen', 'title' => 'Equip your kitchen', 'highlight' => 'up to 25% off', 'subtitle' => 'Find tools and appliances for your home.', 'cta' => 'Explore kitchen'],
-            ];
+        // La portada siempre gira alrededor de productos reales elegidos al azar.
+        // Al usar inRandomOrder(), cualquier producto recién publicado entra solo
+        // en la rotación en cuanto esté activo, visible y con stock.
+        $heroProducts = Product::query()
+            ->active()
+            ->visible()
+            ->with(['brand', 'category', 'translations', 'variants.images', 'variants.supplierVariants.supplier'])
+            ->whereHas('variants', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('supplierVariants', fn ($supplierQuery) => $supplierQuery
+                        ->active()
+                        ->whereColumn('stock', '>', 'reserved_stock'));
+            })
+            ->whereHas('variants.images')
+            ->inRandomOrder()
+            ->limit(6)
+            ->get();
 
-            $savedHeroSlides = $savedHeroSlides
-                ->values()
-                ->map(fn (array $slide, int $index): array => array_merge(
-                    $slide,
-                    $englishHeroCopy[$index] ?? [
-                        'eyebrow' => 'Brevare selection',
-                        'title' => 'Find something',
-                        'highlight' => 'worth discovering',
-                        'subtitle' => 'Explore our latest selection.',
-                        'cta' => 'Shop now',
-                    ],
-                ));
-        }
+        $storefront = StorefrontContext::current();
 
-        $christmasSlides = $christmasProducts->take(3)->values()->map(function (Product $product, int $index): array {
-            $copy = app()->getLocale() === 'en' ? [
-                [
-                    'eyebrow' => 'Holiday at home',
-                    'title' => 'Details that brighten',
-                    'highlight' => 'your holidays',
-                    'subtitle' => 'Wreaths, garlands, and decorations to warm every corner.',
-                ],
-                [
-                    'eyebrow' => 'Moments to share',
-                    'title' => 'Your table, ready to',
-                    'highlight' => 'celebrate',
-                    'subtitle' => 'Small details that make the season feel special.',
-                ],
-                [
-                    'eyebrow' => 'Decorate your way',
-                    'title' => 'A holiday season with',
-                    'highlight' => 'your personality',
-                    'subtitle' => 'Find seasonal pieces that transform your home effortlessly.',
-                ],
-            ] : [
-                [
-                    'eyebrow' => 'Navidad en casa',
-                    'title' => 'Detalles que iluminan',
-                    'highlight' => 'tu Navidad',
-                    'subtitle' => 'Coronas, ramos y guirnaldas para darle calidez a cada rincón.',
-                ],
-                [
-                    'eyebrow' => 'Momentos para compartir',
-                    'title' => 'Tu mesa, lista para',
-                    'highlight' => 'celebrar',
-                    'subtitle' => 'Pequeños detalles que hacen que diciembre se sienta especial.',
-                ],
-                [
-                    'eyebrow' => 'Decora a tu estilo',
-                    'title' => 'Una Navidad con',
-                    'highlight' => 'tu personalidad',
-                    'subtitle' => 'Encuentra piezas navideñas para transformar tu casa sin complicarte.',
-                ],
-            ][$index] ?? [];
-
-            return [
-                ...$copy,
-                'image' => $product->coverImageModel()?->sizedUrl(1600),
-                'cta' => app()->getLocale() === 'en' ? 'View product' : 'Ver el producto',
-                'url' => route('store.product', ['slug' => $product->slug]),
-                'tone' => 'christmas',
-            ];
-        })->filter(fn (array $slide): bool => filled($slide['image'] ?? null))->values();
-
-        $heroSlides = $savedHeroSlides
-            ->take(2)
-            ->merge($christmasSlides)
-            ->merge($savedHeroSlides->slice(2))
-            ->unique(fn (array $slide): string => (string) ($slide['image'] ?? ''))
-            ->take(9)
+        $productHeroSlides = $heroProducts
             ->values()
-            ->all();
+            ->map(function (Product $product, int $index) use ($storefront): array {
+                $variants = $product->availableVariantModels();
+                $minVariant = $variants->sortBy('sale_price')->first();
+                $price = (float) ($minVariant?->sale_price ?? 0);
+                $compare = (float) ($minVariant?->compare_price ?? 0);
+                $discount = $compare > $price && $price > 0
+                    ? (int) round((1 - ($price / $compare)) * 100)
+                    : 0;
+
+                $cover = $product->coverImageModel();
+                $thumbnails = $product->variants
+                    ->flatMap(fn ($variant) => $variant->images)
+                    ->unique('id')
+                    ->reject(fn ($image) => $cover && $image->id === $cover->id)
+                    ->take(3)
+                    ->map(fn ($image) => $image->sizedUrl(320))
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                $name = $product->localized('name') ?? $product->name;
+                $description = $product->localized('short_description');
+
+                return [
+                    'image' => $cover?->sizedUrl(1600),
+                    'thumbs' => $thumbnails,
+                    'eyebrow' => $product->brand?->name
+                        ?? $product->category?->name
+                        ?? (app()->getLocale() === 'en' ? 'Brevare picks' : 'Selección Brevare'),
+                    'title' => $name,
+                    'subtitle' => filled($description)
+                        ? Str::limit(strip_tags((string) $description), 160)
+                        : __('storefront.home.hero_subtitle'),
+                    'price' => $price > 0 ? $storefront->formatFromPen($price) : null,
+                    'compare' => $discount > 0 ? $storefront->formatFromPen($compare) : null,
+                    'discount' => $discount,
+                    'cta' => __('storefront.home.buy_now'),
+                    'url' => route('store.product', ['slug' => $product->slug]),
+                    'side' => $index % 2 === 0 ? 'left' : 'right',
+                ];
+            })
+            ->filter(fn (array $slide): bool => filled($slide['image']))
+            ->values();
+
+        // Si aún no hay productos comprables, se conservan las portadas guardadas
+        // desde el panel para no dejar el espacio vacío.
+        $fallbackHeroSlides = collect($savedSettings?->hero_slides ?: config('homepage.slides', []))
+            ->values()
+            ->map(fn (array $slide, int $index): array => [
+                'image' => $slide['image'] ?? null,
+                'thumbs' => [],
+                'eyebrow' => $slide['eyebrow'] ?? '',
+                'title' => trim(($slide['title'] ?? '').' '.($slide['highlight'] ?? '')),
+                'subtitle' => $slide['subtitle'] ?? '',
+                'price' => null,
+                'compare' => null,
+                'discount' => 0,
+                'cta' => $slide['cta'] ?? __('storefront.home.buy_now'),
+                'url' => $slide['url'] ?? route('store.search'),
+                'side' => $index % 2 === 0 ? 'left' : 'right',
+            ]);
+
+        $heroSlides = $productHeroSlides->isNotEmpty()
+            ? $productHeroSlides->all()
+            : $fallbackHeroSlides->take(6)->all();
+
         $heroFallbackImage = config('homepage.slides.0.image');
         $homeTexts = array_merge(config('homepage.texts', []), $savedSettings?->section_texts ?? []);
         $promoTickerItems = $newestProducts

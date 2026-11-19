@@ -6,7 +6,7 @@
         </div>
     @endif
 
-    {{-- Banner principal --}}
+    {{-- Portada: cada slide es un producto real, con imagen grande y CTA de compra --}}
     @if ($heroSlides)
         <section x-data="{
             active: 0,
@@ -15,54 +15,73 @@
             next() { this.active = (this.active + 1) % this.slides.length },
             prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
             go(i) { this.active = i },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 5000) },
+            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 6000) },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
             @visibilitychange.window="document.hidden ? stop() : start()"
             class="mx-auto mt-3 max-w-[1440px] px-4 sm:px-6 lg:px-10">
-            <div class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white">
-                <div class="grid lg:grid-cols-[1.05fr_1fr]">
-                    <div class="relative order-2 flex flex-col justify-center px-6 pb-8 pt-6 sm:px-10 sm:py-10 lg:order-1 lg:px-14">
-                        <template x-for="(slide, i) in slides" :key="'copy-' + i">
-                            <div x-show="i === active" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
-                                <p class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[.14em] text-amber-900" x-text="slide.eyebrow"></p>
-                                <h1 class="mt-4 max-w-xl text-[2rem] font-extrabold leading-[1.05] tracking-[-.04em] text-stone-950 sm:text-[2.6rem] lg:text-[3rem]">
-                                    <span class="sr-only">Brevare: </span>
-                                    <span x-text="slide.title">Regalos que llegan</span>
-                                    <span class="text-amber-700" x-text="slide.highlight">con ilusión</span>
-                                </h1>
-                                <p class="mt-3 max-w-md text-sm leading-6 text-stone-600 sm:text-[15px] sm:leading-7" x-text="slide.subtitle"></p>
-                                <a :href="slide.url" class="fv-cta mt-6">
-                                    <span x-text="slide.cta"></span><span aria-hidden="true">→</span>
-                                </a>
-                            </div>
-                        </template>
+            <div class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_60px_-46px_rgba(28,25,23,.45)]">
+                {{-- Todas las portadas comparten la misma celda: el alto lo marca la más
+                     alta, así al cambiar de slide nada de la página se mueve. --}}
+                <div class="grid">
+                    <template x-for="(slide, i) in slides" :key="'hero-' + i">
+                        <div class="col-start-1 row-start-1 opacity-0 transition-opacity duration-700 ease-out"
+                            :class="i === active ? 'z-10 opacity-100' : 'pointer-events-none opacity-0'"
+                            :aria-hidden="i === active ? 'false' : 'true'">
+                            <div class="grid lg:grid-cols-[1.15fr_1fr]">
+                                {{-- Imagen principal: ocupa más espacio y alterna izquierda / derecha --}}
+                                <div class="relative h-[260px] overflow-hidden bg-gradient-to-br from-[#f4efe6] via-[#faf8f3] to-[#efe7da] sm:h-[350px] lg:h-[500px]"
+                                    :class="slide.side === 'left' ? 'lg:order-1' : 'lg:order-2'">
+                                    <img :src="slide.image" :alt="slide.title" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'"
+                                        onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }"
+                                        class="animate-kenburns h-full w-full object-contain p-8 drop-shadow-[0_26px_45px_rgba(28,25,23,.16)] sm:p-12">
+                                    <span x-show="slide.discount > 0" x-text="'-' + slide.discount + '%'" class="absolute left-5 top-5 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-md"></span>
+                                    <div x-show="slide.thumbs.length" class="absolute bottom-5 left-5 flex items-end gap-2" aria-hidden="true">
+                                        <template x-for="(thumb, t) in slide.thumbs" :key="'thumb-' + i + '-' + t">
+                                            <span class="block size-11 overflow-hidden rounded-lg border-2 border-white bg-white shadow-md sm:size-14" :class="t === 0 ? 'ring-1 ring-amber-300' : 'opacity-80'">
+                                                <img :src="thumb" alt="" loading="lazy" decoding="async" class="size-full object-cover">
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
 
-                        <div class="mt-7 flex items-center gap-2">
-                            <template x-for="(slide, i) in slides" :key="'dot-' + i">
-                                <button type="button" @click="go(i)" :aria-label="'{{ __('storefront.home.go_slide') }}'.replace(':number', i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-9 min-w-4 items-center justify-center">
-                                    <span class="h-1.5 rounded-full transition-all duration-400" :class="i === active ? 'w-7 bg-amber-600' : 'w-4 bg-stone-300'"></span>
-                                </button>
-                            </template>
-                            <div class="ml-auto flex gap-2">
-                                <button type="button" @click="prev()" aria-label="{{ __('storefront.home.previous') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
-                                    <flux:icon name="chevron-left" class="size-4" />
-                                </button>
-                                <button type="button" @click="next()" aria-label="{{ __('storefront.home.next') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
-                                    <flux:icon name="chevron-right" class="size-4" />
-                                </button>
+                                {{-- Texto: toda la portada gira alrededor de este producto --}}
+                                <div class="flex flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
+                                    :class="slide.side === 'left' ? 'lg:order-2' : 'lg:order-1'">
+                                    <p class="inline-flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[.14em] text-amber-900" x-text="slide.eyebrow"></p>
+                                    <h1 class="mt-4 line-clamp-3 max-w-xl text-[1.9rem] font-extrabold leading-[1.04] tracking-[-.04em] text-stone-950 sm:text-[2.4rem] lg:text-[2.75rem]" x-text="slide.title"></h1>
+                                    <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1" x-show="slide.price">
+                                        <span class="text-[1.75rem] font-extrabold tracking-tight text-amber-700 sm:text-[2rem]" x-text="slide.price"></span>
+                                        <span x-show="slide.compare" class="text-sm font-medium text-stone-400 line-through" x-text="slide.compare"></span>
+                                    </div>
+                                    <p class="mt-3 line-clamp-3 max-w-md text-sm leading-6 text-stone-600 sm:text-[15px] sm:leading-7" x-text="slide.subtitle"></p>
+                                    <a :href="slide.url" class="fv-cta mt-6 w-fit text-[15px]">
+                                        <span x-text="slide.cta"></span><span aria-hidden="true">→</span>
+                                    </a>
+                                    <p class="mt-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.12em] text-stone-400">
+                                        <span class="inline-block size-1.5 rounded-full bg-emerald-500"></span>{{ app()->getLocale() === 'en' ? 'In stock · Ships nationwide' : 'Disponible · Envío a todo el Perú' }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </template>
+                </div>
 
-                    <div class="relative order-1 min-h-[220px] overflow-hidden bg-[#e8e3da] sm:min-h-[300px] lg:order-2 lg:min-h-[400px]">
-                        <template x-for="(slide, i) in slides" :key="'image-' + i">
-                            <div x-show="i === active" x-transition.opacity.duration.500ms x-cloak class="absolute inset-0">
-                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="h-full w-full object-cover">
-                            </div>
-                        </template>
-                        <span class="absolute bottom-4 right-4 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-stone-800 backdrop-blur">Brevare · Perú</span>
+                {{-- Controles compartidos: posición y tamaño fijos --}}
+                <div class="relative z-20 flex items-center gap-2 border-t border-stone-100 bg-white/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
+                    <template x-for="(slide, i) in slides" :key="'dot-' + i">
+                        <button type="button" @click="go(i)" :aria-label="'{{ __('storefront.home.go_slide') }}'.replace(':number', i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-9 min-w-4 items-center justify-center">
+                            <span class="h-1.5 rounded-full transition-all duration-400" :class="i === active ? 'w-7 bg-amber-600' : 'w-4 bg-stone-300'"></span>
+                        </button>
+                    </template>
+                    <div class="ml-auto flex gap-2">
+                        <button type="button" @click="prev()" aria-label="{{ __('storefront.home.previous') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
+                            <flux:icon name="chevron-left" class="size-4" />
+                        </button>
+                        <button type="button" @click="next()" aria-label="{{ __('storefront.home.next') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
+                            <flux:icon name="chevron-right" class="size-4" />
+                        </button>
                     </div>
                 </div>
             </div>
