@@ -63,7 +63,7 @@
                                         <img :src="image" :alt="slide.title" :fetchpriority="i === 0 && f === 0 ? 'high' : 'auto'" :loading="i === 0 && f === 0 ? 'eager' : 'lazy'"
                                             onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }"
                                             class="absolute inset-0 h-full w-full object-contain p-8 drop-shadow-[0_26px_45px_rgba(28,25,23,.16)] transition-opacity duration-[900ms] ease-[cubic-bezier(.16,1,.3,1)] sm:p-12"
-                                            :class="(i === active && f === frame) ? 'opacity-100 animate-kenburns' : 'opacity-0'">
+                                            :class="(i === active && f === frame) ? 'opacity-100 hero-frame-active' : 'opacity-0'">
                                     </template>
                                     <span x-show="slide.discount > 0" x-text="'-' + slide.discount + '%'" class="absolute left-5 top-5 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-md"></span>
                                     <div x-show="slide.thumbs.length" class="absolute bottom-5 left-5 flex items-end gap-2" aria-hidden="true">
@@ -78,7 +78,7 @@
 
                                 {{-- Texto: toda la portada gira alrededor de este producto --}}
                                 <div class="hero-copy flex flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
-                                    :class="[slide.side === 'left' ? 'lg:order-2' : 'lg:order-1', { 'is-active': i === active }]">
+                                    :class="(slide.side === 'left' ? 'lg:order-2' : 'lg:order-1') + (i === active ? ' is-active' : '')">
                                     <p class="inline-flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[.14em] text-amber-900" x-text="slide.eyebrow"></p>
                                     <h1 class="mt-4 line-clamp-3 max-w-xl text-[1.9rem] font-extrabold leading-[1.04] tracking-[-.04em] text-stone-950 sm:text-[2.4rem] lg:text-[2.75rem]" x-text="slide.title"></h1>
                                     <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1" x-show="slide.price">

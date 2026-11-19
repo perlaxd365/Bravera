@@ -889,6 +889,21 @@ main > * {
     pointer-events: none;
 }
 
+/* Acercamiento cinematográfico de la imagen protagonista */
+@keyframes hero-frame-drift {
+    from {
+        transform: scale(1.015) translateX(1.4%);
+    }
+    to {
+        transform: scale(1.09) translateX(-1.4%);
+    }
+}
+
+.hero-frame-active {
+    animation: hero-frame-drift 5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform;
+}
+
 /* El texto de la portada entra escalonado, como una composición editorial */
 .hero-copy > * {
     opacity: 0;
@@ -936,6 +951,10 @@ main > * {
     .hero-slide {
         filter: none;
         transform: none;
+    }
+
+    .hero-frame-active {
+        animation: none;
     }
 }
 
