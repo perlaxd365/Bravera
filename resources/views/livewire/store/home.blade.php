@@ -1,41 +1,12 @@
-<div class="home-editorial">
+<div class="bg-[#f6f5f2] pb-10">
     {{-- Credenciales de la cuenta de prueba para las validaciones de Culqi. --}}
     @if (app()->getLocale() === 'es')
-        <div class="home-order-credentials mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:px-10">
+        <div class="mx-auto max-w-[1440px] px-4 pt-3 sm:px-6 lg:px-10">
             <x-brevare.review-credentials />
         </div>
     @endif
 
-    {{-- Franja editorial con los productos agregados más recientemente. --}}
-    @if ($promoTickerItems !== [])
-        <section class="home-order-promo mx-auto mt-4 max-w-screen-2xl px-4 sm:px-6 lg:mt-5 lg:px-10"
-            aria-label="{{ __('storefront.home.latest_added') }}">
-            <div class="home-promo-ticker">
-                <div class="home-promo-track">
-                    @foreach ([false, true] as $duplicate)
-                        <div class="home-promo-group" @if ($duplicate) aria-hidden="true" @endif>
-                            @foreach ($promoTickerItems as $item)
-                                <a href="{{ $item['url'] }}" @if ($duplicate) tabindex="-1" @endif
-                                    class="home-promo-card group">
-                                    <span class="home-promo-media">
-                                        <img src="{{ $item['image'] }}" alt="{{ $duplicate ? '' : $item['name'] }}"
-                                            loading="lazy" decoding="async" width="72" height="72">
-                                    </span>
-                                    <span class="min-w-0 flex-1">
-                                        <span class="block truncate text-[9px] font-bold uppercase tracking-[.19em] text-stone-500">{{ $item['eyebrow'] }}</span>
-                                        <span class="mt-1 block truncate text-sm font-semibold tracking-[-.015em] text-stone-950 sm:text-[15px]">{{ $item['name'] }}</span>
-                                    </span>
-                                    <span class="home-promo-cta">{{ __('storefront.home.view') }} <span aria-hidden="true">↗</span></span>
-                                </a>
-                            @endforeach
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </section>
-    @endif
-
-    {{-- Portada de campaña: fotografía protagonista y texto con espacio propio. --}}
+    {{-- Banner principal --}}
     @if ($heroSlides)
         <section x-data="{
             active: 0,
@@ -44,284 +15,201 @@
             next() { this.active = (this.active + 1) % this.slides.length },
             prev() { this.active = (this.active - 1 + this.slides.length) % this.slides.length },
             go(i) { this.active = i },
-            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 2000) },
+            start() { this.stop(); if (!document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.slides.length > 1) this.timer = setInterval(() => this.next(), 5000) },
             stop() { clearInterval(this.timer); this.timer = null }
         }"
             x-init="start()" @mouseenter="stop()" @mouseleave="start()" @focusin="stop()" @focusout="start()"
             @visibilitychange.window="document.hidden ? stop() : start()"
-            class="home-order-hero mx-auto mt-5 max-w-screen-2xl px-4 sm:mt-7 sm:px-6 lg:px-10">
-            <div class="home-hero relative overflow-hidden rounded-[1.75rem] bg-[#f5f2eb] sm:rounded-[2.25rem]">
-                <div class="home-hero-grid grid min-h-[459px] lg:grid-cols-[.9fr_1.1fr]">
-                    <div class="home-hero-copy order-2 flex flex-col justify-center px-6 pb-8 pt-5 sm:px-10 sm:pb-9 lg:order-1 lg:px-14 lg:py-10 xl:px-[4.5rem]">
+            class="mx-auto mt-3 max-w-[1440px] px-4 sm:px-6 lg:px-10">
+            <div class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white">
+                <div class="grid lg:grid-cols-[1.05fr_1fr]">
+                    <div class="relative order-2 flex flex-col justify-center px-6 pb-8 pt-6 sm:px-10 sm:py-10 lg:order-1 lg:px-14">
                         <template x-for="(slide, i) in slides" :key="'copy-' + i">
-                            <div x-show="i === active" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="home-hero-slide">
-                                <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70 sm:text-xs" x-text="slide.eyebrow"></p>
-                                <h1 class="mt-3 max-w-xl text-[2.1rem] font-semibold leading-[1.04] tracking-[-.045em] text-[#171714] sm:text-[2.75rem] lg:text-[3.35rem] xl:text-[3.65rem]">
+                            <div x-show="i === active" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
+                                <p class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[.14em] text-amber-900" x-text="slide.eyebrow"></p>
+                                <h1 class="mt-4 max-w-xl text-[2rem] font-extrabold leading-[1.05] tracking-[-.04em] text-stone-950 sm:text-[2.6rem] lg:text-[3rem]">
                                     <span class="sr-only">Brevare: </span>
                                     <span x-text="slide.title">Regalos que llegan</span>
                                     <span class="text-amber-700" x-text="slide.highlight">con ilusión</span>
                                 </h1>
-                                <p class="mt-4 max-w-md text-sm leading-6 text-gray-600 sm:text-base sm:leading-7" x-text="slide.subtitle"></p>
-                                <a :href="slide.url" class="mt-5 inline-flex min-h-11 items-center gap-3 rounded-full bg-[#171714] px-6 text-sm font-semibold text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-900">
-                                    <span x-text="slide.cta"></span><span aria-hidden="true">↗</span>
+                                <p class="mt-3 max-w-md text-sm leading-6 text-stone-600 sm:text-[15px] sm:leading-7" x-text="slide.subtitle"></p>
+                                <a :href="slide.url" class="fv-cta mt-6">
+                                    <span x-text="slide.cta"></span><span aria-hidden="true">→</span>
                                 </a>
                             </div>
                         </template>
 
-                        <div class="home-hero-controls mt-8 flex items-center gap-4 sm:mt-10">
-                            <button type="button" @click="prev()" aria-label="{{ __('storefront.home.previous') }}" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
-                                <flux:icon name="chevron-left" class="size-5" />
-                            </button>
-                            <div class="flex items-center gap-1.5" role="group" aria-label="{{ __('storefront.home.choose_slide') }}">
-                                <template x-for="(slide, i) in slides" :key="'dot-' + i">
-                                    <button type="button" @click="go(i)" :aria-label="'{{ __('storefront.home.go_slide') }}'.replace(':number', i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-11 min-w-5 items-center justify-center focus-visible:outline-2 focus-visible:outline-amber-700">
-                                        <span class="h-1.5 rounded-full transition-all duration-500" :class="i === active ? 'w-7 bg-amber-700' : 'w-1.5 bg-gray-400/65'"></span>
-                                    </button>
-                                </template>
+                        <div class="mt-7 flex items-center gap-2">
+                            <template x-for="(slide, i) in slides" :key="'dot-' + i">
+                                <button type="button" @click="go(i)" :aria-label="'{{ __('storefront.home.go_slide') }}'.replace(':number', i + 1)" :aria-current="i === active ? 'true' : 'false'" class="flex min-h-9 min-w-4 items-center justify-center">
+                                    <span class="h-1.5 rounded-full transition-all duration-400" :class="i === active ? 'w-7 bg-amber-600' : 'w-4 bg-stone-300'"></span>
+                                </button>
+                            </template>
+                            <div class="ml-auto flex gap-2">
+                                <button type="button" @click="prev()" aria-label="{{ __('storefront.home.previous') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
+                                    <flux:icon name="chevron-left" class="size-4" />
+                                </button>
+                                <button type="button" @click="next()" aria-label="{{ __('storefront.home.next') }}" class="flex size-9 items-center justify-center rounded-full border border-stone-300 text-stone-700 transition hover:border-amber-400 hover:bg-amber-50">
+                                    <flux:icon name="chevron-right" class="size-4" />
+                                </button>
                             </div>
-                            <button type="button" @click="next()" aria-label="{{ __('storefront.home.next') }}" class="flex size-11 items-center justify-center rounded-full border border-gray-900/15 text-gray-800 transition hover:border-gray-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-amber-700">
-                                <flux:icon name="chevron-right" class="size-5" />
-                            </button>
-                            <span class="ml-auto hidden items-center gap-2 text-xs font-medium text-gray-500 sm:inline-flex"><span class="size-1.5 rounded-full bg-emerald-600"></span>{{ __('storefront.home.seasonal_ideas') }}</span>
                         </div>
                     </div>
 
-                    <div class="home-hero-image relative order-1 h-[212px] overflow-hidden bg-[#e6e0d4] sm:h-[306px] lg:order-2 lg:h-full lg:min-h-[459px]">
+                    <div class="relative order-1 min-h-[220px] overflow-hidden bg-[#e8e3da] sm:min-h-[300px] lg:order-2 lg:min-h-[400px]">
                         <template x-for="(slide, i) in slides" :key="'image-' + i">
                             <div x-show="i === active" x-transition.opacity.duration.500ms x-cloak class="absolute inset-0">
-                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" :class="i === active ? 'home-hero-photo-active' : ''" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="home-hero-photo h-full w-full object-cover">
-                                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent lg:bg-gradient-to-l lg:from-transparent lg:to-black/[.04]"></div>
+                                <img :src="slide.image" :alt="slide.title + ' ' + slide.highlight" :fetchpriority="i === 0 ? 'high' : 'auto'" :loading="i === 0 ? 'eager' : 'lazy'" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $heroFallbackImage }}'; }" class="h-full w-full object-cover">
                             </div>
                         </template>
-                        <span class="home-hero-snow" aria-hidden="true"></span>
-                        <span class="absolute bottom-4 right-4 rounded-full border border-white/50 bg-white/75 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.16em] text-gray-800 backdrop-blur-md sm:bottom-6 sm:right-6">Brevare · Perú</span>
+                        <span class="absolute bottom-4 right-4 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-stone-800 backdrop-blur">Brevare · Perú</span>
                     </div>
                 </div>
             </div>
         </section>
     @endif
 
-    {{-- Carrusel editorial con avance automático pausable en cualquier dispositivo. --}}
-    @if ($allCategories->isNotEmpty())
-        <section x-data="{
-            timer: null,
-            paused: false,
-            userPaused: false,
-            visible: false,
-            observer: null,
-            active: 0,
-            total: @js($allCategories->count()),
-            progress: 0,
-            reduced() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches },
-            step() {
-                const track = this.$refs.track;
-                const first = track?.firstElementChild;
-                if (!first) return 0;
-                const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-                return first.getBoundingClientRect().width + gap;
-            },
-            sync() {
-                const viewport = this.$refs.viewport;
-                if (!viewport) return;
-                const step = this.step();
-                this.active = step > 0
-                    ? Math.min(this.total - 1, Math.max(0, Math.round(viewport.scrollLeft / step)))
-                    : 0;
-                this.progress = viewport.scrollWidth > 0
-                    ? Math.min(1, (viewport.scrollLeft + viewport.clientWidth) / viewport.scrollWidth)
-                    : 1;
-            },
-            move() {
-                const viewport = this.$refs.viewport;
-                if (!viewport) return;
-                const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-                if (max < 4) return;
-                let direction = viewport.dataset.direction === '-1' ? -1 : 1;
-                if (direction > 0 && viewport.scrollLeft >= max - 4) direction = -1;
-                if (direction < 0 && viewport.scrollLeft <= 4) direction = 1;
-                viewport.dataset.direction = String(direction);
-                viewport.scrollTo({
-                    left: Math.max(0, Math.min(max, viewport.scrollLeft + direction * this.step())),
-                    behavior: this.reduced() ? 'auto' : 'smooth',
-                });
-            },
-            start() {
-                this.stop();
-                if (this.userPaused || !this.visible || this.reduced() || !this.$refs.viewport) return;
-                this.timer = setInterval(() => { if (!this.paused) this.move() }, 3000);
-            },
-            stop() { clearInterval(this.timer); this.timer = null },
-            observeVisibility() {
-                if (!('IntersectionObserver' in window)) {
-                    this.visible = true;
-                    this.start();
-                    return;
-                }
-
-                this.observer = new IntersectionObserver(([entry]) => {
-                    this.visible = Boolean(entry?.isIntersecting);
-                    this.visible ? this.start() : this.stop();
-                }, { threshold: 0.2 });
-
-                this.observer.observe(this.$el);
-            },
-            toggleAutoplay() {
-                this.userPaused = !this.userPaused;
-                if (this.userPaused) {
-                    this.stop();
-                    return;
-                }
-                this.paused = false;
-                this.start();
-            },
-            interact() {
-                this.userPaused = true;
-                this.stop();
-            },
-            nudge(direction) {
-                const viewport = this.$refs.viewport;
-                if (!viewport) return;
-                this.interact();
-                viewport.scrollBy({
-                    left: direction * viewport.clientWidth * 0.82,
-                    behavior: this.reduced() ? 'auto' : 'smooth',
-                });
-            }
-        }"
-            x-init="$nextTick(() => { sync(); observeVisibility(); })"
-            @focusin="paused = true" @focusout="paused = false"
-            @visibilitychange.window="document.hidden ? stop() : start()" @resize.window.debounce.150ms="sync(); start()"
-            class="home-category-section home-order-categories mt-8 py-12 sm:mt-12 sm:py-16 lg:mt-16 lg:py-20">
-            <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10">
-                <div class="mb-7 flex items-end justify-between gap-5 sm:mb-9">
-                    <div>
-                        <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.categories_eyebrow') }}</p>
-                        <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl lg:text-[2.5rem]">{{ __('storefront.home.categories_title') }}</h2>
-                        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-600 sm:text-base">{{ __('storefront.home.categories_copy') }}</p>
-                    </div>
-                    <div class="hidden items-center gap-3 sm:flex">
-                        <div class="mr-2 text-right">
-                            <p class="text-[10px] font-bold uppercase tracking-[.16em] text-stone-500">
-                                <span x-text="String(active + 1).padStart(2, '0')">01</span>
-                                <span class="text-stone-400">/ {{ str_pad((string) $allCategories->count(), 2, '0', STR_PAD_LEFT) }}</span>
-                            </p>
-                            <span class="mt-2 block h-px w-24 overflow-hidden bg-stone-900/10" aria-hidden="true">
-                                <span class="block h-full origin-left bg-amber-700 transition-transform duration-500 ease-out"
-                                    :style="`transform: scaleX(${progress})`"></span>
-                            </span>
-                        </div>
-                        <button type="button" @click="nudge(-1)" aria-label="{{ __('storefront.home.previous_categories') }}"
-                            class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
-                            <flux:icon name="chevron-left" class="size-4" />
-                        </button>
-                        <button type="button" @click="nudge(1)" aria-label="{{ __('storefront.home.next_categories') }}"
-                            class="flex size-11 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-800 shadow-sm transition hover:border-stone-900 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
-                            <flux:icon name="chevron-right" class="size-4" />
-                        </button>
-                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'"
-                            class="ml-1 min-h-11 rounded-full px-3 text-xs font-semibold text-stone-600 transition hover:text-stone-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                            x-text="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'">{{ __('storefront.home.pause') }}</button>
-                        <a href="{{ route('store.search') }}" class="ml-1 text-sm font-semibold text-gray-700 transition hover:text-amber-800">{{ __('storefront.common.view_all') }} <span class="ml-1" aria-hidden="true">↗</span></a>
-                    </div>
+    {{-- Llamativos y económicos --}}
+    @if ($featured->isNotEmpty())
+        <section class="mx-auto mt-6 max-w-[1440px] px-4 sm:px-6 lg:px-10">
+            <div class="mb-4 flex items-end justify-between gap-4">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[.16em] text-amber-800">{{ app()->getLocale() === 'en' ? 'Eye-catching & affordable' : 'Llamativos y económicos' }}</p>
+                    <h2 class="mt-1 text-xl font-extrabold tracking-tight text-stone-950 sm:text-2xl">{{ app()->getLocale() === 'en' ? __('storefront.home.featured_title') : ($homeTexts['featured'] ?? 'Destacados') }}</h2>
                 </div>
+                <a href="{{ route('store.search') }}" class="shrink-0 text-[13px] font-semibold text-stone-700 transition hover:text-amber-800">{{ __('storefront.common.view_store') }} <span class="ml-1" aria-hidden="true">→</span></a>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                @foreach ($featured as $product)
+                    @include('store.components.product-card', ['product' => $product])
+                @endforeach
+            </div>
+        </section>
+    @endif
 
-                <div x-ref="viewport" class="category-carousel-viewport" role="region"
-                    aria-label="{{ __('storefront.catalog.categories') }}" tabindex="0"
-                    @scroll.debounce.100ms="sync()"
-                    @touchstart.passive="interact()"
-                    @keydown.arrow-left.prevent="nudge(-1)"
-                    @keydown.arrow-right.prevent="nudge(1)">
-                    <div x-ref="track" class="category-carousel flex gap-4 pb-2 sm:gap-5 lg:gap-6" data-direction="1">
-                    @foreach ($allCategories as $category)
-                        <a href="{{ route('store.category', ['path' => $category->path]) }}" class="home-category-card group relative isolate flex min-h-[270px] shrink-0 items-end overflow-hidden rounded-[1.5rem] bg-[#e8e3da] text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700 sm:min-h-[340px] sm:rounded-[1.8rem] lg:min-h-[390px]">
-                            <img src="{{ $category->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $category->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]">
-                            <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
-                            <span class="relative flex w-full items-end justify-between gap-3 p-5 sm:p-6 lg:p-7">
-                                <span class="min-w-0">
-                                    <span class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-white/80">{{ __('storefront.home.collections') }}</span>
-                                    <span class="block truncate text-2xl font-semibold tracking-[-.03em] sm:text-3xl">{{ $category->seo_label ?? $category->name }}</span>
-                                </span>
-                                <span class="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/15 text-white backdrop-blur-md transition group-hover:border-white group-hover:bg-white group-hover:text-gray-900" aria-hidden="true"><span class="text-xl leading-none">↗</span></span>
+    {{-- Categorías --}}
+    @if ($allCategories->isNotEmpty())
+        <section class="mx-auto mt-6 max-w-[1440px] px-4 sm:px-6 lg:px-10" aria-labelledby="home-categories-title">
+            <div class="mb-4 flex items-end justify-between gap-4">
+                <div>
+                    <h2 id="home-categories-title" class="text-xl font-extrabold tracking-tight text-stone-950 sm:text-2xl">{{ __('storefront.home.categories_title') }}</h2>
+                    <p class="mt-1 text-[13px] text-stone-500">{{ __('storefront.home.categories_copy') }}</p>
+                </div>
+                <a href="{{ route('store.search') }}" class="hidden shrink-0 text-[13px] font-semibold text-stone-700 transition hover:text-amber-800 sm:inline-flex">{{ __('storefront.common.view_all') }} <span class="ml-1" aria-hidden="true">→</span></a>
+            </div>
+
+            <div class="fv-noscroll flex gap-3 overflow-x-auto pb-1">
+                @foreach ($allCategories as $category)
+                    <a href="{{ route('store.category', ['path' => $category->path]) }}"
+                        class="group flex w-[92px] shrink-0 flex-col items-center gap-2 text-center">
+                        <span class="flex size-[76px] items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-white p-1 shadow-sm transition group-hover:border-amber-300 group-hover:shadow-md sm:size-[88px]">
+                            <img src="{{ $category->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $category->store_image_fallback }}'; }" class="size-full rounded-full object-cover transition duration-500 group-hover:scale-105">
+                        </span>
+                        <span class="line-clamp-2 text-[12px] font-semibold leading-tight text-stone-700 group-hover:text-amber-800">{{ $category->seo_label ?? $category->name }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- Novedades / agregados recientemente (deslizable + avance automático) --}}
+    @if ($promoTickerItems !== [])
+        <section class="mx-auto mt-6 max-w-[1440px] px-4 sm:px-6 lg:px-10" aria-label="{{ __('storefront.home.latest_added') }}">
+            <div class="mb-2 flex items-center justify-between gap-3">
+                <h2 class="text-sm font-extrabold uppercase tracking-[.12em] text-stone-900">{{ __('storefront.home.latest_added') }}</h2>
+                <span class="text-[11px] font-medium text-stone-500">{{ app()->getLocale() === 'en' ? 'Swipe →' : 'Desliza →' }}</span>
+            </div>
+
+            <div
+                x-data="{
+                    timer: null,
+                    paused: false,
+                    down: false,
+                    moved: false,
+                    startX: 0,
+                    startLeft: 0,
+                    init() {
+                        this.timer = setInterval(() => { if (!this.paused) this.advance(); }, 2800);
+                    },
+                    destroy() { clearInterval(this.timer); },
+                    advance() {
+                        const v = this.$refs.viewport;
+                        if (!v) return;
+                        const max = v.scrollWidth - v.clientWidth;
+                        if (max <= 4) return;
+                        const card = v.querySelector('[data-promo-card]');
+                        const step = card ? Math.round(card.getBoundingClientRect().width) + 12 : 300;
+                        if (v.scrollLeft >= max - 8) {
+                            v.scrollTo({ left: 0, behavior: 'smooth' });
+                        } else {
+                            v.scrollTo({ left: Math.min(max, v.scrollLeft + step), behavior: 'smooth' });
+                        }
+                    },
+                    start(e) {
+                        if (e.pointerType && e.pointerType !== 'mouse') return;
+                        this.down = true;
+                        this.moved = false;
+                        this.startX = e.clientX;
+                        this.startLeft = this.$refs.viewport.scrollLeft;
+                        this.paused = true;
+                    },
+                    move(e) {
+                        if (!this.down) return;
+                        const dx = e.clientX - this.startX;
+                        if (Math.abs(dx) > 4) this.moved = true;
+                        this.$refs.viewport.scrollLeft = this.startLeft - dx;
+                    },
+                    end() {
+                        this.down = false;
+                        this.paused = false;
+                    },
+                    guardClick(e) {
+                        if (this.moved) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.moved = false;
+                        }
+                    }
+                }"
+                @mouseenter="paused = true" @mouseleave="paused = false"
+                @touchstart.passive="paused = true" @touchend="paused = false"
+                class="relative"
+            >
+                <div x-ref="viewport"
+                    @pointerdown="start($event)" @pointermove="move($event)" @pointerup="end()" @pointerleave="end()"
+                    @click.capture="guardClick($event)"
+                    class="fv-noscroll flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 select-none active:cursor-grabbing">
+                    @foreach ($promoTickerItems as $item)
+                        <a href="{{ $item['url'] }}" data-promo-card
+                            class="group flex w-[272px] shrink-0 snap-start items-center gap-3 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md sm:w-[320px]">
+                            <span class="size-16 shrink-0 overflow-hidden rounded-lg border border-stone-100 bg-stone-50">
+                                <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" loading="lazy" decoding="async" width="72" height="72" class="size-full object-cover">
                             </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block truncate text-[9px] font-bold uppercase tracking-[.16em] text-amber-800">{{ $item['eyebrow'] }}</span>
+                                <span class="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-tight text-stone-900 group-hover:text-amber-900">{{ $item['name'] }}</span>
+                            </span>
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition group-hover:bg-amber-400 group-hover:text-amber-950" aria-hidden="true">→</span>
                         </a>
                     @endforeach
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center justify-between gap-3 sm:hidden">
-                    <div>
-                        <p class="text-[10px] font-bold uppercase tracking-[.16em] text-stone-500">
-                            <span x-text="String(active + 1).padStart(2, '0')">01</span>
-                            <span class="text-stone-400">/ {{ str_pad((string) $allCategories->count(), 2, '0', STR_PAD_LEFT) }}</span>
-                        </p>
-                        <span class="mt-2 block h-px w-20 overflow-hidden bg-stone-900/10" aria-hidden="true">
-                            <span class="block h-full origin-left bg-amber-700 transition-transform duration-500 ease-out"
-                                :style="`transform: scaleX(${progress})`"></span>
-                        </span>
-                    </div>
-                    <div class="ml-auto flex gap-2">
-                        <button type="button" @click="toggleAutoplay()" :aria-label="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'"
-                            class="min-h-11 rounded-full border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 shadow-sm transition active:scale-95"
-                            x-text="userPaused ? '{{ __('storefront.home.resume') }}' : '{{ __('storefront.home.pause') }}'">{{ __('storefront.home.pause') }}</button>
-                        <button type="button" @click="nudge(-1)" aria-label="{{ __('storefront.home.previous_categories') }}"
-                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
-                            <flux:icon name="chevron-left" class="size-4" />
-                        </button>
-                        <button type="button" @click="nudge(1)" aria-label="{{ __('storefront.home.next_categories') }}"
-                            class="flex size-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-sm transition active:scale-95">
-                            <flux:icon name="chevron-right" class="size-4" />
-                        </button>
-                    </div>
-                    <a href="{{ route('store.search') }}" class="text-xs font-semibold text-gray-800">{{ __('storefront.common.view_all') }} ↗</a>
                 </div>
             </div>
         </section>
     @endif
 
-    {{-- Productos reales; el módulo editorial llena el espacio si hay poca selección. --}}
-    @if ($featured->isNotEmpty())
-        <section class="home-order-featured mx-auto max-w-screen-2xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14 lg:px-10">
-            <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
-                <div>
-                    <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.featured_eyebrow') }}</p>
-                    <h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ app()->getLocale() === 'en' ? __('storefront.home.featured_title') : ($homeTexts['featured'] ?? __('storefront.home.featured_title')) }}</h2>
-                </div>
-                <a href="{{ route('store.search') }}" class="hidden text-sm font-semibold text-gray-700 transition hover:text-amber-800 sm:inline-flex">{{ __('storefront.common.view_store') }} <span class="ml-1" aria-hidden="true">↗</span></a>
-            </div>
-            @if ($featured->count() <= 2 && $allCategories->isNotEmpty())
-                <div class="home-featured-layout grid gap-5 lg:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)] lg:gap-7">
-                    <div class="home-featured-card">
-                        @include('store.components.product-card', ['product' => $featured->first()])
-                    </div>
-                    @php($discoveryCategory = $allCategories->first())
-                    <a href="{{ route('store.category', ['path' => $discoveryCategory->path]) }}" class="home-discovery-card group relative isolate flex min-h-[390px] items-end overflow-hidden rounded-[1.75rem] bg-[#e8e3da] sm:min-h-[440px]">
-                        <img src="{{ $discoveryCategory->store_image }}" alt="" loading="lazy" decoding="async" onerror="if (this.dataset.fallbackAttempted) { this.remove(); } else { this.dataset.fallbackAttempted = 'true'; this.src = '{{ $discoveryCategory->store_image_fallback }}'; }" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]">
-                        <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"></span>
-                        <span class="relative max-w-lg p-6 text-white sm:p-9 lg:p-11">
-                            <span class="block text-[10px] font-semibold uppercase tracking-[.2em] text-white/80">{{ __('storefront.home.more_to_discover') }}</span>
-                            <span class="mt-2 block text-3xl font-semibold leading-tight tracking-[-.035em] sm:text-4xl">{{ __('storefront.home.discovery_title') }}</span>
-                            <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold">{{ __('storefront.home.discover_category', ['category' => $discoveryCategory->seo_label ?? $discoveryCategory->name]) }} <span aria-hidden="true">↗</span></span>
-                        </span>
-                    </a>
-                </div>
-            @else
-                <div class="home-product-grid grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-                    @foreach ($featured as $product)
-                        <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
-                    @endforeach
-                </div>
-            @endif
-        </section>
-    @endif
-
+    {{-- Lo más nuevo --}}
     @if ($latest->isNotEmpty())
-        <section class="home-order-latest mx-auto max-w-screen-2xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-10">
-            <div class="mb-7 flex items-end justify-between gap-4 sm:mb-9">
-                <div><p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-900/70">{{ __('storefront.home.new_arrivals') }}</p><h2 class="mt-2 text-2xl font-semibold tracking-[-.035em] text-[#171714] sm:text-3xl">{{ app()->getLocale() === 'en' ? __('storefront.home.new_title') : ($homeTexts['latest'] ?? __('storefront.home.new_title')) }}</h2></div>
-                <a href="{{ route('store.search') }}" class="text-sm font-semibold text-gray-700 transition hover:text-amber-800">{{ __('storefront.home.discover_new') }} ↗</a>
+        <section class="mx-auto mt-8 max-w-[1440px] px-4 sm:px-6 lg:px-10">
+            <div class="mb-4 flex items-end justify-between gap-4">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[.16em] text-amber-800">{{ __('storefront.home.new_arrivals') }}</p>
+                    <h2 class="mt-1 text-xl font-extrabold tracking-tight text-stone-950 sm:text-2xl">{{ app()->getLocale() === 'en' ? __('storefront.home.new_title') : ($homeTexts['latest'] ?? __('storefront.home.new_title')) }}</h2>
+                </div>
+                <a href="{{ route('store.search') }}" class="shrink-0 text-[13px] font-semibold text-stone-700 transition hover:text-amber-800">{{ __('storefront.home.discover_new') }} <span class="ml-1" aria-hidden="true">→</span></a>
             </div>
-            <div class="home-product-grid grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                 @foreach ($latest as $product)
-                    <div class="home-product-item">@include('store.components.product-card', ['product' => $product])</div>
+                    @include('store.components.product-card', ['product' => $product])
                 @endforeach
             </div>
         </section>

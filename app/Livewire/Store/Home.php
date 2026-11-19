@@ -16,10 +16,15 @@ class Home extends Component
 {
     public function render()
     {
+        // Escaparate principal: productos llamativos (con foto y disponibles)
+        // ordenados por precio más económico primero, y destacados como desempate.
         $featured = Product::query()
             ->active()
             ->visible()
-            ->featured()
+            ->orderByRaw('(select min(pv.sale_price) from product_variants pv where pv.product_id = products.id and pv.is_active = 1 and exists (select 1 from supplier_variants sv where sv.product_variant_id = pv.id and sv.is_active = 1 and sv.stock > sv.reserved_stock)) asc')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->with(['brand', 'category', 'translations', 'variants.supplierVariants.supplier', 'variants.images', 'variants.attributeValues.attribute', 'variants.attributeValues.value'])
             ->withCount(['reviews' => fn ($query) => $query->approved()])
             ->withAvg(['reviews' => fn ($query) => $query->approved()], 'rating')
@@ -29,6 +34,7 @@ class Home extends Component
                         $q->active()->whereColumn('stock', '>', 'reserved_stock');
                     });
             })
+            ->whereHas('variants.images')
             ->limit(8)
             ->get();
 
@@ -234,10 +240,10 @@ class Home extends Component
 
         $seoTitle = app()->getLocale() === 'en'
             ? __('storefront.home.seo_title')
-            : 'Brevare Perú | Moda, tecnología, hogar y regalos';
+            : 'Brevare | Moda, tecnología, hogar y regalos';
         $seoDescription = app()->getLocale() === 'en'
             ? __('storefront.home.seo_description')
-            : 'Compra moda, tecnología, hogar y regalos en Brevare Perú. Entrega garantizada y envíos a todo el Perú.';
+            : 'Compra moda, tecnología, hogar y regalos en Brevare. Entrega garantizada y envíos a todo el Perú.';
         $seoImage = $heroSlides[0]['image'] ?? asset('favicon-192.png');
 
         return view('livewire.store.home', compact('featured', 'latest', 'allCategories', 'discoveryCategory', 'brands', 'heroSlides', 'heroFallbackImage', 'promoTickerItems', 'homeTexts'))
